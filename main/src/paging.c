@@ -524,7 +524,8 @@ static PDE *create_os_pd(void)
 
     // ---- カーネル空間の設定
 
-    // test. 最初の物理メモリ8MBをリニアアドレスにそのまま対応させる
+    // FIXME
+    // 最初の物理メモリ8MBをリニアアドレスにそのまま対応させる
     int flg = PTE_RW | PTE_US | PTE_PRESENT;
     char *max_p = (char *) (8 * 1024 * 1024);
     for (char *p = 0; p < max_p; p += PAGE_SIZE_B) {
@@ -532,8 +533,7 @@ static PDE *create_os_pd(void)
     }
 
     // VRAM
-    //unsigned short *vram = (unsigned short *) *((int *) ADDR_VRAM);
-    unsigned short *vram = (unsigned short *) 0xFD000000;
+    unsigned short *vram = (unsigned short *) *((int *) ADDR_VRAM);
     char *vaddr = (char *) vram;
     max_p = vaddr + (g_w * g_h * 2);
 

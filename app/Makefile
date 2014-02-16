@@ -1,28 +1,26 @@
-CC=gcc
-CFLAGS=-Wall -nostdlib -Iinclude -Wl,-entry=OnSenMain
+CFLAGS = -Wall -nostdlib -Iinclude -Wl,-entry=OnSenMain
 
-BIN=bin
-LIB=../api/bin
-INCLUDE=include
+BIN_DIR = bin
+LIB_DIR = ../api/bin
+INC_DIR = include
 
-ONSEN_LIB=../api/bin/libonsen.a
-ONSEN_H=../api/include/onsen.h
-MSG_H=../main/include/msg.h
-KEY_H=../main/include/keycode.h
+LDS = lds/app.lds
+ONSEN_LIB = ../api/bin/libonsen.a
+ONSEN_H = ../api/include/onsen.h
+MSG_H = ../main/include/msg.h
+KEY_H = ../main/include/keycode.h
 
 
 all :
-	cp $(ONSEN_H) $(INCLUDE)
-	cp $(MSG_H) $(INCLUDE)
-	cp $(KEY_H) $(INCLUDE)
-	make $(BIN)/hello
-	make $(BIN)/crack
+	cp $(ONSEN_H) $(INC_DIR)
+	cp $(MSG_H) $(INC_DIR)
+	cp $(KEY_H) $(INC_DIR)
+	make $(BIN_DIR)/hello
 
 
-$(BIN)/hello : $(ONSEN_LIB) hello/*.c Makefile
-	$(CC) $(CFLAGS) hello/*.c -o $@ -L$(LIB) -lonsen
+$(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello/hello.c Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello/hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
 
 
-$(BIN)/crack : $(ONSEN_LIB) crack/*.s Makefile
-	$(CC) $(CFLAGS) crack/*.s -o $@ -L$(LIB) -lonsen
-
+clean :
+	rm -f $(BIN_DIR)/hello

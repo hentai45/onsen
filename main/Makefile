@@ -1,20 +1,28 @@
 # ソフトウェア
-CC=gcc
-ASMFLAGS=-Wall -nostdlib
-CFLAGS=-Wall -std=gnu99 -nostdlib
-MKHDR=../tools/mkhdr
+ASFLAGS = -Wall -nostdlib
+CFLAGS  = -Wall -std=gnu99 -nostdlib -I$(INC_DIR) -I$(API_INC_DIR)
+MKHDR   = ../tools/mkhdr
 
 
 # ディレクトリ
-SRC=src
-LDS=lds
-INCLUDE=include
-ONSEN_INC=../api/include
-BIN=bin
+SRC_DIR = src
+LDS_DIR = lds
+INC_DIR = include
+API_INC_DIR = ../api/include
+BIN_DIR = bin
 
 
 # ファイル
-ONSEN=$(BIN)/onsen.sys
+ONSEN = $(BIN_DIR)/onsen.sys
+LDS = $(LDS_DIR)/os.lds
+MAP = onsen.map
+
+AS_SRCS := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
+AS_SRCS += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/mem/*.S))
+AS_OBJS := $(AS_SRCS:.S=.o)
+
+C_SRCS  := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
+C_OBJS  := $(C_SRCS:.c=.o)
 
 
 all :
@@ -23,10 +31,12 @@ all :
 
 
 mkhdr :
-	$(MKHDR) $(SRC) $(INCLUDE)
+	$(MKHDR) $(SRC_DIR) $(INC_DIR)
 
 
-$(ONSEN) : $(ONSEN_INC)/onsen.h $(INCLUDE)/*.h $(SRC)/boot/boot.S $(SRC)/*.S $(SRC)/mem/*.S $(SRC)/*.c $(LDS)/os.lds Makefile
-	$(CC) $(ASMFLAGS) -c -I$(INCLUDE) $(SRC)/boot/boot.S -o $(BIN)/boot.o
-	$(CC) $(CFLAGS) -Wl,-Map=onsen.map -I$(INCLUDE) -I$(ONSEN_INC) $(BIN)/boot.o $(SRC)/*.S $(SRC)/mem/*.S $(SRC)/*.c -T $(LDS)/os.lds -o $@
+$(ONSEN) : $(AS_OBJS) $(C_OBJS) $(LDS) Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) -T $(LDS) -o $@
 
+
+clean :
+	rm -f $(AS_OBJS) $(C_OBJS)

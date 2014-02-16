@@ -157,7 +157,7 @@ static void idle_main(void);
 
 static void init_tss_seg(void);
 static void set_os_tss(int pid, unsigned long pd, void (*f)(void), void *esp);
-static void set_app_tss(int pid, void (*f)(void), void *esp, void *esp0);
+static void set_app_tss(int pid, unsigned long pd, void (*f)(void), void *esp, void *esp0);
 static void set_tss(int pid, int cs, int ds, unsigned long cr3,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0);
@@ -218,14 +218,39 @@ int task_run_app(void *p, unsigned int size, const char *name)
 
     int pid = task_new(app_name);
 
-    char *p_data = (char *) mem_alloc(stack_and_data_size);
+    memcpy(0x350000, p_code, 0x400);
+    //char *p_data = (char *) mem_alloc(stack_and_data_size); FIXME
+    char *p_data = (char *) 0x350400;
 
-    memcpy(p_data + esp, p_code + data_addr, data_size);
+    dbg_str("\nsize: 0x");
+    dbg_intx(size);
+    dbg_str("\nstack_and_data_size: 0x");
+    dbg_intx(stack_and_data_size);
+    dbg_str("\nesp: 0x");
+    dbg_intx(esp);
+    dbg_str("\ndata_size: 0x");
+    dbg_intx(data_size);
+    dbg_str("\ndata_addr: 0x");
+    dbg_intx(data_addr);
+    dbg_str("\np_data: 0x");
+    dbg_intx(p_data);
+    dbg_str("\np_code: 0x");
+    dbg_intx(p_code);
+    dbg_newline();
+    //memcpy(p_data + esp, p_code + data_addr, data_size); FIXME
+    memcpy(esp, p_code + data_addr, data_size);
+    dbg_strln((char *) (esp));
+    dbg_intx(p_code + data_addr);
+    dbg_newline();
+
+    p_code = (char *) 0x350000;
 
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
 
-    set_app_tss(pid, (void *) 0x1B, (unsigned char *) esp, esp0);
+    unsigned long pd = (unsigned long) get_os_pd();  // FIXME
+    //set_app_tss(pid, pd, (void *) 0x1B, (unsigned char *) esp, esp0); FIXME
+    set_app_tss(pid, pd, (void *) 0x35001B, (unsigned char *) esp, esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;
@@ -513,10 +538,10 @@ static void set_os_tss(int pid, unsigned long pd, void (*f)(void), void *esp)
 }
 
 
-static void set_app_tss(int pid, void (*f)(void), void *esp, void *esp0)
+static void set_app_tss(int pid, unsigned long pd, void (*f)(void), void *esp, void *esp0)
 {
     // | 3 は要求者特権レベルを3にするため
-    set_tss(pid, USER_CS | 3, USER_DS, 0, f, EFLAGS_INT_ENABLE,
+    set_tss(pid, USER_CS | 3, USER_DS, pd, f, EFLAGS_INT_ENABLE,
             esp, USER_DS | 3, esp0, KERNEL_DS);
 }
 

@@ -114,40 +114,15 @@ static int  cmd_app(char *cmd_name, int bgp);
 //-----------------------------------------------------------------------------
 // メイン
 
+void test_draw_rainbow(void);
+void test_draw_bitmap(void);
+void test_draw_textbox(void);
+
 void console_main(void)
 {
-    //fill_surface(g_con_sid, bg);
-    for (int y = 0; y < g_h; y++) {
-        for (int x = 0; x < g_w; x++) {
-            draw_pixel(g_con_sid, x, y, RGB(x % 256, y % 256, 255 - (x % 256)));
-        }
-    }
-
-    /*
-    FILEINFO *finfo = fat12_get_file_info();
-    int i_fi = fat12_search_file(finfo, "test.bmp");
-
-    if (i_fi >= 0) {
-        FILEINFO *fi = &finfo[i_fi];
-
-        char *p = (char *) mem_alloc(fi->size);
-        fat12_load_file(fi->clustno, fi->size, p);
-
-        int bmp_sid = load_bmp(p, fi->size);
-        set_sprite_pos(bmp_sid, 300, 150);
-        draw_sprite(bmp_sid, g_con_sid, OP_SRC_COPY);
-
-        mem_free(p);
-    }
-    */
-
-    int sid = surface_new(g_w / 4, g_h / 4);
-    fill_surface(sid, COL_BLACK);
-    set_alpha(sid, 50);
-    set_sprite_pos(sid, 150, 30);
-    draw_sprite(sid, g_con_sid, OP_SRC_COPY);
-
-    draw_text(g_con_sid, 155, 35, COL_WHITE, "HELLO");
+    test_draw_rainbow();
+    test_draw_bitmap();
+    test_draw_textbox();
 
     update_screen(g_con_sid);
 
@@ -161,6 +136,45 @@ void console_main(void)
     while (get_message(&msg)) {
         dispatch_message(&msg, console_proc);
     }
+}
+
+void test_draw_rainbow(void)
+{
+    for (int y = 0; y < g_h; y++) {
+        for (int x = 0; x < g_w; x++) {
+            draw_pixel(g_con_sid, x, y, RGB(x % 256, y % 256, 255 - (x % 256)));
+        }
+    }
+}
+
+void test_draw_bitmap(void)
+{
+    FILEINFO *finfo = fat12_get_file_info();
+    int i_fi = fat12_search_file(finfo, "test.bmp");
+
+    if (i_fi >= 0) {
+        FILEINFO *fi = &finfo[i_fi];
+
+        char *p = (char *) mem_alloc(fi->size);
+        fat12_load_file(fi->clustno, fi->size, p);
+
+        int bmp_sid = load_bmp(p, fi->size);
+        set_sprite_pos(bmp_sid, 250, 250);
+        draw_sprite(bmp_sid, g_con_sid, OP_SRC_COPY);
+
+        mem_free(p);
+    }
+}
+
+void test_draw_textbox(void)
+{
+    int sid = surface_new(g_w / 4, g_h / 4);
+    fill_surface(sid, COL_BLACK);
+    set_alpha(sid, 50);
+    set_sprite_pos(sid, 150, 30);
+    draw_sprite(sid, g_con_sid, OP_SRC_COPY);
+
+    draw_text(g_con_sid, 155, 35, COL_WHITE, "HELLO");
 }
 
 
@@ -547,43 +561,40 @@ static int cmd_app(char *cmd_name, int bgp)
     FILEINFO *finfo = fat12_get_file_info();
     int i_fi = fat12_search_file(finfo, name);
 
-    // 見つからなかったら、後ろに.ONSをつけてもう１度検索する
+    // 見つからなかったら、後ろに.HRBをつけてもう１度検索する
     if (i_fi < 0) {
         name[i_name    ] = '.';
-        name[i_name + 1] = 'O';
-        name[i_name + 2] = 'N';
-        name[i_name + 3] = 'S';
+        name[i_name + 1] = 'H';
+        name[i_name + 2] = 'R';
+        name[i_name + 3] = 'B';
         name[i_name + 4] = 0;
 
         i_fi = fat12_search_file(finfo, name);
     }
 
-    if (i_fi >= 0) {  // ファイルが見つかった
-        FILEINFO *fi = &finfo[i_fi];
-
-        char *p_code = (char *) mem_alloc(fi->size);
-        fat12_load_file(fi->clustno, fi->size, p_code);
-
-        if (fi->size < 36 || s_ncmp(p_code + 4, "OITA", 4) != 0 ||
-                *p_code != 0) {
-            if (s_ncmp(p_code + 1, "ELF", 3) == 0) {
-                elf_load(p_code);
-            }
-            return -1;
-        }
-
-        child_pid = task_run_app(p_code, fi->size, fi->name);
-
-        if (bgp) {
-            child_pid = 0;
-        } else {
-            timer_stop(cursor_tid);
-        }
-
-        return 0;
+    if (i_fi < 0) {  // ファイルが見つからなかった
+        return -2;
     }
 
-    return -2;
+    FILEINFO *fi = &finfo[i_fi];
+
+    char *p_code = (char *) mem_alloc(fi->size);
+    fat12_load_file(fi->clustno, fi->size, p_code);
+
+    if (fi->size < 36 || s_ncmp(p_code + 4, "Hari", 4) != 0 ||
+            *p_code != 0) {
+        return -1;
+    }
+
+    child_pid = task_run_app(p_code, fi->size, fi->name);
+
+    if (bgp) {
+        child_pid = 0;
+    } else {
+        timer_stop(cursor_tid);
+    }
+
+    return 0;
 }
 
 

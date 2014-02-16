@@ -7,9 +7,6 @@
  * @author Ivan Ivanovich Ivanov
  */
 
-//=============================================================================
-// ヘッダ
-
 #include <stdbool.h>
 
 #include "asmfunc.h"
@@ -36,47 +33,16 @@ static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
 
 
-//-----------------------------------------------------------------------------
-// メイン
-
 static void onsen_init(void);
 static void main_proc(unsigned int message, unsigned long u_param,
         long l_param);
-
-
-//-----------------------------------------------------------------------------
-// メッセージ処理ハンドラ
 
 static void mouse_handler(unsigned long data);
 static void keydown_handler(unsigned long keycode);
 
 
-//=============================================================================
-// 関数
-
-//-----------------------------------------------------------------------------
-// メイン
-
-void set_vga_reg(int reg, int data)
-{
-    outw(0x01CE, reg);
-    outw(0x01CF, data);
-}
-
-void init_vga(void)
-{
-    set_vga_reg(0x0004, 0x0000);
-    set_vga_reg(0x0001, 640);
-    set_vga_reg(0x0002, 480);
-    set_vga_reg(0x0003, 16);
-    set_vga_reg(0x0005, 0x0000);
-    set_vga_reg(0x0004, 0x41);
-}
-
 void OnSenMain(unsigned long magic, multiboot_info_t *mbi)
 {
-    init_vga();
-
     onsen_init();
 
     MSG msg;
@@ -101,7 +67,7 @@ static void onsen_init(void)
     set_pic1_mask(0xEF);  // マウスの割り込みを許可
     task_init();
     // タスク初期化のあとでする必要がある
-    unsigned short *vram = (unsigned short *) 0xFD000000;
+    unsigned short *vram = (unsigned short *) *((int *) ADDR_VRAM);
     graphic_init(vram);  // 画面初期化
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
@@ -131,9 +97,6 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
     }
 }
 
-
-//-----------------------------------------------------------------------------
-// メッセージ処理ハンドラ
 
 static void mouse_handler(unsigned long data)
 {

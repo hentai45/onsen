@@ -1,4 +1,7 @@
 bin/
+debug/
+*.bin
+*.map
 
 # Object files
 *.o
