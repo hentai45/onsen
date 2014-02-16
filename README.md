@@ -1,4 +1,4 @@
-onsen
-=====
-
-my own os
+run
+---
+GRUB> kernel /onsen.sys
+GRUB> boot
