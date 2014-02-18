@@ -41,7 +41,7 @@ static void mouse_handler(unsigned long data);
 static void keydown_handler(unsigned long keycode);
 
 
-void OnSenMain(unsigned long magic, multiboot_info_t *mbi)
+void OnSenMain(void)
 {
     onsen_init();
 

@@ -10,8 +10,8 @@ APP_BIN = app/bin
 
 # ファイル
 IMG = $(BIN_DIR)/a.img
-IPL = boot/ipl.bin
-ASMHEAD = boot/asmhead.bin
+IPL = boot/ipl/bin/ipl.bin
+HEAD = boot/head/bin/head.bin
 ONSEN = main/bin/onsen.sys
 ONSEN_SYS = $(BIN_DIR)/onsen.sys
 
@@ -28,8 +28,8 @@ img :
 	make $(IMG)
 
 
-$(ONSEN_SYS) : $(ASMHEAD) $(ONSEN)
-	cat $(ASMHEAD) $(ONSEN) > $@
+$(ONSEN_SYS) : $(HEAD) $(ONSEN)
+	cat $(HEAD) $(ONSEN) > $@
 
 
 $(IMG) : $(IPL) $(ONSEN_SYS) $(APP_BIN)/hello test.bmp
@@ -51,32 +51,25 @@ run :
 	$(QEMU) $(QEMU_FLAGS) -fda $(IMG) &
 
 
-debug/gdbinit :
-	echo 'target remote localhost:1234' >$@
-	echo 'set architecture i8086' >>$@
-	echo 'break *0x07c00' >>$@
-	echo 'c' >>$@
-
-
-debug : debug/gdbinit
+debug_ipl :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x debug/gdbinit
+	gdb -tui -x debug/gdbinit_ipl
 
 
-debug/gdbinit2 :
-	echo 'target remote localhost:1234' >$@
-	echo 'set architecture i386' >>$@
-	echo 'break *0xc384' >>$@
-	echo 'c' >>$@
-
-
-debug2 : debug/gdbinit2
+debug_head :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x debug/gdbinit2
+	gdb -x debug/gdbinit_head
+
+
+debug :
+	make img
+	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
+	sleep 1
+	gdb -x debug/gdbinit_main
 
 
 clean :
