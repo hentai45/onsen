@@ -10,22 +10,25 @@
 .code16gcc
 .arch i486
 
-    call  set_video_mode         # 画面モードの設定
-    call  disable_interrupts     # 割り込みを受け付けないようにする
-    call  enable_a20             # 1MB以上のメモリにアクセスできるようにする
+    call head16_main
 
-    call  to_protect_mode        # プロテクトモードに移行
-    call  move_disk_data         # ディスクデータをキャッシュへ転送
-    call  move_onsensys          # onsen.sysを転送
-    call  run_onsensys           # onsen.sysを実行
+    # プロテクトモードへ移行
+    call  to_protect_mode
+
+    ljmpl $2*8, $start32  # GDTの実行可能セグメントへ移行
+start32:
+    # さあ、32ビットの始まりだ！
+
+.code32
+    call head32_main
+.code16gcc
 
 
 #---------------------------------------------------------------------
 # 関数
 #---------------------------------------------------------------------
 
-
-# プロテクトモードに移行
+# プロテクトモードへ移行
 to_protect_mode:
     lgdtl (GDTR0)            # 仮のGDTを設定
     movl  %cr0, %eax
@@ -42,6 +45,7 @@ flush_pipeline:
     movw  %ax, %gs
     movw  %ax, %ss
     ret
+
 
 #---------------------------------------------------------------------
 # 仮のGDT

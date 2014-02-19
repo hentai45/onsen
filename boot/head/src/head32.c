@@ -2,9 +2,6 @@
  * ブートローダ
  */
 
-__asm__ (".code16gcc\n");
-
-#include "asmfunc.h"
 #include "hrbbin.h"
 
 
@@ -24,48 +21,20 @@ __asm__ (".code16gcc\n");
 #define ADDR_DISK_CACHE_REAL (0x00008000)
 
 
-/**
- * 一切の割り込みを受け付けないようにする
- * AT互換機の仕様では、
- * CLI前にこれをやっておかないと、たまにハングアップする
- */
-void disable_interrupts(void)
-{
-    outb(0x21, 0xFF);  /* 全マスタの割り込みを禁止 */
-    nop();             /* OUT命令を連続させるとうまくいかない機種があるらしい */
-    outb(0xA1, 0xFF);  /* 全スレーブの割り込みを禁止 */
-    cli();             /* CPUレベルでも割り込み禁止 */
-}
-
-
-static void wait_kbc_sendready(void);
+static void move_disk_data(void);
+static void move_onsensys(void);
+static void run_onsensys(void);
 
 /**
- * CPUから1MB以上のメモリにアクセスできるように、A20GATEを設定する
+ * 32ビット処理のメイン関数
  */
-void enable_a20(void)
+void head32_main(void)
 {
-    wait_kbc_sendready();
-    outb(0x64, 0xD1);
-    wait_kbc_sendready();
-    outb(0x60, 0xDF);  /* enable A20 */
-    wait_kbc_sendready();
+    move_disk_data();  /* ディスクデータをキャッシュへ転送 */
+    move_onsensys();   /* onsen.sysを転送 */
+    run_onsensys();    /* onsen.sysを実行 */
 }
 
-#define PORT_R_KBC_STATE            0x0064
-#define KBC_STATE_SEND_NOT_READY      0x02
-
-/**
- * キーボードコントローラがデータ送信可能になるのを待つ
- */
-static void wait_kbc_sendready(void)
-{
-    for (;;) {
-        if ((inb(PORT_R_KBC_STATE) & KBC_STATE_SEND_NOT_READY) == 0) {
-            return;
-        }
-    }
-}
 
 static void memcopy(char *dst, char *src, int num_bytes);
 
@@ -74,7 +43,7 @@ static void memcopy(char *dst, char *src, int num_bytes);
 /**
  * ディスクデータをキャッシュへ転送する
  */
-void move_disk_data(void)
+static void move_disk_data(void)
 {
     /* ブートセクタ */
     char *src = (char *) ADDR_IPL;
@@ -94,7 +63,7 @@ extern int OnSenMain;
 /**
  * onsen.sysを転送する
  */
-void move_onsensys(void)
+static void move_onsensys(void)
 {
     /* onsen.sysを実行可能セグメントへ転送 */
     char *src = (char *) &OnSenMain;
@@ -127,7 +96,7 @@ static void memcopy(char *dst, char *src, int num_bytes)
 /**
  * onsen.sysを実行する
  */
-void run_onsensys(void)
+static void run_onsensys(void)
 {
     HRB_HEADER *hdr = (HRB_HEADER *) &OnSenMain;
 
