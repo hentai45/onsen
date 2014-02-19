@@ -6,27 +6,22 @@
 //-----------------------------------------------------------------------------
 // メモリマップ
 
-#define ADDR_VRAM        0x00000FF0  ///< VRAMのアドレスが格納されているアドレス
 
-#define ADDR_DISK_IMG    0x00100000
+#define ADDR_BASE        (0xC0000000)  /* ページングにより論理アドレスが
+                                          こいつベースになる */
 
-#define ADDR_IDT         0x0026F800
-#define LIMIT_IDT        0x000007FF
-
-#define ADDR_GDT         0x00270000
-#define LIMIT_GDT        0x0000FFFF
-
-#define MADDR_PAGE_MEM_MNG 0x003C0000
-
-#define ADDR_MEMORY_MNG  0x003C0000
-
-#define ADDR_FREE1_START 0x00001000
-#define ADDR_FREE1_SIZE  0x0009E000
-
-#define ADDR_FREE2_START 0x00400000
-
-#define ADDR_MEMTEST_START ADDR_FREE2_START
-#define ADDR_MEMTEST_END 0xBFFFFFFF
+#define ADDR_SYS_INFO    (0x00000FF0)  /* システム情報が格納されているアドレス */
+#define ADDR_FREE1_START (0x00001000)
+#define ADDR_FREE1_SIZE  (0x0009E000)
+#define ADDR_DISK_IMG    (0x00100000)
+#define ADDR_IDT         (0x0026F800)
+#define LIMIT_IDT        (0x000007FF)
+#define ADDR_GDT         (0x00270000)
+#define LIMIT_GDT        (0x0000FFFF)
+#define ADDR_OS          (0x00280000)
+#define ADDR_OS_PDT      (0x00400000)
+#define MADDR_PAGE_MEM_MNG  (ADDR_OS_PDT + 0x1000)
+#define ADDR_FREE2_START (0x00402000)
 
 
 //-----------------------------------------------------------------------------
@@ -42,6 +37,6 @@ void mem_dbg(void);
 //-----------------------------------------------------------------------------
 // メモリ容量確認
 
-unsigned int mem_total_size_B(void);
+unsigned int mem_total_B(void);
 
 #endif

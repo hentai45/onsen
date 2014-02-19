@@ -39,6 +39,7 @@ void console_main(void);
 #include "msg_q.h"
 #include "paging.h"
 #include "str.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
 
@@ -489,7 +490,7 @@ static void cmd_mem(void)
 {
     put_str("memory\n");
     put_str("total : ");
-    put_int(mem_total_size_B() / (1024 * 1024));
+    put_int(mem_total_B() / (1024 * 1024));
     put_str(" MB\n");
     put_str("free  : ");
     put_int(mem_total_free() / 1024);
@@ -521,6 +522,24 @@ static void cmd_dbg(char *name)
         page_mem_dbg();
         paging_dbg();
         task_dbg();
+        switch_debug_screen();
+    } else if (s_cmp(name, "sysinfo") == 0) {
+        dbg_str("vram = ");
+        dbg_intx(g_sys_info->vram);
+        dbg_newline();
+
+        dbg_str("width = ");
+        dbg_int(g_sys_info->w);
+        dbg_newline();
+
+        dbg_str("height = ");
+        dbg_int(g_sys_info->h);
+        dbg_newline();
+
+        dbg_str("mem_total_B = ");
+        dbg_int(g_sys_info->mem_total_B);
+        dbg_newline();
+
         switch_debug_screen();
     } else if (s_cmp(name, "task") == 0) {
         task_dbg();

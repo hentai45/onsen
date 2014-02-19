@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // ページング
 
-#define PAGE_SIZE_B 4096  ///< ページサイズ
+#define PAGE_SIZE_B (4096)  ///< ページサイズ
 
 #define IS_4KB_ALIGN(byte) (((byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
 #define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) ///< 4KB 単位で切り上げ

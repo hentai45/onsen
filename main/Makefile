@@ -2,6 +2,7 @@
 ASFLAGS = -Wall -nostdlib
 CFLAGS  = -Wall -std=gnu99 -nostdlib -I$(INC_DIR) -I$(API_INC_DIR)
 MKHDR   = ../tools/mkhdr
+OBJDUMP = objdump
 
 
 # ディレクトリ
@@ -36,6 +37,7 @@ mkhdr :
 
 $(ONSEN) : $(AS_OBJS) $(C_OBJS) $(LDS) Makefile
 	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) -T $(LDS) -o $@
+	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.ls
 
 
 clean :

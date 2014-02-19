@@ -799,7 +799,7 @@ static SURFACE *srf_alloc(void)
 
 static void create_mouse_surface(void)
 {
-	static char cursor[MOUSE_W * MOUSE_H * 2] = {
+    static char cursor[MOUSE_W * MOUSE_H * 2] = {
         "* * . . . . . . . . "
         "* O * . . . . . . . "
         "* O O * . . . . . . "
@@ -816,7 +816,7 @@ static void create_mouse_surface(void)
         ". . . . . * O O * . "
         ". . . . . * O O * . "
         ". . . . . . * * * . "
-	};
+    };
 
     l_mouse_sid = surface_new(MOUSE_W, MOUSE_H);
     l_mouse_srf = sid2srf(l_mouse_sid);

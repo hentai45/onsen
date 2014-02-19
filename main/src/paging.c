@@ -59,7 +59,7 @@
 //-----------------------------------------------------------------------------
 // ページング
 
-#define PAGE_SIZE_B 4096  ///< ページサイズ
+#define PAGE_SIZE_B (4096)  ///< ページサイズ
 
 #define IS_4KB_ALIGN(byte) (((byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
 #define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) ///< 4KB 単位で切り上げ
@@ -102,14 +102,15 @@ void page_mem_dbg();
 //-----------------------------------------------------------------------------
 // ページング
 
-#define NUM_PDE     1024  ///< １つの PD 内の PDE の数
-#define NUM_PTE     1024  ///< １つの PT 内の PTE の数
+#define NUM_PDE     (1024)  /* １つの PD 内の PDE の数 */
+#define NUM_PTE     (1024)  /* １つの PT 内の PTE の数 */
 
-#define PTE_PRESENT 0x01  ///< 1ならページがメモリ上に存在する
-#define PTE_RW      0x02  ///< 0なら特権レベル3では書き込めない
-#define PTE_US      0x04  ///< 0なら特権レベル3ではアクセスできない
-#define PTE_ACCESS  0x20  ///< このエントリのページをアクセスするとCPUが1にする
-#define PTE_DIRTY   0x40  ///< このエントリのページに書き込むとCPUが1にする
+#define PTE_PRESENT (0x01)  /* 1ならページがメモリ上に存在する */
+#define PTE_RW      (0x02)  /* 0なら特権レベル3では書き込めない */
+#define PTE_US      (0x04)  /* 0なら特権レベル3ではアクセスできない */
+#define PTE_ACCESS  (0x20)  /* このエントリのページをアクセスするとCPUが1にする */
+#define PTE_DIRTY   (0x40)  /* このエントリのページに書き込むとCPUが1にする */
+#define PTE_4MB     (0x80)  /* 4MBページ */
 
 
 #define VADDR_TO_PD_INDEX(vaddr)  (((unsigned long) vaddr) >> 22)
@@ -198,10 +199,10 @@ static void *vaddr2maddr(PDE *pd, void *vp_vaddr)
 }
 
 
-static PDE *l_os_pd;
+static PDE *l_os_pd = (PDE *) ADDR_OS_PDT;
 
 
-static unsigned long *create_os_pd(void);
+static void create_os_pd(void);
 
 
 //-----------------------------------------------------------------------------
@@ -237,13 +238,11 @@ static void *alloc_page_maddr(unsigned int num_page);
 //-----------------------------------------------------------------------------
 // ページング
 
+static void disable_8MB_page(void);
+
 void paging_init(void)
 {
-    l_os_pd = create_os_pd();
-
-    store_cr3((unsigned long) l_os_pd);
-
-    enable_paging();
+    //disable_8MB_page();
 }
 
 
@@ -267,6 +266,13 @@ void paging_dbg(void)
     dbg_intxln((int) pd);
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {
+        if (pd[i_pd] & PTE_4MB) {
+            dbg_str("    4MB Page = 0x");
+            dbg_intx(i_pd * (4 * 1024 * 1024));
+            dbg_newline();
+            continue;
+        }
+
         PTE *pt = get_pt(pd, i_pd);
 
         if (pt == 0) {
@@ -514,35 +520,20 @@ void page_mem_dbg(void)
 //-----------------------------------------------------------------------------
 // ページング
 
-static PDE *create_os_pd(void)
+
+/**
+ * 論理アドレスの先頭8MBを無効にする
+ */
+static void disable_8MB_page(void)
 {
-    // ---- ページディレクトリの作成
-
-    PDE *pd = page_alloc(1);
-    memset(pd, 0, PAGE_SIZE_B);
-
-
-    // ---- カーネル空間の設定
-
-    // FIXME
-    // 最初の物理メモリ8MBをリニアアドレスにそのまま対応させる
-    int flg = PTE_RW | PTE_US | PTE_PRESENT;
-    char *max_p = (char *) (8 * 1024 * 1024);
-    for (char *p = 0; p < max_p; p += PAGE_SIZE_B) {
-        map_page(pd, p, p, flg);
-    }
-
-    // VRAM
-    unsigned short *vram = (unsigned short *) *((int *) ADDR_VRAM);
-    char *vaddr = (char *) vram;
-    max_p = vaddr + (g_w * g_h * 2);
-
-    for (char *p = (char *) vram; p < max_p; p += PAGE_SIZE_B) {
-        map_page(pd, vaddr, p, flg);
-        vaddr += PAGE_SIZE_B;
-    }
+    l_os_pd[0] = 0;
+    l_os_pd[1] = 0;
+    flush_tlb();
+}
 
 
+static void create_os_pd(void)
+{
     // ---- バイト単位メモリ管理の作成
 
     /*
@@ -551,8 +542,6 @@ static PDE *create_os_pd(void)
     int *vaddr = 0; //TODO
     set_pte(pd, vaddr, mem_mng, PTE_RW | PTE_US | PTE_PRESENT);
     */
-
-    return (PDE *) (((unsigned long) pd) | flg);
 }
 
 

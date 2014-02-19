@@ -7,8 +7,11 @@ __asm__ (".code16gcc\n");
 /* ディスク読み込み先セグメント */
 #define DST_SEG (0x0820)
 
-/* 読み込みシリンダ数 */
-#define LOAD_CYLS (40)
+/**
+ * 読み込みシリンダ数
+ * 33までなら安全に読み込める
+ */
+#define LOAD_CYLS (33)
 
 
 /**

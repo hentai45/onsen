@@ -5,8 +5,7 @@
 
 __asm__ (".code16gcc\n");
 
-
-#define ADDR_VRAM_ADDR (0x0FF0)
+#include "sysinfo.h"
 
 #define VBE_640x480_16bit   (0x0111)
 
@@ -59,7 +58,6 @@ void set_video_mode(void)
 {
     SVGA_INFO svga;
     SVGA_MODE_INFO svga_mode;
-    long *vram_info = (long *) ADDR_VRAM_ADDR;
 
     if (get_svga_info(&svga) < 0) {
         screen320x200();
@@ -79,7 +77,9 @@ void set_video_mode(void)
 
     set_svga_mode();
 
-    *vram_info = svga_mode.vram;
+    g_sys_info->vram = svga_mode.vram;
+    g_sys_info->w = svga_mode.w;
+    g_sys_info->h = svga_mode.h;
 }
 
 

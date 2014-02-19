@@ -3,41 +3,15 @@
 #ifndef HEADER_ASMFUNC
 #define HEADER_ASMFUNC
 
-inline __attribute__ ((always_inline)) void hlt(void);
-inline __attribute__ ((always_inline)) void stihlt(void);
-inline __attribute__ ((always_inline)) void cli(void);
-inline __attribute__ ((always_inline)) void sti(void);
-inline __attribute__ ((always_inline)) void outb(unsigned short port,
-        unsigned char data);
-inline __attribute__ ((always_inline)) unsigned char inb(unsigned short port);
-inline __attribute__ ((always_inline)) void outw(unsigned short port,
-        unsigned short data);
-inline __attribute__ ((always_inline)) int load_cr0(void);
-inline __attribute__ ((always_inline)) void store_cr0(int cr0);
-inline __attribute__ ((always_inline)) unsigned long load_cr3(void);
-inline __attribute__ ((always_inline)) void store_cr3(unsigned long cr3);
-inline __attribute__ ((always_inline)) void enable_paging(void);
-inline __attribute__ ((always_inline)) void flush_tlb(unsigned long vaddr);
-inline __attribute__ ((always_inline)) int load_eflags(void);
-inline __attribute__ ((always_inline)) void store_eflags(int eflags);
-inline __attribute__ ((always_inline)) void ltr(int tr);
-inline __attribute__ ((always_inline)) void far_jmp(unsigned short cs,
-        unsigned long eip);
-inline __attribute__ ((always_inline)) void far_call(unsigned short cs,
-        unsigned long eip);
-inline __attribute__ ((always_inline)) void reload_segments(unsigned short cs,
-        unsigned short ds);
-
-
 inline __attribute__ ((always_inline))
-void hlt(void)
+static void hlt(void)
 {
     __asm__ __volatile__ ("hlt");
 }
 
 
 inline __attribute__ ((always_inline))
-void stihlt(void)
+static void stihlt(void)
 {
     __asm__ __volatile__ (
             "sti        \n\t"
@@ -46,21 +20,21 @@ void stihlt(void)
 
 
 inline __attribute__ ((always_inline))
-void cli(void)
+static void cli(void)
 {
     __asm__ __volatile__ ("cli");
 }
 
 
 inline __attribute__ ((always_inline))
-void sti(void)
+static void sti(void)
 {
     __asm__ __volatile__ ("sti");
 }
 
 
 inline __attribute__ ((always_inline))
-void outb(unsigned short port, unsigned char data)
+static void outb(unsigned short port, unsigned char data)
 {
     __asm__ __volatile__ (
             "outb %0, %1"
@@ -72,7 +46,7 @@ void outb(unsigned short port, unsigned char data)
 
 
 inline __attribute__ ((always_inline))
-unsigned char inb(unsigned short port)
+static unsigned char inb(unsigned short port)
 {
     unsigned char ret;
 
@@ -88,7 +62,7 @@ unsigned char inb(unsigned short port)
 
 
 inline __attribute__ ((always_inline))
-void outw(unsigned short port, unsigned short data)
+static void outw(unsigned short port, unsigned short data)
 {
     __asm__ __volatile__ (
             "outw %0, %1"
@@ -98,8 +72,9 @@ void outw(unsigned short port, unsigned short data)
             );
 }
 
+
 inline __attribute__ ((always_inline))
-int load_cr0(void)
+static int load_cr0(void)
 {
     int cr0;
 
@@ -110,14 +85,14 @@ int load_cr0(void)
 
 
 inline __attribute__ ((always_inline))
-void store_cr0(int cr0)
+static void store_cr0(int cr0)
 {
     __asm__ __volatile__ ("movl %0, %%cr0" : : "r" (cr0));
 }
 
 
 inline __attribute__ ((always_inline))
-unsigned long load_cr3(void)
+static unsigned long load_cr3(void)
 {
     unsigned long cr3;
 
@@ -128,14 +103,14 @@ unsigned long load_cr3(void)
 
 
 inline __attribute__ ((always_inline))
-void store_cr3(unsigned long cr3)
+static void store_cr3(unsigned long cr3)
 {
     __asm__ __volatile__("movl %0, %%cr3" : : "r" (cr3));
 }
 
 
 inline __attribute__ ((always_inline))
-void enable_paging(void)
+static void enable_paging(void)
 {
     unsigned long temp;
 
@@ -150,21 +125,21 @@ void enable_paging(void)
 
 
 inline __attribute__ ((always_inline))
-void flush_tlb(unsigned long vaddr)
+static void flush_tlb(void)
 {
     __asm__ __volatile__(
-            "cli              \n\t"
-            "invlpg %0        \n\t"
-            "sti"
+        "movl %%cr3, %%eax\n"
+        "movl %%eax, %%cr3\n"
 
-            :
-            : "m" (vaddr)
-            : "memory");
+        :
+        :
+        : "%eax"
+    );
 }
 
 
 inline __attribute__ ((always_inline))
-int load_eflags(void)
+static int load_eflags(void)
 {
     int eflags = 0;
 
@@ -180,7 +155,7 @@ int load_eflags(void)
 
 
 inline __attribute__ ((always_inline))
-void store_eflags(int eflags)
+static void store_eflags(int eflags)
 {
     __asm__ __volatile__ (
             "pushl %0         \n\t"
@@ -192,14 +167,14 @@ void store_eflags(int eflags)
 
 
 inline __attribute__ ((always_inline))
-void ltr(int tr)
+static void ltr(int tr)
 {
     __asm__ __volatile__("ltr %0" : : "m" (tr));
 }
 
 
 inline __attribute__ ((always_inline))
-void far_jmp(unsigned short cs, unsigned long eip)
+static void far_jmp(unsigned short cs, unsigned long eip)
 {
     struct {
         unsigned long eip;
@@ -214,7 +189,7 @@ void far_jmp(unsigned short cs, unsigned long eip)
 
 
 inline __attribute__ ((always_inline))
-void far_call(unsigned short cs, unsigned long eip)
+static void far_call(unsigned short cs, unsigned long eip)
 {
     struct {
         unsigned long eip;
@@ -230,7 +205,7 @@ void far_call(unsigned short cs, unsigned long eip)
 
 // GDT を変更したあとにセグメントを読みなおすのに使用する
 inline __attribute__ ((always_inline))
-void reload_segments(unsigned short cs, unsigned short ds)
+static void reload_segments(unsigned short cs, unsigned short ds)
 {
     // 「&&ラベル名」 はラベルのアドレスを取得できるgcc拡張
     far_jmp(cs, (unsigned long) &&reload_cs);

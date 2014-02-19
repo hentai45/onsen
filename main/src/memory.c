@@ -22,27 +22,22 @@
 //-----------------------------------------------------------------------------
 // メモリマップ
 
-#define ADDR_VRAM        0x00000FF0  ///< VRAMのアドレスが格納されているアドレス
 
-#define ADDR_DISK_IMG    0x00100000
+#define ADDR_BASE        (0xC0000000)  /* ページングにより論理アドレスが
+                                          こいつベースになる */
 
-#define ADDR_IDT         0x0026F800
-#define LIMIT_IDT        0x000007FF
-
-#define ADDR_GDT         0x00270000
-#define LIMIT_GDT        0x0000FFFF
-
-#define MADDR_PAGE_MEM_MNG 0x003C0000
-
-#define ADDR_MEMORY_MNG  0x003C0000
-
-#define ADDR_FREE1_START 0x00001000
-#define ADDR_FREE1_SIZE  0x0009E000
-
-#define ADDR_FREE2_START 0x00400000
-
-#define ADDR_MEMTEST_START ADDR_FREE2_START
-#define ADDR_MEMTEST_END 0xBFFFFFFF
+#define ADDR_SYS_INFO    (0x00000FF0)  /* システム情報が格納されているアドレス */
+#define ADDR_FREE1_START (0x00001000)
+#define ADDR_FREE1_SIZE  (0x0009E000)
+#define ADDR_DISK_IMG    (0x00100000)
+#define ADDR_IDT         (0x0026F800)
+#define LIMIT_IDT        (0x000007FF)
+#define ADDR_GDT         (0x00270000)
+#define LIMIT_GDT        (0x0000FFFF)
+#define ADDR_OS          (0x00280000)
+#define ADDR_OS_PDT      (0x00400000)
+#define MADDR_PAGE_MEM_MNG  (ADDR_OS_PDT + 0x1000)
+#define ADDR_FREE2_START (0x00402000)
 
 
 //-----------------------------------------------------------------------------
@@ -58,7 +53,7 @@ void mem_dbg(void);
 //-----------------------------------------------------------------------------
 // メモリ容量確認
 
-unsigned int mem_total_size_B(void);
+unsigned int mem_total_B(void);
 
 #endif
 
@@ -70,6 +65,7 @@ unsigned int mem_total_size_B(void);
 #include "debug.h"
 #include "paging.h"
 #include "str.h"
+#include "sysinfo.h"
 
 //-----------------------------------------------------------------------------
 // バイト単位メモリ管理
@@ -100,23 +96,6 @@ static MEMORY_MNG mng;
 static int mem_set_free(void *vp_vaddr, unsigned int size_B);
 
 
-//-----------------------------------------------------------------------------
-// メモリ容量確認
-
-#define EFLAGS_AC_BIT 0x00040000
-#define CR0_CACHE_DISABLE 0x60000000
-
-
-static unsigned int s_memtotal;
-
-
-static unsigned int memtest(unsigned int start, unsigned int end);
-static unsigned int memtest_sub(unsigned int start, unsigned int end);
-static char is486(void);
-static void enable_cache(void);
-static void disable_cache(void);
-
-
 //=============================================================================
 // 公開関数
 
@@ -131,8 +110,7 @@ void mem_init(void)
 
     page_set_free((void *) ADDR_FREE1_START, BYTE_TO_PAGE(ADDR_FREE1_SIZE));
 
-    s_memtotal = memtest(ADDR_MEMTEST_START, ADDR_MEMTEST_END);
-    unsigned int size_B = s_memtotal - ADDR_FREE2_START;
+    unsigned int size_B = g_sys_info->mem_total_B - ADDR_FREE2_START;
     page_set_free((void *) ADDR_FREE2_START, BYTE_TO_PAGE(size_B));
 
 
@@ -262,9 +240,9 @@ void mem_dbg(void)
 //-----------------------------------------------------------------------------
 // メモリ容量確認
 
-unsigned int mem_total_size_B(void)
+unsigned int mem_total_B(void)
 {
-    return s_memtotal;
+    return g_sys_info->mem_total_B;
 }
 
 
@@ -370,94 +348,3 @@ static int mem_set_free(void *vp_vaddr, unsigned int size_B)
 
     return -1;
 }
-
-
-//-----------------------------------------------------------------------------
-// メモリ容量確認
-
-/// @return 末尾の有効なアドレス
-static unsigned int memtest(unsigned int start, unsigned int end)
-{
-    char flag486 = is486();
-
-    if (flag486 != 0) {
-        disable_cache();
-    }
-
-    unsigned int i = memtest_sub(start, end);
-
-    if (flag486 != 0) {
-        enable_cache();
-    }
-
-    return i;
-}
-
-
-static unsigned int memtest_sub(unsigned int start, unsigned int end)
-{
-    unsigned int i, old, pattern0 = 0xAA55AA55, pattern1 = 0x55AA55AA;
-    volatile unsigned int *p;
-
-    // 4KBごとにチェック
-    for (i = start; i <= end; i += 0x1000) {
-        p = (unsigned int *) (i + 0xFFC);
-        old = *p;
-        *p = pattern0;
-
-        *p ^= 0xFFFFFFFF;  // 反転
-        if (*p != pattern1) {
-            // メモリでない
-            *p = old;
-            break;
-        }
-
-        *p ^= 0xFFFFFFFF;  // 反転して元に戻す
-        if (*p != pattern0) {
-            // メモリでない
-            *p = old;
-            break;
-        }
-
-        *p = old;
-    }
-
-    return i;
-}
-
-
-/// 386 では AC-bit を 1 にしても自動で 0 に戻ることを利用して
-/// 486 であるかどうかを確認する
-static char is486(void)
-{
-    unsigned int eflg = load_eflags();
-    eflg |= EFLAGS_AC_BIT;  // AC-bit = 1
-    store_eflags(eflg);
-
-    char flag486 = 0;
-    if ((eflg & EFLAGS_AC_BIT) != 0) {
-        flag486 = 1;
-    }
-    eflg &= ~EFLAGS_AC_BIT;  // AC-bit = 0
-    store_eflags(eflg);
-
-    return flag486;
-}
-
-
-static void enable_cache(void)
-{
-    unsigned int cr0 = load_cr0();
-    cr0 &= ~CR0_CACHE_DISABLE;  // キャッシュ許可
-    store_cr0(cr0);
-}
-
-
-static void disable_cache(void)
-{
-    unsigned int cr0 = load_cr0();
-    cr0 |= CR0_CACHE_DISABLE;  // キャッシュ禁止
-    store_cr0(cr0);
-}
-
-

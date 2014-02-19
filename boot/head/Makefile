@@ -1,6 +1,6 @@
 include ../../Makefile.inc
 
-CFLAGS  += -fno-toplevel-reorder -Os
+CFLAGS  += -fno-toplevel-reorder -Os -ffixed-cr2 -ffixed-cr3 -ffixed-cr4
 
 HEAD     = $(BIN_DIR)/head.bin
 HEAD_LDS = $(LDS_DIR)/head.lds

@@ -23,9 +23,12 @@
 #include "msg_q.h"
 #include "multiboot.h"
 #include "paging.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
 
+
+SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) ADDR_SYS_INFO;
 
 static int screen_pid;
 
@@ -56,7 +59,6 @@ void OnSenMain(void)
 static void onsen_init(void)
 {
     mem_init();     // メモリ初期化
-    paging_init();
     fat12_init();
     gdt_init();
     idt_init();
@@ -67,7 +69,7 @@ static void onsen_init(void)
     set_pic1_mask(0xEF);  // マウスの割り込みを許可
     task_init();
     // タスク初期化のあとでする必要がある
-    unsigned short *vram = (unsigned short *) *((int *) ADDR_VRAM);
+    unsigned short *vram = (unsigned short *) (0xC0000000 + (4 * 1024 * 1024) * 2);
     graphic_init(vram);  // 画面初期化
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);

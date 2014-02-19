@@ -2,27 +2,20 @@
  * ブートローダ
  */
 
+#include "memory.h"
 #include "hrbbin.h"
+#include "sysinfo.h"
 
 
 /* IPLが読み込んだシリンダ数 */
-#define CYLS (40)
+#define CYLS (33)
 
-/* IPLが読み込まれている場所 */
-#define ADDR_IPL (0x7C00)
-
-/* onsen.sysのロード先 */
-#define ADDR_ONSENSYS (0x00280000)
-
-/* ディスクキャッシュの場所 */
-#define ADDR_DISK_CACHE (0x00100000)
-
-/* ディスクキャッシュの場所（リアルモード） */
-#define ADDR_DISK_CACHE_REAL (0x00008000)
+SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) ADDR_SYS_INFO;
 
 
 static void move_disk_data(void);
 static void move_onsensys(void);
+void paging_init(void);
 static void run_onsensys(void);
 
 /**
@@ -30,8 +23,10 @@ static void run_onsensys(void);
  */
 void head32_main(void)
 {
+    g_sys_info->mem_total_B = memtest(ADDR_MEMTEST_START, ADDR_MEMTEST_END);
     move_disk_data();  /* ディスクデータをキャッシュへ転送 */
     move_onsensys();   /* onsen.sysを転送 */
+    paging_init();     /* 仮のページングを設定 */
     run_onsensys();    /* onsen.sysを実行 */
 }
 
@@ -47,12 +42,12 @@ static void move_disk_data(void)
 {
     /* ブートセクタ */
     char *src = (char *) ADDR_IPL;
-    char *dst = (char *) ADDR_DISK_CACHE;
+    char *dst = (char *) ADDR_DISK_DST;
     memcopy(dst, src, 512);
 
     /* 残り */
-    src = (char *) (ADDR_DISK_CACHE_REAL + 512);
-    dst = (char *) (ADDR_DISK_CACHE      + 512);
+    src = (char *) (ADDR_DISK_SRC + 512);
+    dst = (char *) (ADDR_DISK_DST + 512);
     int num_bytes = BYTES_PER_CYL * (CYLS - 1);  // IPLの分1引く
     memcopy(dst, src, num_bytes);
 }
@@ -67,7 +62,7 @@ static void move_onsensys(void)
 {
     /* onsen.sysを実行可能セグメントへ転送 */
     char *src = (char *) &OnSenMain;
-    char *dst = (char *) ADDR_ONSENSYS;
+    char *dst = (char *) ADDR_OS;
     int num_bytes = 512 * 1024;
     memcopy(dst, src, num_bytes);
 

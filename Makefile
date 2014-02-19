@@ -65,11 +65,11 @@ debug_head :
 	gdb -x debug/gdbinit_head
 
 
-debug :
+debug_head32 :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x debug/gdbinit_main
+	gdb -x debug/gdbinit_head32
 
 
 clean :
