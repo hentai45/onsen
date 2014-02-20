@@ -51,25 +51,32 @@ run :
 	$(QEMU) $(QEMU_FLAGS) -fda $(IMG) &
 
 
-debug_ipl :
+dipl :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -tui -x debug/gdbinit_ipl
+	gdb -x gdbinit/ipl
 
 
-debug_head :
+dhead16 :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x debug/gdbinit_head
+	gdb -x gdbinit/head16
 
 
-debug_head32 :
+dhead32 :
 	make img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x debug/gdbinit_head32
+	gdb -x gdbinit/head32
+
+
+dos :
+	make img
+	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
+	sleep 1
+	gdb -x gdbinit/os
 
 
 clean :

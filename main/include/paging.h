@@ -21,17 +21,4 @@ unsigned long *get_os_pd(void);
 
 void paging_dbg(void);
 
-
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-void page_mem_init(void);
-unsigned int total_free_page(void);
-void *page_alloc(unsigned int num_page);
-int page_free(void *maddr);
-int page_set_free(void *vp_vaddr, unsigned int num_page);
-void *get_mem_mng(void);
-
-void page_mem_dbg();
-
 #endif

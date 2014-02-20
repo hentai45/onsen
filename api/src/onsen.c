@@ -55,7 +55,7 @@ void dbg_int(int val);
 
 
 #define API_DBG_INTX    9002
-void dbg_intx(int val);
+void dbg_intx(unsigned int val);
 
 
 #define API_DBG_NEWLINE 9003

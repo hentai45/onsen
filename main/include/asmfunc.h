@@ -13,9 +13,7 @@ static void hlt(void)
 inline __attribute__ ((always_inline))
 static void stihlt(void)
 {
-    __asm__ __volatile__ (
-            "sti        \n\t"
-            "hlt");
+    __asm__ __volatile__ ("sti\n    hlt");
 }
 
 
@@ -37,11 +35,11 @@ inline __attribute__ ((always_inline))
 static void outb(unsigned short port, unsigned char data)
 {
     __asm__ __volatile__ (
-            "outb %0, %1"
+        "outb %0, %1"
 
-            :
-            : "a" (data), "Nd" (port)  // N : 0 から 255 の範囲の定数
-            );
+        :
+        : "a" (data), "Nd" (port)  // N : 0 から 255 の範囲の定数
+    );
 }
 
 
@@ -51,11 +49,11 @@ static unsigned char inb(unsigned short port)
     unsigned char ret;
 
     __asm__ __volatile__ (
-            "inb %1, %0"
+        "inb %1, %0"
 
-            : "=a" (ret)
-            : "Nd" (port)  // N : 0 から 255 の範囲の定数
-            );
+        : "=a" (ret)
+        : "Nd" (port)  // N : 0 から 255 の範囲の定数
+    );
 
     return ret;
 }
@@ -65,11 +63,11 @@ inline __attribute__ ((always_inline))
 static void outw(unsigned short port, unsigned short data)
 {
     __asm__ __volatile__ (
-            "outw %0, %1"
+        "outw %0, %1"
 
-            :
-            : "q" (data), "q" (port)
-            );
+        :
+        : "q" (data), "q" (port)
+    );
 }
 
 
@@ -96,7 +94,7 @@ static unsigned long load_cr3(void)
 {
     unsigned long cr3;
 
-    __asm__ __volatile__("movl %%cr3, %0" : "=r" (cr3));
+    __asm__ __volatile__ ("movl %%cr3, %0" : "=r" (cr3));
 
     return cr3;
 }
@@ -105,7 +103,7 @@ static unsigned long load_cr3(void)
 inline __attribute__ ((always_inline))
 static void store_cr3(unsigned long cr3)
 {
-    __asm__ __volatile__("movl %0, %%cr3" : : "r" (cr3));
+    __asm__ __volatile__ ("movl %0, %%cr3" : : "r" (cr3));
 }
 
 
@@ -114,20 +112,20 @@ static void enable_paging(void)
 {
     unsigned long temp;
 
-    __asm__ __volatile__(
-            "movl  %%cr0, %0                \n\t"
-            "orl   $0x80000000, %0          \n\t"
-            "movl  %0, %%cr0"
+    __asm__ __volatile__ (
+        "movl  %%cr0, %0\n"
+        "orl   $0x80000000, %0\n"
+        "movl  %0, %%cr0"
 
-            : "=r" (temp)
-            );
+        : "=r" (temp)
+    );
 }
 
 
 inline __attribute__ ((always_inline))
 static void flush_tlb(void)
 {
-    __asm__ __volatile__(
+    __asm__ __volatile__ (
         "movl %%cr3, %%eax\n"
         "movl %%eax, %%cr3\n"
 
@@ -139,16 +137,23 @@ static void flush_tlb(void)
 
 
 inline __attribute__ ((always_inline))
+static void flush_tlb_single(unsigned long addr)
+{
+    __asm__ __volatile__ ("invlpg (%0)" : : "r" (addr) : "memory");
+}
+
+
+inline __attribute__ ((always_inline))
 static int load_eflags(void)
 {
     int eflags = 0;
 
     __asm__ __volatile__ (
-            "pushf            \n\t"
-            "popl %0"
+        "pushf\n"
+        "popl %0"
 
-            : "=r" (eflags)
-           );
+        : "=r" (eflags)
+    );
 
     return eflags;
 }
@@ -158,18 +163,19 @@ inline __attribute__ ((always_inline))
 static void store_eflags(int eflags)
 {
     __asm__ __volatile__ (
-            "pushl %0         \n\t"
-            "popf"
+        "pushl %0\n"
+        "popf"
 
-            :
-            : "a" (eflags));
+        :
+        : "a" (eflags)
+    );
 }
 
 
 inline __attribute__ ((always_inline))
 static void ltr(int tr)
 {
-    __asm__ __volatile__("ltr %0" : : "m" (tr));
+    __asm__ __volatile__ ("ltr %0" : : "m" (tr));
 }
 
 
@@ -213,15 +219,15 @@ static void reload_segments(unsigned short cs, unsigned short ds)
 reload_cs:
 
     __asm__ __volatile__ (
-            "movw %0, %%ds           \n\t"
-            "movw %0, %%es           \n\t"
-            "movw %0, %%fs           \n\t"
-            "movw %0, %%gs           \n\t"
-            "movw %0, %%ss"
- 
-            :
-            : "q" (ds)
-            );
+        "movw %0, %%ds\n"
+        "movw %0, %%es\n"
+        "movw %0, %%fs\n"
+        "movw %0, %%gs\n"
+        "movw %0, %%ss"
+
+        :
+        : "q" (ds)
+    );
 }
 
 

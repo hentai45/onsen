@@ -12,7 +12,7 @@ LDS_DIR = lds
 INC_DIR = include
 BIN_DIR = bin
 
-CFLAGS  = -Wall -nostdlib -I$(INC_DIR)
+CFLAGS  = -Wall -nostdlib -I$(INC_DIR) -g
 ASFLAGS = -Wall -nostdlib
-LDFLAGS = -nostdlib
+LDFLAGS = -nostdlib -g
 

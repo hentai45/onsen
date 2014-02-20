@@ -58,7 +58,7 @@ MOUSE_DECODE *mouse_decode(unsigned char data);
 #define MAXMIN(A, B, C) MAX(A, MIN(B, C))
 
 
-MOUSE_DECODE l_mdec;
+static MOUSE_DECODE l_mdec;
 
 
 //=============================================================================

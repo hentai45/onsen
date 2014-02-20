@@ -1,17 +1,14 @@
-# ソフトウェア
-ASFLAGS = -Wall -nostdlib -c
-CFLAGS  = -Wall -std=gnu99 -nostdlib -c -Iinclude -I../main/include
+include ../Makefile.inc
+
+MKHDR   = ../tools/mkhdr
+
+CFLAGS += -std=gnu99 -I$(MAIN_INC_DIR)
 ARFLAGS = rcsv
-MKHDR = ../tools/mkhdr
 
 
-# ディレクトリ
-SRC_DIR = src
-INC_DIR = include
-BIN_DIR = bin
+MAIN_INC_DIR = ../main/$(INC_DIR)
 
 
-# ファイル
 LIB = $(BIN_DIR)/libonsen.a
 
 AS_SRCS := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
@@ -35,4 +32,4 @@ $(LIB) : $(AS_OBJS) $(C_OBJS)
 
 
 clean :
-	rm -f $(AS_OBJS) $(C_OBJS)
+	rm -f $(LIB) $(AS_OBJS) $(C_OBJS)

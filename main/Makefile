@@ -1,20 +1,14 @@
-# ソフトウェア
-ASFLAGS = -Wall -nostdlib
-CFLAGS  = -Wall -std=gnu99 -nostdlib -I$(INC_DIR) -I$(API_INC_DIR)
+include ../Makefile.inc
+
 MKHDR   = ../tools/mkhdr
-OBJDUMP = objdump
+
+CFLAGS += -std=gnu99 -I$(API_INC_DIR)
+
+API_INC_DIR = ../api/$(INC_DIR)
 
 
-# ディレクトリ
-SRC_DIR = src
-LDS_DIR = lds
-INC_DIR = include
-API_INC_DIR = ../api/include
-BIN_DIR = bin
-
-
-# ファイル
-ONSEN = $(BIN_DIR)/onsen.sys
+ONSEN_BIN = $(BIN_DIR)/onsen.sys
+ONSEN_ELF = $(BIN_DIR)/onsen.elf
 LDS = $(LDS_DIR)/os.lds
 MAP = onsen.map
 
@@ -28,17 +22,22 @@ C_OBJS  := $(C_SRCS:.c=.o)
 
 all :
 	make mkhdr
-	make $(ONSEN)
+	make $(ONSEN_BIN)
 
 
 mkhdr :
 	$(MKHDR) $(SRC_DIR) $(INC_DIR)
 
 
-$(ONSEN) : $(AS_OBJS) $(C_OBJS) $(LDS) Makefile
-	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) -T $(LDS) -o $@
+# objcopyで巨大なファイルができたなら.note.gnu.build-idなどの余計なセクションが
+# 残っている可能性がある。その場合はstripで余計なセクションを捨てる。
+# strip -R .note.gnu.build-id -o $(BIN_DIR)/temp.elf $(ONSEN_ELF)
+# $(OBJCOPY) -S -O binary $(BIN_DIR)/temp.elf $@
+$(ONSEN_BIN) : $(AS_OBJS) $(C_OBJS) $(LDS) Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) -T $(LDS) -o $(ONSEN_ELF)
+	$(OBJCOPY) -S -O binary $(ONSEN_ELF) $@
 	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.ls
 
 
 clean :
-	rm -f $(AS_OBJS) $(C_OBJS)
+	rm -f $(ONSEN_BIN) $(ONSEN_ELF) $(AS_OBJS) $(C_OBJS)

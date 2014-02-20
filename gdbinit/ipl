@@ -1,0 +1,5 @@
+target remote localhost:1234
+set architecture i8086
+symbol-file boot/ipl/bin/ipl.elf
+break load_fd
+c

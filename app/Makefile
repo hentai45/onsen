@@ -1,14 +1,12 @@
-CFLAGS = -Wall -nostdlib -Iinclude -Wl,-entry=OnSenMain
+include ../Makefile.inc
 
-BIN_DIR = bin
-LIB_DIR = ../api/bin
-INC_DIR = include
+LIB_DIR = ../api/$(BIN_DIR)
 
-LDS = lds/app.lds
+LDS       = lds/app.lds
 ONSEN_LIB = ../api/bin/libonsen.a
-ONSEN_H = ../api/include/onsen.h
-MSG_H = ../main/include/msg.h
-KEY_H = ../main/include/keycode.h
+ONSEN_H   = ../api/include/onsen.h
+MSG_H     = ../main/include/msg.h
+KEY_H     = ../main/include/keycode.h
 
 
 all :
@@ -23,4 +21,4 @@ $(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello/hello.c Makefile
 
 
 clean :
-	rm -f $(BIN_DIR)/hello
+	rm -f $(BIN_DIR)/hello $(BIN_DIR)/hello

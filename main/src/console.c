@@ -519,7 +519,6 @@ static void cmd_dbg(char *name)
     if (s_cmp(name, "all") == 0) {
         graphic_dbg();
         mem_dbg();
-        page_mem_dbg();
         paging_dbg();
         task_dbg();
         switch_debug_screen();
@@ -546,9 +545,6 @@ static void cmd_dbg(char *name)
         switch_debug_screen();
     } else if (s_cmp(name, "mem") == 0) {
         mem_dbg();
-        switch_debug_screen();
-    } else if (s_cmp(name, "pagemem") == 0) {
-        page_mem_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "paging") == 0) {
         paging_dbg();

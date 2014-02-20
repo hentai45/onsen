@@ -1,0 +1,5 @@
+target remote localhost:1234
+set architecture i386
+symbol-file boot/head/bin/head.elf
+break head32_main
+c

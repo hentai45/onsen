@@ -1,4 +1,4 @@
-OUTPUT_FORMAT("binary");
+/* OUTPUT_FORMAT("binary"); */
 OS_BASE = 0xC0280000;
 STACK   = 0xC0310000;
 

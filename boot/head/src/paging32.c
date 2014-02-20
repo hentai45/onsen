@@ -52,13 +52,14 @@ static PDE *create_os_pd(void)
     map_4MB_page(pd, (void *) 0, (void *) 0, flg);
     map_4MB_page(pd, (void *) SIZE_4MB, (void *) SIZE_4MB, flg);
 
-    // 最初の物理メモリ8MBを論理アドレス0xC0000000に対応させる
-    map_4MB_page(pd, (void *) 0xC0000000, (void *) 0, flg);
-    map_4MB_page(pd, (void *) 0xC0000000 + SIZE_4MB, (void *) SIZE_4MB, flg);
+    // 最初の物理メモリ8MBを論理アドレスVADDR_BASEに対応させる
+    map_4MB_page(pd, (void *) VADDR_BASE, (void *) 0, flg);
+    map_4MB_page(pd, (void *) (VADDR_BASE + SIZE_4MB), (void *) SIZE_4MB, flg);
 
-    // VRAMを論理アドレス0xC0000000 + 8MBに対応させる
+    // VRAMを論理アドレスVADDR_VRAMから8MBを対応させる
     unsigned short *vram = (unsigned short *) g_sys_info->vram;
-    map_4MB_page(pd, (void *) 0xC0000000 + (2*SIZE_4MB), vram, flg);
+    map_4MB_page(pd, (void *) VADDR_VRAM, vram, flg);
+    map_4MB_page(pd, (void *) (VADDR_VRAM + SIZE_4MB), ((char *) vram) + SIZE_4MB, flg);
 
     return pd;
 }

@@ -73,19 +73,6 @@ unsigned long *get_os_pd(void);
 
 void paging_dbg(void);
 
-
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-void page_mem_init(void);
-unsigned int total_free_page(void);
-void *page_alloc(unsigned int num_page);
-int page_free(void *maddr);
-int page_set_free(void *vp_vaddr, unsigned int num_page);
-void *get_mem_mng(void);
-
-void page_mem_dbg();
-
 #endif
 
 
@@ -205,33 +192,6 @@ static PDE *l_os_pd = (PDE *) ADDR_OS_PDT;
 static void create_os_pd(void);
 
 
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-typedef struct PAGE_MEM {
-    unsigned int maddr;
-    unsigned int num_page;
-} PAGE_MEM;
-
-
-#define PAGE_MEM_MNG_MAX   4096
-
-typedef struct PAGE_MEM_MNG {
-    /// 記憶領域の確保用。
-    /// free.maddrの昇順でなければならない
-    PAGE_MEM free[PAGE_MEM_MNG_MAX];
-
-    int num_free;       ///< 空き情報の数
-    int num_free_page;  ///< 空きページの数
-} PAGE_MEM_MNG;
-
-
-PAGE_MEM_MNG *l_mng = (PAGE_MEM_MNG *) MADDR_PAGE_MEM_MNG;
-
-
-static void *alloc_page_maddr(unsigned int num_page);
-
-
 //=============================================================================
 // 公開関数
 
@@ -263,12 +223,16 @@ void paging_dbg(void)
     DBG_STR("DEBUG PAGING");
 
     dbg_str("PD : maddr = ");
-    dbg_intxln((int) pd);
+    dbg_addr(pd);
+    dbg_newline();
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {
         if (pd[i_pd] & PTE_4MB) {
             dbg_str("    4MB Page = 0x");
             dbg_intx(i_pd * (4 * 1024 * 1024));
+            dbg_str(" (");
+            dbg_int(i_pd);
+            dbg_str(")");
             dbg_newline();
             continue;
         }
@@ -282,9 +246,9 @@ void paging_dbg(void)
         dbg_str("    PD[");
         dbg_int(i_pd);
         dbg_str("] = ");
-        dbg_intxln((int) pt);
+        dbg_addr(pt);
 
-        int num_page = 0;
+        int num_pages = 0;
 
         dbg_str("        ");
         for (int i_pt = 0; i_pt < NUM_PTE; i_pt++) {
@@ -297,222 +261,21 @@ void paging_dbg(void)
 
                 dbg_str("PT[");
                 dbg_int(i_pt);
-                dbg_str("] = ");
+                dbg_str("] = 0x");
                 dbg_intx(pte);
             }
 
             if (pte != 0) {
-                num_page++;
+                num_pages++;
             }
         }
 
         dbg_str(",   page = ");
-        dbg_intln(num_page);
+        dbg_intln(num_pages);
     }
 
     dbg_str("\n");
 }
-
-
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-void page_mem_init(void)
-{
-    l_mng->num_free = 0;
-    l_mng->num_free_page = 0;
-}
-
-
-unsigned int total_free_page(void)
-{
-    return l_mng->num_free_page;
-}
-
-
-void *alloc_os_page_vaddr(unsigned int num_page)
-{
-    return 0;
-}
-
-
-void *alloc_user_page_vaddr(unsigned int num_page)
-{
-    return 0;
-}
-
-
-/**
- * @return リニアアドレス。空き容量が足りなければ 0 が返ってくる
- */
-void *page_alloc(unsigned int num_page)
-{
-    if (num_page == 0) {
-        return 0;
-    }
-
-    return alloc_page_maddr(num_page);
-}
-
-
-int page_free(void *vp_vaddr)
-{
-    /*TODO
-    PDE *pd = get_pd();
-    void *vp_maddr = vaddr2maddr(pd, vp_vaddr);
-    */
-    void *vp_maddr = vp_vaddr;
-
-    if (vp_maddr == 0) {
-        return -1;
-    }
-
-    // 割り当てサイズの取得
-    unsigned int num_page = 1; // TODO : どうにかして得る
-
-    return page_set_free(vp_maddr, num_page);
-}
-
-
-/// OS 起動時に空いているメモリを設定するのに使う。
-/// 通常のメモリ解放は、page_free のほうを使う。
-int page_set_free(void *vp_maddr, unsigned int num_page)
-{
-    unsigned int maddr = (unsigned int) vp_maddr;
-
-    // 4KB 境界でなかったらエラー
-    if (num_page == 0 || ! IS_4KB_ALIGN(maddr)) {
-        return -1;
-    }
-
-    // ---- 管理している空きメモリとまとめれるならまとめる
-
-    int i;
-    PAGE_MEM *next = 0;
-
-    // 挿入位置または結合位置を検索
-    for (i = 0; i < l_mng->num_free; i++) {
-        if (l_mng->free[i].maddr > maddr) {
-            next = &l_mng->free[i];
-            break;
-        }
-    }
-
-    // うしろに空きがなければ末尾に追加
-    if (next == 0) {
-        if (l_mng->num_free >= PAGE_MEM_MNG_MAX) {
-            return -1;
-        }
-
-        l_mng->free[i].maddr = maddr;
-        l_mng->free[i].num_page = num_page;
-
-        l_mng->num_free++;  // 空きが１つ追加
-        l_mng->num_free_page += num_page;
-
-        return 0;
-    }
-
-    unsigned int end_maddr = maddr + (num_page * PAGE_SIZE_B);
-
-    // 前があるか？
-    if (i > 0) {
-        PAGE_MEM *prev = &l_mng->free[i - 1];
-        unsigned int prev_end_maddr = prev->maddr + prev->num_page*PAGE_SIZE_B;
-
-        // 前とまとめれるか？
-        if (prev_end_maddr == maddr) {
-            prev->num_page += num_page;
-
-            // 後ろがあるか？
-            if (next != 0) {
-
-                // 後ろとまとめれるか？
-                if (end_maddr == next->maddr) {
-                    prev->num_page += next->num_page;
-
-                    l_mng->num_free--; // 空き１つ追加されて前後２つ削除された
-                    l_mng->num_free_page += num_page;
-
-                    for (; i < l_mng->num_free; i++) {
-                        l_mng->free[i] = l_mng->free[i + 1];
-                    }
-                }
-            }
-
-            return 0;
-        }
-    }
-
-    // 前とはまとめれなかった
-
-    // 後ろがあるか？
-    if (next != 0) {
-
-        // 後ろとまとめれるか？
-        if (end_maddr == next->maddr) {
-            next->maddr = maddr;
-            next->num_page += num_page;
-
-            // 空きが１つ追加されて１つ削除されたのでl_mng->num_freeは変わらない
-            l_mng->num_free_page += num_page;
-            return 0;
-        }
-    }
-
-    // 前にも後ろにもまとめれなかった
-
-    if (l_mng->num_free < PAGE_MEM_MNG_MAX) {
-        // free[i]より後ろを、後ろへずらして、すきまをつくる
-        for (int j = l_mng->num_free; j > i; j--) {
-            l_mng->free[j] = l_mng->free[j - 1];
-        }
-
-        next->maddr = maddr;
-        next->num_page = num_page;
-
-        l_mng->num_free++;  // 空きが１つ追加
-        l_mng->num_free_page += num_page;
-        return 0;
-    }
-
-
-    // 失敗
-
-    return -1;
-}
-
-
-void *get_mem_mng(void)
-{
-    return 0;
-}
-
-
-void page_mem_dbg(void)
-{
-    char s[32];
-
-    DBG_STR("DEBUG PAGE UNIT MEMORY MANAGE");
-
-    for (int i = 0; i < l_mng->num_free; i++) {
-        PAGE_MEM *mem = &l_mng->free[i];
-
-        dbg_int(i);
-        dbg_str(" : addr = ");
-        dbg_intx(mem->maddr);
-
-        dbg_str(", page = ");
-        dbg_int(mem->num_page);
-
-        dbg_str(", size = ");
-        s_size(mem->num_page * PAGE_SIZE_B, s);
-        dbg_strln(s);
-    }
-
-    dbg_newline();
-}
-
 
 //=============================================================================
 // 非公開関数
@@ -543,44 +306,4 @@ static void create_os_pd(void)
     set_pte(pd, vaddr, mem_mng, PTE_RW | PTE_US | PTE_PRESENT);
     */
 }
-
-
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-/**
- * 空きページを割り当てる。ページは物理的に連続したメモリアドレスになっている。
- *
- * @return ページの物理アドレス。空きがなければ0。
- */
-static void *alloc_page_maddr(unsigned int num_page)
-{
-    for (unsigned int i = 0; i < l_mng->num_free; i++) {
-        if (l_mng->free[i].num_page >= num_page) {
-            // 空きが見つかった
-
-            PAGE_MEM *mem = &l_mng->free[i];
-
-            unsigned int maddr = mem->maddr;
-
-            // 空きアドレスを減らす
-            mem->maddr += (num_page * PAGE_SIZE_B);
-            mem->num_page -= num_page;
-            l_mng->num_free_page -= num_page;
-
-            if (mem->num_page <= 0) {
-                // 空いた隙間をずらす
-                l_mng->num_free--;
-                for ( ; i < l_mng->num_free; i++) {
-                    l_mng->free[i] = l_mng->free[i + 1];
-                }
-            }
-
-            return (void *) maddr;
-        }
-    }
-
-    return 0;
-}
-
 

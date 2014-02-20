@@ -6,22 +6,29 @@
 //-----------------------------------------------------------------------------
 // メモリマップ
 
+#define SZ4MB  4 * 1024 * 1024  /* 4MB のサイズ */
 
-#define ADDR_BASE        (0xC0000000)  /* ページングにより論理アドレスが
-                                          こいつベースになる */
+#define VADDR_BASE        (0xC0000000)  /* 論理アドレスのベースアドレス */
 
-#define ADDR_SYS_INFO    (0x00000FF0)  /* システム情報が格納されているアドレス */
-#define ADDR_FREE1_START (0x00001000)
-#define ADDR_FREE1_SIZE  (0x0009E000)
-#define ADDR_DISK_IMG    (0x00100000)
-#define ADDR_IDT         (0x0026F800)
-#define LIMIT_IDT        (0x000007FF)
-#define ADDR_GDT         (0x00270000)
-#define LIMIT_GDT        (0x0000FFFF)
-#define ADDR_OS          (0x00280000)
-#define ADDR_OS_PDT      (0x00400000)
-#define MADDR_PAGE_MEM_MNG  (ADDR_OS_PDT + 0x1000)
-#define ADDR_FREE2_START (0x00402000)
+#define ADDR_SYS_INFO     (0x00000A00)  /* システム情報が格納されているアドレス */
+/* FREE START             (0x00001000) */
+#define ADDR_OS_PDT       (0x00001000)
+#define VADDR_MAP_START   (0x00010000)  /* 物理アドレスを管理するためのビットマップ */
+#define VADDR_MAP_END     (0x00030000)
+#define VADDR_BMEM_MNG    (VADDR_BASE + VADDR_MAP_END)
+#define VADDR_VMEM_MNG    (VADDR_BMEM_MNG + 0x10000)
+/* FREE END               (0x0009FFFF) */
+#define ADDR_DISK_IMG     (0x00100000)
+#define ADDR_IDT          (0x0026F800)
+#define LIMIT_IDT         (0x000007FF)
+#define ADDR_GDT          (0x00270000)
+#define LIMIT_GDT         (0x0000FFFF)
+#define ADDR_OS           (0x00280000)  /* 最大 1,152 KB */
+#define MADDR_FREE_START  (0x00400000)
+#define VADDR_VRAM        (0xE0000000)
+
+#define VADDR_MEM_START   (VADDR_BASE + SZ4MB * 2)
+#define VADDR_MEM_END     (VADDR_VRAM)
 
 
 //-----------------------------------------------------------------------------
@@ -33,6 +40,14 @@ void *mem_alloc(unsigned int size_B);
 int   mem_free(void *vp_vaddr);
 
 void mem_dbg(void);
+
+
+//-----------------------------------------------------------------------------
+// ページ単位メモリ管理
+
+void *mem_alloc_page(unsigned int num_pages);
+int page_free(void *maddr);
+
 
 //-----------------------------------------------------------------------------
 // メモリ容量確認

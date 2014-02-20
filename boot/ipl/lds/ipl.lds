@@ -1,4 +1,4 @@
-OUTPUT_FORMAT("binary");
+/* OUTPUT_FORMAT("binary"); */
 IPLBASE = 0x7C00;
 
 SECTIONS

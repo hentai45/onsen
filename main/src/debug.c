@@ -71,10 +71,11 @@ void dbg_newline(void);
 void dbg_char(char ch);
 void dbg_str(const char *s);
 void dbg_strln(const char *s);
+void dbg_addr(void *p);
 void dbg_int(int n);
 void dbg_intln(int n);
-void dbg_intx(int n);
-void dbg_intxln(int n);
+void dbg_intx(unsigned int n);
+void dbg_intxln(unsigned int n);
 void dbg_reg(const REGISTER *r);
 void dbg_seg(void);
 
@@ -194,6 +195,13 @@ void dbg_strln(const char *s)
 }
 
 
+void dbg_addr(void *p)
+{
+    dbg_str("0x");
+    dbg_intx((unsigned int) p);
+}
+
+
 void dbg_int(int n)
 {
     char s[32];
@@ -209,7 +217,7 @@ void dbg_intln(int n)
 }
 
 
-void dbg_intx(int n)
+void dbg_intx(unsigned int n)
 {
     char s[9];
     s_itox(n, s, 8);
@@ -217,7 +225,7 @@ void dbg_intx(int n)
 }
 
 
-void dbg_intxln(int n)
+void dbg_intxln(unsigned int n)
 {
     dbg_intx(n);
     dbg_newline();
