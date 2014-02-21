@@ -59,8 +59,10 @@ void dbg_strln(const char *s);
 void dbg_addr(void *p);
 void dbg_int(int n);
 void dbg_intln(int n);
+void dbg_uint(unsigned int n);
 void dbg_intx(unsigned int n);
 void dbg_intxln(unsigned int n);
+void dbg_bits(unsigned int n);
 void dbg_reg(const REGISTER *r);
 void dbg_seg(void);
 

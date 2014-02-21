@@ -15,5 +15,6 @@ void timer_start(int tid, unsigned int timeout_ms);
 int  timer_stop(int tid);
 unsigned int timer_get_count_10ms(void);
 void int20_handler(int *esp);
+void timer_dbg(void);
 
 #endif

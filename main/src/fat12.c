@@ -56,13 +56,13 @@ void fat12_init(void)
 
 FILEINFO *fat12_get_file_info(void)
 {
-    return (FILEINFO *) (ADDR_DISK_IMG + 0x2600);
+    return (FILEINFO *) (VADDR_DISK_IMG + 0x2600);
 }
 
 
 void fat12_load_file(int clustno, int size, char *buf)
 {
-    unsigned char *img = (unsigned char *) (ADDR_DISK_IMG + 0x3E00);
+    unsigned char *img = (unsigned char *) (VADDR_DISK_IMG + 0x3E00);
 
     for (;;) {
         if (size <= 512) {
@@ -140,7 +140,7 @@ int fat12_search_file(FILEINFO *fi, char *fname)
 /// FAT12のFAT領域を読み込む
 static void fat12_read_fat(int *fat)
 {
-    unsigned char *img = (unsigned char *) (ADDR_DISK_IMG + 0x0200);
+    unsigned char *img = (unsigned char *) (VADDR_DISK_IMG + 0x0200);
 
     for (int i = 0, j = 0; i < 2880; i += 2, j += 3) {
         fat[i + 0] = (img[j + 0]      | img[j + 1] << 8) & 0xFFF;

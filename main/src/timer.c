@@ -23,6 +23,7 @@ void timer_start(int tid, unsigned int timeout_ms);
 int  timer_stop(int tid);
 unsigned int timer_get_count_10ms(void);
 void int20_handler(int *esp);
+void timer_dbg(void);
 
 #endif
 
@@ -31,6 +32,7 @@ void int20_handler(int *esp);
 // 非公開ヘッダ
 
 #include "asmfunc.h"
+#include "debug.h"
 #include "intr.h"
 #include "msg_q.h"
 #include "task.h"
@@ -75,8 +77,7 @@ static int ts_tid;       ///< タスク切り替え用タイマの ID
 inline __attribute__ ((always_inline))
 static TIMER *tid2timer(int tid)
 {
-    // 番兵(0)も除く
-    if (tid <= 0 || TIMER_MAX <= tid) {
+    if (tid < 0 || TIMER_MAX <= tid) {
         return 0;
     }
 
@@ -123,7 +124,6 @@ void timer_init(void)
 
     ts_tid = timer_new();
     ts_timer = tid2timer(ts_tid);
-    ts_timer->flags = TIMER_FLG_ALLOC;
 }
 
 
@@ -311,6 +311,66 @@ void int20_handler(int *esp)
     if (ts == 1) {
         task_switch(ts_tid);
     }
+}
+
+
+static void print_timer(TIMER *t);
+
+void timer_dbg(void)
+{
+    TIMER *t;
+
+    DBG_STR("TIMER DEBUG");
+
+    dbg_str("count_10ms = " );
+    dbg_uint(l_mng.count_10ms);
+    dbg_newline();
+    dbg_newline();
+
+    dbg_strln("ALL TIMERS:");
+    for (int i = 0; i < TIMER_MAX; i++) {
+        t = &l_mng.timers[i];
+
+        if (t->flags != TIMER_FLG_FREE) {
+            print_timer(t);
+        }
+    }
+    dbg_newline();
+
+    dbg_strln("USED TIMERS:");
+    for (t = l_mng.head_use; t; t = t->next_use) {
+        print_timer(t);
+    }
+    dbg_newline();
+}
+
+static void print_timer(TIMER *t)
+{
+    dbg_str("tid = ");
+    dbg_int(t->tid);
+
+    dbg_str(", pid = ");
+    dbg_int(t->tid);
+
+    dbg_str(", timeout_10ms = ");
+    dbg_uint(t->timeout_10ms);
+
+    dbg_str(", status = ");
+    switch (t->flags) {
+    case TIMER_FLG_FREE:
+        dbg_str("free");
+        break;
+
+    case TIMER_FLG_ALLOC:
+        dbg_str("alloc");
+        break;
+
+    case TIMER_FLG_USING:
+        dbg_str("using");
+        break;
+    }
+
+    dbg_newline();
 }
 
 

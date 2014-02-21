@@ -54,7 +54,7 @@ typedef struct GATE_DESC {
 } __attribute__ ((__packed__)) GATE_DESC;
 
 
-static GATE_DESC *idt = (GATE_DESC *) ADDR_IDT;
+static GATE_DESC *idt = (GATE_DESC *) VADDR_IDT;
 
 
 typedef struct {
@@ -65,7 +65,7 @@ typedef struct {
 
 inline static void load_idtr(IDTR *idtr)
 {
-    __asm__ volatile("lidt (%0)" : : "q" (idtr));
+    __asm__ __volatile__ ("lidt (%0)" : : "q" (idtr));
 }
 
 
@@ -81,7 +81,7 @@ void idt_init(void)
 
     IDTR idtr;
     idtr.limit = LIMIT_IDT;
-    idtr.base = ADDR_IDT;
+    idtr.base = VADDR_IDT;
     load_idtr(&idtr);
 
     SET_INTR_GATE(00);

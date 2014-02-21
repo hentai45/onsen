@@ -23,7 +23,7 @@ static void run_onsensys(void);
  */
 void head32_main(void)
 {
-    g_sys_info->mem_total_B = memtest(ADDR_MEMTEST_START, ADDR_MEMTEST_END);
+    g_sys_info->end_free_maddr = memtest(MADDR_MEMTEST_START, MADDR_MEMTEST_END);
     move_disk_data();  /* ディスクデータをキャッシュへ転送 */
     move_onsensys();   /* onsen.sysを転送 */
     paging_init();     /* 仮のページングを設定 */

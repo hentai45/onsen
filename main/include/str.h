@@ -14,6 +14,7 @@ void s_to_upper(char *s);
 
 void s_itox(int n, char *s, int digit);
 void s_itoa(int n, char *s);
+void s_uitoa(unsigned int n, char *s);
 int  s_atoi(const char *s);
 void s_size(unsigned int size_B, char *s);
 

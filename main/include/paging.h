@@ -17,6 +17,8 @@
 
 
 void paging_init(void);
+void paging_map(void *vp_vaddr, void *vp_maddr);
+void *paging_get_maddr(void *vp_vaddr);
 unsigned long *get_os_pd(void);
 
 void paging_dbg(void);

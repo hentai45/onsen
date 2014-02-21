@@ -28,7 +28,7 @@
 #include "timer.h"
 
 
-SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) ADDR_SYS_INFO;
+SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
 
 static int screen_pid;
 
@@ -59,6 +59,7 @@ void OnSenMain(void)
 static void onsen_init(void)
 {
     mem_init();     // メモリ初期化
+    paging_init();
     fat12_init();
     gdt_init();
     idt_init();

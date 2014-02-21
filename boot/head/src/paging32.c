@@ -39,31 +39,35 @@ void paging_init(void)
 
 #define SIZE_4MB (4 * 1024 * 1024)
 
-static void map_4MB_page(PDE *pd, void *vp_vaddr, void *vp_maddr, int flg);
 static void zero_clear_pde(PDE *pd);
+static void map_4MB_page(PDE *pd, void *vp_vaddr, void *vp_maddr);
+static void map_self(PDE *pd);
 
 static PDE *create_os_pd(void)
 {
-    PDE *pd = (PDE *) ADDR_OS_PDT;
+    PDE *pd = (PDE *) MADDR_OS_PDT;
     zero_clear_pde(pd);
 
     // 最初の物理メモリ8MBを論理アドレスにそのまま対応させる
-    int flg = PTE_4MB | PTE_RW | PTE_US | PTE_PRESENT;
-    map_4MB_page(pd, (void *) 0, (void *) 0, flg);
-    map_4MB_page(pd, (void *) SIZE_4MB, (void *) SIZE_4MB, flg);
+    map_4MB_page(pd, (void *) 0, (void *) 0);
+    //map_4MB_page(pd, (void *) SIZE_4MB, (void *) SIZE_4MB);
 
     // 最初の物理メモリ8MBを論理アドレスVADDR_BASEに対応させる
-    map_4MB_page(pd, (void *) VADDR_BASE, (void *) 0, flg);
-    map_4MB_page(pd, (void *) (VADDR_BASE + SIZE_4MB), (void *) SIZE_4MB, flg);
+    map_4MB_page(pd, (void *) VADDR_BASE, (void *) 0);
+    //map_4MB_page(pd, (void *) (VADDR_BASE + SIZE_4MB), (void *) SIZE_4MB);
 
     // VRAMを論理アドレスVADDR_VRAMから8MBを対応させる
     unsigned short *vram = (unsigned short *) g_sys_info->vram;
-    map_4MB_page(pd, (void *) VADDR_VRAM, vram, flg);
-    map_4MB_page(pd, (void *) (VADDR_VRAM + SIZE_4MB), ((char *) vram) + SIZE_4MB, flg);
+    map_4MB_page(pd, (void *) VADDR_VRAM, vram);
+    map_4MB_page(pd, (void *) (VADDR_VRAM + SIZE_4MB), ((char *) vram) + SIZE_4MB);
+
+    map_self(pd);
 
     return pd;
 }
 
+
+#define FLG_4MB (PTE_4MB | PTE_RW | PTE_US | PTE_PRESENT)
 
 /**
  * 4MBページの物理アドレスをリニアアドレスに対応づける。
@@ -71,10 +75,18 @@ static PDE *create_os_pd(void)
  * @vp_vaddr 論理アドレス
  * @vp_maddr 物理アドレス
  */
-static void map_4MB_page(PDE *pd, void *vp_vaddr, void *vp_maddr, int flg)
+static void map_4MB_page(PDE *pd, void *vp_vaddr, void *vp_maddr)
 {
     int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
-    pd[i_pd] = ((int) vp_maddr & ~0xFFF) | flg;
+    unsigned long maddr = (unsigned long) vp_maddr;
+    pd[i_pd] = (maddr & ~0xFFF) | FLG_4MB;
+}
+
+
+static void map_self(PDE *pd)
+{
+    int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
+    pd[i_pd] = ((unsigned long) pd & ~0xFFF) | (PTE_RW | PTE_US | PTE_PRESENT);
 }
 
 

@@ -73,7 +73,7 @@ typedef struct SEG_DESC {
 } __attribute__ ((__packed__)) SEG_DESC;
 
 
-static SEG_DESC *gdt = (SEG_DESC *) ADDR_GDT;
+static SEG_DESC *gdt = (SEG_DESC *) VADDR_GDT;
 
 
 typedef struct {
@@ -105,7 +105,7 @@ void gdt_init(void)
 
     GDTR gdtr;
     gdtr.limit = LIMIT_GDT;
-    gdtr.base = ADDR_GDT;
+    gdtr.base = VADDR_GDT;
     load_gdtr(&gdtr);
 
     reload_segments(KERNEL_CS, KERNEL_DS);

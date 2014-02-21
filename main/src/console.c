@@ -492,9 +492,12 @@ static void cmd_mem(void)
     put_str("total : ");
     put_int(mem_total_B() / (1024 * 1024));
     put_str(" MB\n");
-    put_str("free  : ");
-    put_int(mem_total_free() / 1024);
-    put_str(" KB\n\n");
+    put_str("mfree  : ");
+    put_int(mem_total_mfree_B() / (1024));
+    put_str(" KB\n");
+    put_str("vfree  : ");
+    put_int(mem_total_vfree_B() / (1024 * 1024));
+    put_str(" MB\n\n");
 }
 
 
@@ -521,6 +524,7 @@ static void cmd_dbg(char *name)
         mem_dbg();
         paging_dbg();
         task_dbg();
+        timer_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "sysinfo") == 0) {
         dbg_str("vram = ");
@@ -535,13 +539,16 @@ static void cmd_dbg(char *name)
         dbg_int(g_sys_info->h);
         dbg_newline();
 
-        dbg_str("mem_total_B = ");
-        dbg_int(g_sys_info->mem_total_B);
+        dbg_str("end_free_maddr = ");
+        dbg_int(g_sys_info->end_free_maddr);
         dbg_newline();
 
         switch_debug_screen();
     } else if (s_cmp(name, "task") == 0) {
         task_dbg();
+        switch_debug_screen();
+    } else if (s_cmp(name, "timer") == 0) {
+        timer_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "mem") == 0) {
         mem_dbg();

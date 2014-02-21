@@ -12,53 +12,51 @@
 //-----------------------------------------------------------------------------
 // メモリマップ
 
-#define SZ4MB  4 * 1024 * 1024  /* 4MB のサイズ */
+#define SZ4MB  4 * 1024 * 1024  // 4MB のサイズ
 
-#define VADDR_BASE        (0xC0000000)  /* 論理アドレスのベースアドレス */
+#define VADDR_BASE          (0xC0000000)  // 論理アドレスのベースアドレス
 
-#define ADDR_SYS_INFO     (0x00000A00)  /* システム情報が格納されているアドレス */
-/* FREE START             (0x00001000) */
-#define ADDR_OS_PDT       (0x00001000)
-#define VADDR_MAP_START   (0x00010000)  /* 物理アドレスを管理するためのビットマップ */
-#define VADDR_MAP_END     (0x00030000)
-#define VADDR_BMEM_MNG    (VADDR_BASE + VADDR_MAP_END)
-#define VADDR_VMEM_MNG    (VADDR_BMEM_MNG + 0x10000)
-/* FREE END               (0x0009FFFF) */
-#define ADDR_DISK_IMG     (0x00100000)
-#define ADDR_IDT          (0x0026F800)
-#define LIMIT_IDT         (0x000007FF)
-#define ADDR_GDT          (0x00270000)
-#define LIMIT_GDT         (0x0000FFFF)
-#define ADDR_OS           (0x00280000)  /* 最大 1,152 KB */
-#define MADDR_FREE_START  (0x00400000)
-#define VADDR_VRAM        (0xE0000000)
+#define VADDR_SYS_INFO      (0xC0000A00)  // システム情報が格納されているアドレス
+/* FREE START               (0x00001000) */
+/* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
+#define MADDR_OS_PDT        (0x00001000)  // 4KB(0x1000)境界であること
+#define VADDR_BITMAP_START  (0xC0010000)  // 物理アドレス管理用ビットマップ
+#define VADDR_BITMAP_END    (0xC0030000)
+#define VADDR_BMEM_MNG      (VADDR_BITMAP_END)
+#define VADDR_VMEM_MNG      (VADDR_BMEM_MNG + 0x10000)
+/* FREE END                 (0x0009FFFF) */
+#define VADDR_DISK_IMG      (0xC0100000)
+#define VADDR_IDT           (0xC026F800)
+#define LIMIT_IDT           (0x000007FF)
+#define VADDR_GDT           (0xC0270000)
+#define LIMIT_GDT           (0x0000FFFF)
+#define VADDR_OS            (0xC0280000)  // 最大 1,152 KB
+#define VADDR_MEM_START     (0xC0400000)
+#define VADDR_VRAM          (0xE0000000)
+#define VADDR_MEM_END       (VADDR_VRAM)
+#define VADDR_PD_SELF       (0xFFFFF000)
 
-#define VADDR_MEM_START   (VADDR_BASE + SZ4MB * 2)
-#define VADDR_MEM_END     (VADDR_VRAM)
+/* 0x4000境界であること。bitmapの初期化がそのことを前提に書かれているから */
+#define MADDR_FREE_START    (0x00400000)
+
 
 
 //-----------------------------------------------------------------------------
-// バイト単位メモリ管理
+// メモリ管理
 
 void  mem_init(void);
-unsigned int mem_total_free(void);
 void *mem_alloc(unsigned int size_B);
+void *mem_alloc_user(void *vp_vaddr, int size_B);
+void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
-
-void mem_dbg(void);
-
-
-//-----------------------------------------------------------------------------
-// ページ単位メモリ管理
-
-void *mem_alloc_page(unsigned int num_pages);
-int page_free(void *maddr);
-
+void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
 // メモリ容量確認
 
 unsigned int mem_total_B(void);
+unsigned int mem_total_mfree_B(void);
+unsigned int mem_total_vfree_B(void);
 
 #endif
 
@@ -104,9 +102,9 @@ static void *get_free_addr(MEM_MNG *mng, unsigned int size);
 // バイト単位メモリ管理
 
 #define BYTE_MEM_MNG_MAX  (4096)
-#define MEM_INFO_B        (4)                /* メモリの先頭に置く管理情報のサイズ */
-#define BYTE_MEM_BYTES    (1 * 1024 * 1024)  /* バイト管理する容量 */
-#define MM_SIG            (0xBAD41000)       /* メモリの先頭に置くシグネチャ */
+#define MEM_INFO_B        (4)                // メモリの先頭に置く管理情報のサイズ
+#define BYTE_MEM_BYTES    (1 * 1024 * 1024)  // バイト管理する容量
+#define MM_SIG            (0xBAD41000)       // メモリの先頭に置くシグネチャ
 
 static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
@@ -117,52 +115,121 @@ static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
 #define PAGE_MEM_MNG_MAX   (4096)
 
-static MEM_MNG *l_mng = (MEM_MNG *) VADDR_VMEM_MNG;
+/**
+ * 物理アドレスからビットマップのインデックスに変換
+ * 4096バイト(0x1000)単位で管理しているので12ビット右にシフト
+ * さらに、4バイトで32管理できるので5ビット右にシフト
+ * 合計17ビット右にシフトする。
+ */
+#define MADDR2IDX(maddr)  (((unsigned long) maddr) >> 17)
+
+// 物理アドレスからビットマップのビット位置に変換
+#define MADDR2BIT(maddr)  (1 << (31 - ((((unsigned long) maddr) >> 12) & 0x1F)))
+
+// インデックスとビット番号から物理アドレスに変換
+#define IDX2MADDR(idx, bits)  ((void *) (((idx) << 17) | ((31 - (bits)) << 12)))
+
+// 指定した物理アドレスが空いているなら0以外
+#define IS_FREE_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] & MADDR2BIT(maddr))
+
+// 指定した物理アドレスを空きにする
+#define SET_FREE_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] |= MADDR2BIT(maddr))
+
+// 指定した物理アドレスを使用中にする
+#define SET_USED_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] &= ~MADDR2BIT(maddr))
+
+#define BITMAP_ST MADDR2IDX(MADDR_FREE_START)
+
+static MEM_MNG *l_mng_v = (MEM_MNG *) VADDR_VMEM_MNG;
 
 static void *get_free_maddr(unsigned int num_pages);
 
+// 物理アドレスを管理するためのビットマップ。使用中なら0、空きなら1
+static unsigned long *l_bitmap = (unsigned long *) VADDR_BITMAP_START;
+
+// ビットマップの最後のインデックス
+static int l_bitmap_end;
+
+static unsigned long l_mfree_B;
+
+
+static void *mem_alloc_page(unsigned int num_pages);
+static int page_free(void *maddr);
+
 
 //=============================================================================
-// 公開関数
+// 関数
 
 //-----------------------------------------------------------------------------
-// バイト単位メモリ管理
+// メモリ管理
 
+static void init_mpage_mem(void);
+static void init_vpage_mem(void);
+static void init_byte_mem(void);
+
+/**
+ * メモリ管理の初期化
+ */
 void mem_init(void)
 {
-    int num_pages;
-    unsigned long size_B;
-    void *addr;
+    init_mpage_mem();
+    init_vpage_mem();
+    init_byte_mem();
+}
 
-    init_mem_mng(l_mng, PAGE_MEM_MNG_MAX, PAGE_SIZE_B, 0);
+/**
+ * ページ単位メモリ管理（物理アドレス）の初期化
+ */
+static void init_mpage_mem(void)
+{
+    /* ビットマップを使用中で初期化 */
+    unsigned long size_B = VADDR_BITMAP_END - VADDR_BITMAP_START;
+    memset(l_bitmap, 0, size_B);
 
-    // ---- 空きメモリをページ単位メモリ管理に登録
+    /* 空き領域を設定 */
+    l_bitmap_end = MADDR2IDX(g_sys_info->end_free_maddr) + 1;
+    size_B = (unsigned long) &l_bitmap[l_bitmap_end - 1] - (unsigned long) &l_bitmap[BITMAP_ST];
+    memset(&l_bitmap[BITMAP_ST], 0xFF, size_B);
 
-    size_B = g_sys_info->mem_total_B - MADDR_FREE_START;
-    num_pages = BYTE_TO_PAGE(size_B);
-    mem_set_free(l_mng, (void *) MADDR_FREE_START, num_pages);
+    l_mfree_B = g_sys_info->end_free_maddr - MADDR_FREE_START;
+}
 
 
-    // ---- バイト単位メモリ管理の初期化
+/**
+ * ページ単位メモリ管理（論理アドレス）の初期化
+ */
+static void init_vpage_mem(void)
+{
+    init_mem_mng(l_mng_v, PAGE_MEM_MNG_MAX, PAGE_SIZE_B, 0);
 
+    unsigned long size_B = VADDR_MEM_END - VADDR_MEM_START;
+    int num_pages = BYTE_TO_PAGE(size_B);
+    mem_set_free(l_mng_v, (void *) VADDR_MEM_START, num_pages);
+}
+
+/**
+ * バイト単位メモリ管理の初期化
+ */
+static void init_byte_mem(void)
+{
     init_mem_mng(l_mng_b, BYTE_MEM_MNG_MAX, 1, MEM_INFO_B);
 
-    // バイト単位でメモリ管理する
-    size_B = BYTE_MEM_BYTES;
-    num_pages = BYTE_TO_PAGE(size_B);
-    addr = mem_alloc_page(num_pages);
+    unsigned long size_B = BYTE_MEM_BYTES;
+    int num_pages = BYTE_TO_PAGE(size_B);
+    void *addr = mem_alloc_page(num_pages);
     mem_set_free(l_mng_b, addr, size_B);
 }
 
-static unsigned int total_free_pages(void);
-
-/// 空き容量を取得
-unsigned int mem_total_free(void)
+static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size_b)
 {
-    return total_free_pages() * PAGE_SIZE_B;
+    mng->free = (MEMORY *) (mng + 1);
+    mng->max_free = max_free;
+    mng->num_free = 0;
+    mng->total_free = 0;
+    mng->unit = unit;
+    mng->info_size_b = info_size_b;
 }
 
-static void *mem_alloc_byte(unsigned int size_B);
 
 /**
  * @note 割り当てられたメモリの前に割り当てサイズが置かれる。
@@ -184,6 +251,7 @@ void *mem_alloc(unsigned int size_B)
     return get_free_addr(l_mng_b, size_B);  // FIXME: 0ならmem_alloc_pageを使う
 }
 
+
 int mem_free(void *vp_vaddr)
 {
     if (vp_vaddr == 0) {
@@ -196,6 +264,7 @@ int mem_free(void *vp_vaddr)
         // アドレスが4KB境界なのでページ単位メモリ管理のほうのメモリ。
         // バイト単位メモリ管理ではアドレスの前にサイズを置くので
         // 4KB境界になることはない。
+        // FIXME: 上に書いたことはウソ。信じるな
         return page_free(vp_vaddr);
     }
 
@@ -215,13 +284,37 @@ int mem_free(void *vp_vaddr)
 }
 
 
+/**
+ * 1ページ分の物理アドレスを割り当てる
+ */
+void *mem_alloc_maddr(void)
+{
+    int i, j;
+    void *maddr;
+    for (i = BITMAP_ST; i < l_bitmap_end; i++) {
+        if (l_bitmap[i] != 0) {
+            for (j = 31; j >= 0; j--) {
+                if (l_bitmap[i] & (1 << j)) {
+                    maddr = IDX2MADDR(i, j);
+                    SET_USED_MADDR(maddr);
+                    l_mfree_B -= PAGE_SIZE_B;
+                    return maddr;
+                }
+            }
+        }
+    }
+
+    /* 物理アドレスが足りない */
+    return 0;
+}
+
 void mem_dbg(void)
 {
     DBG_STR("DEBUG BYTE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_b);
 
     DBG_STR("DEBUG PAGE UNIT MEMORY MANAGE");
-    dbg_mem_mng(l_mng);
+    dbg_mem_mng(l_mng_v);
 }
 
 
@@ -229,18 +322,17 @@ void mem_dbg(void)
 // ページ単位メモリ管理
 
 
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages);
 
-void *alloc_os_page_vaddr(unsigned int num_pages)
+void *mem_alloc_user(void *vp_vaddr, int size_B)
 {
-    // TODO
-    return 0;
-}
+    int num_pages = BYTE_TO_PAGE(size_B);
 
-
-void *alloc_user_page_vaddr(unsigned int num_pages)
-{
-    // TODO
-    return 0;
+    if (mem_alloc_page_sub(vp_vaddr, num_pages) < 0) {
+        return 0;
+    } else {
+        return vp_vaddr;
+    }
 }
 
 
@@ -249,29 +341,57 @@ void *alloc_user_page_vaddr(unsigned int num_pages)
  */
 void *mem_alloc_page(unsigned int num_pages)
 {
-    void *maddr;
-
     if (num_pages == 0) {
         return 0;
     }
 
-    maddr = get_free_addr(l_mng, num_pages);
+    void *vaddr = get_free_addr(l_mng_v, num_pages);
 
-    if (maddr == 0) {
+    /* 論理アドレスが足りない */
+    if (vaddr == 0) {
         return 0;
     }
 
-    return maddr;
+    if (mem_alloc_page_sub(vaddr, num_pages) < 0) {
+        return 0;
+    } else {
+        return vaddr;
+    }
+}
+
+
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages)
+{
+    unsigned long vaddr = (unsigned long) vp_vaddr;
+    int i, j;
+    void *vp_maddr;
+    for (i = BITMAP_ST; i < l_bitmap_end; i++) {
+        if (l_bitmap[i] != 0) {
+            for (j = 31; j >= 0; j--) {
+                if (l_bitmap[i] & (1 << j)) {
+                    vp_maddr = IDX2MADDR(i, j);
+                    SET_USED_MADDR(vp_maddr);
+                    l_mfree_B -= PAGE_SIZE_B;
+
+                    paging_map(vaddr, vp_maddr);
+                    vaddr += PAGE_SIZE_B;
+
+                    if (--num_pages == 0) {
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+
+    /* 物理アドレスが足りない */
+    return -1;
 }
 
 
 int page_free(void *vp_vaddr)
 {
-    /*TODO
-    PDE *pd = get_pd();
-    void *vp_maddr = vaddr2maddr(pd, vp_vaddr);
-    */
-    void *vp_maddr = vp_vaddr;
+    void *vp_maddr = paging_get_maddr(vp_vaddr);
 
     if (vp_maddr == 0) {
         return -1;
@@ -280,29 +400,9 @@ int page_free(void *vp_vaddr)
     // 割り当てサイズの取得
     unsigned int num_pages = 1; // TODO : どうにかして得る
 
-    return mem_set_free(l_mng, vp_maddr, num_pages);
-}
+    SET_FREE_MADDR(vp_maddr);
 
-//-----------------------------------------------------------------------------
-// メモリ容量確認
-
-unsigned int mem_total_B(void)
-{
-    return g_sys_info->mem_total_B;
-}
-
-
-//=============================================================================
-// 非公開関数
-
-static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size_b)
-{
-    mng->free = (MEMORY *) (mng + 1);
-    mng->max_free = max_free;
-    mng->num_free = 0;
-    mng->total_free = 0;
-    mng->unit = unit;
-    mng->info_size_b = info_size_b;
+    return mem_set_free(l_mng_v, vp_maddr, num_pages);
 }
 
 
@@ -318,7 +418,8 @@ static void dbg_mem_mng(MEM_MNG *mng)
         dbg_addr(mem->addr);
 
         dbg_str(", size = ");
-        dbg_int(mem->size);
+        dbg_int((mem->size * mng->unit) / (1024));
+        dbg_str("KB");
 
         dbg_newline();
     }
@@ -406,7 +507,7 @@ static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
             next->size += size;
 
             // 空きが１つ追加されて１つ削除されたのでmng->num_freeは変わらない
-            l_mng->total_free += size;
+            mng->total_free += size;
             return 0;
         }
     }
@@ -476,12 +577,24 @@ static void *get_free_addr(MEM_MNG *mng, unsigned int size)
     return 0;
 }
 
+
 //-----------------------------------------------------------------------------
-// ページ単位メモリ管理
+// メモリ容量確認
 
-
-static unsigned int total_free_pages(void)
+unsigned int mem_total_B(void)
 {
-    return l_mng->total_free;
+    return g_sys_info->end_free_maddr;
+}
+
+
+unsigned int mem_total_mfree_B(void)
+{
+    return l_mfree_B;
+}
+
+/// 空き容量を取得
+unsigned int mem_total_vfree_B(void)
+{
+    return l_mng_v->total_free * l_mng_v->unit;
 }
 

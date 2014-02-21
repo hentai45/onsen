@@ -74,8 +74,10 @@ void dbg_strln(const char *s);
 void dbg_addr(void *p);
 void dbg_int(int n);
 void dbg_intln(int n);
+void dbg_uint(unsigned int n);
 void dbg_intx(unsigned int n);
 void dbg_intxln(unsigned int n);
+void dbg_bits(unsigned int n);
 void dbg_reg(const REGISTER *r);
 void dbg_seg(void);
 
@@ -229,6 +231,28 @@ void dbg_intxln(unsigned int n)
 {
     dbg_intx(n);
     dbg_newline();
+}
+
+
+void dbg_uint(unsigned int n)
+{
+    char s[32];
+    s_uitoa(n, s);
+    dbg_str(s);
+}
+
+
+void dbg_bits(unsigned int n)
+{
+    unsigned int i;
+
+    for (i = 0x80000000; i > 0; i >>= 1) {
+        if (n & i) {
+            dbg_int(1);
+        } else {
+            dbg_int(0);
+        }
+    }
 }
 
 

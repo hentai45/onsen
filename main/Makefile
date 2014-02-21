@@ -2,7 +2,7 @@ include ../Makefile.inc
 
 MKHDR   = ../tools/mkhdr
 
-CFLAGS += -std=gnu99 -I$(API_INC_DIR)
+CFLAGS += -I$(API_INC_DIR)
 
 API_INC_DIR = ../api/$(INC_DIR)
 

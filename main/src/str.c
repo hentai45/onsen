@@ -12,6 +12,7 @@ void s_to_upper(char *s);
 
 void s_itox(int n, char *s, int digit);
 void s_itoa(int n, char *s);
+void s_uitoa(unsigned int n, char *s);
 int  s_atoi(const char *s);
 void s_size(unsigned int size_B, char *s);
 
@@ -125,6 +126,22 @@ void s_itoa(int n, char *s)
 
     if (sign < 0)
         s[i++] = '-';
+
+    s[i] = '\0';
+
+    s_reverse(s);
+}
+
+
+void s_uitoa(unsigned int n, char *s)
+{
+    int i;
+
+    i = 0;
+
+    do {
+        s[i++] = n % 10 + '0';
+    } while ((n /= 10) > 0);
 
     s[i] = '\0';
 

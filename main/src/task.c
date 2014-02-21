@@ -205,12 +205,13 @@ void task_init(void)
 
 int task_run_app(void *p, unsigned int size, const char *name)
 {
-    char *p_code = (char *) p;
+    unsigned long p_addr = (unsigned long) p;
+    //char *p_code = (char *) p;
 
-    int stack_and_data_size  = *((int *) (p_code + 0x0000));
-    int esp                  = *((int *) (p_code + 0x000C));
-    int data_size            = *((int *) (p_code + 0x0010));
-    int data_addr            = *((int *) (p_code + 0x0014));
+    int stack_and_data_size  = *((int *) (p_addr + 0x0000));
+    int esp                  = *((int *) (p_addr + 0x000C));
+    int data_size            = *((int *) (p_addr + 0x0010));
+    int data_addr            = *((int *) (p_addr + 0x0014));
 
     char app_name[9];
     memcpy(app_name, name, 8);
@@ -218,9 +219,13 @@ int task_run_app(void *p, unsigned int size, const char *name)
 
     int pid = task_new(app_name);
 
-    memcpy(0x350000, p_code, 0x400);
+    //memcpy(0x350000, p_code, 0x400);
+    char *p_code = 0;
+    mem_alloc_user(p_code, size);
+    memcpy(p_code, p, size);
     //char *p_data = (char *) mem_alloc(stack_and_data_size); FIXME
-    char *p_data = (char *) 0x350400;
+    //char *p_data = (char *) 0x350400;
+    char *p_data = (char *) mem_alloc_user(esp, stack_and_data_size);
 
     dbg_str("\nsize: 0x");
     dbg_intx(size);
@@ -238,13 +243,15 @@ int task_run_app(void *p, unsigned int size, const char *name)
     dbg_intx(p_code);
     dbg_newline();
     //memcpy(p_data + esp, p_code + data_addr, data_size); FIXME
-    memcpy(esp, p_code + data_addr, data_size);
+    //memcpy(esp, p_code + data_addr, data_size);
+    memcpy(p_code + esp, p + data_addr, data_size);
     dbg_strln((char *) (esp));
     dbg_intx(p_code + data_addr);
     dbg_newline();
 
-    p_code = (char *) 0x350000;
+    //p_code = (char *) 0x350000;
 
+    /*
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
 
@@ -258,6 +265,7 @@ int task_run_app(void *p, unsigned int size, const char *name)
     t->stack0 = stack0;
 
     task_run(pid, 20);
+    */
 
     return pid;
 }
@@ -445,6 +453,11 @@ int get_pid(void)
 {
     TSS *t = l_mng.run[l_mng.cur_run];
 
+    /* task_init が呼ばれる前はpid=0とする */
+    if (t == 0) {
+        return 0;
+    }
+
     return t->pid;
 }
 
@@ -486,6 +499,7 @@ void task_dbg(void)
             dbg_newline();
         }
     }
+    dbg_newline();
 }
 
 

@@ -2,7 +2,7 @@ include ../Makefile.inc
 
 MKHDR   = ../tools/mkhdr
 
-CFLAGS += -std=gnu99 -I$(MAIN_INC_DIR)
+CFLAGS += -I$(MAIN_INC_DIR)
 ARFLAGS = rcsv
 
 
