@@ -956,7 +956,7 @@ static void blit_src_invert(SURFACE *src, int src_x, int src_y, int w, int h,
 /// １文字を画面に出力する
 static int draw_char(SURFACE *srf, int x, int y, unsigned short color, char ch)
 {
-    if (x + HANKAKU_W >= srf->w || y + HANKAKU_H >= srf->h) {
+    if (x + HANKAKU_W > srf->w || y + HANKAKU_H > srf->h) {
         return x + HANKAKU_W;
     }
 
@@ -982,7 +982,7 @@ static int draw_char(SURFACE *srf, int x, int y, unsigned short color, char ch)
 static int draw_char_bg(SURFACE *srf, int x, int y, unsigned short color,
         unsigned short bg_color, char ch)
 {
-    if (x + HANKAKU_W >= srf->w || y + HANKAKU_H >= srf->h) {
+    if (x + HANKAKU_W > srf->w || y + HANKAKU_H > srf->h) {
         return x + HANKAKU_W;
     }
 
