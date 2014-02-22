@@ -30,6 +30,9 @@ void *memset(void *dst, int c, unsigned int count);
 #endif
 
 
+#include <stdbool.h>
+
+
 int s_len(const char *s)
 {
     const char *p = s;
@@ -90,12 +93,10 @@ int s_ncmp(const char *s, const char *t, int n)
 }
 static char l_tmp[256];
 
-static void s_itoxs(unsigned int n, char *s, int digit);
-static void s_itox(unsigned int n, char *s, int digit);
+static void s_itox(unsigned int n, char *s, int digit, bool capital);
 static void s_itoa(int n, char *s);
 static void s_uitoa(unsigned int n, char *s);
-static void s_itob(unsigned int n, char *s);
-static void s_itoB(unsigned int n, char *s);
+static void s_itob(unsigned int n, char *s, bool space);
 static void s_size(unsigned int size_B, char *s, int max);
 
 #define ADD_CHAR(ch)  do { \
@@ -159,29 +160,29 @@ int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'x') {  // 符号なし16進数(10以上はabcdef)
-            s_itoxs(va_arg(ap, unsigned int), l_tmp, 8);
+            s_itox(va_arg(ap, unsigned int), l_tmp, 8, false);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'X') {  // 符号なし16進数(10以上はABCDEF)
-            s_itox(va_arg(ap, unsigned int), l_tmp, 8);
+            s_itox(va_arg(ap, unsigned int), l_tmp, 8, true);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'p') {  // ポインタ
             ADD_CHAR('0');
             ADD_CHAR('x');
-            s_itox((unsigned int) va_arg(ap, void *), l_tmp, 8);
+            s_itox((unsigned int) va_arg(ap, void *), l_tmp, 8, true);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'b') {  // ビット表示
-            s_itob(va_arg(ap, unsigned int), l_tmp);
+            s_itob(va_arg(ap, unsigned int), l_tmp, false);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'B') {  // ビット表示（8ビットごとにスペースが入る）
-            s_itoB(va_arg(ap, unsigned int), l_tmp);
+            s_itob(va_arg(ap, unsigned int), l_tmp, true);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
@@ -206,9 +207,15 @@ int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
 }
 
 
-void s_itoxs(unsigned int n, char *s, int digit)
+void s_itox(unsigned int n, char *s, int digit, bool capital)
 {
     int i, d;
+    char char_a;
+
+    if (capital)
+        char_a = 'A';
+    else
+        char_a = 'a';
 
     if (digit > 8)
         digit = 8;
@@ -218,28 +225,7 @@ void s_itoxs(unsigned int n, char *s, int digit)
         if (d < 10)
             s[i] = d + '0';
         else
-            s[i] = d - 10 + 'a';
-        n >>= 4;
-    }
-
-    s[i] = '\0';
-
-    s_reverse(s);
-}
-
-void s_itox(unsigned int n, char *s, int digit)
-{
-    int i, d;
-
-    if (digit > 8)
-        digit = 8;
-
-    for (i = 0; i < digit; i++) {
-        d = n & 0x0F;
-        if (d < 10)
-            s[i] = d + '0';
-        else
-            s[i] = d - 10 + 'A';
+            s[i] = d - 10 + char_a;
         n >>= 4;
     }
 
@@ -287,22 +273,7 @@ void s_uitoa(unsigned int n, char *s)
 }
 
 
-void s_itob(unsigned int n, char *s)
-{
-    int i;
-
-    for (i = 31; i >= 0; i--) {
-        if (n & (1 << i)) {
-            *s++ = '1';
-        } else {
-            *s++ = '0';
-        }
-    }
-
-    *s = '\0';
-}
-
-void s_itoB(unsigned int n, char *s)
+void s_itob(unsigned int n, char *s, bool space)
 {
     int i;
 
@@ -313,7 +284,7 @@ void s_itoB(unsigned int n, char *s)
             *s++ = '0';
         }
 
-        if ((i & 0x7) == 0) {
+        if (space && (i & 0x7) == 0) {
             *s++ = ' ';
         }
     }
