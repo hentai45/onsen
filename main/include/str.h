@@ -12,11 +12,16 @@ int s_ncmp(const char *s, const char *t, int n);
 
 void s_to_upper(char *s);
 
-void s_itox(int n, char *s, int digit);
+void s_itoxs(unsigned int n, char *s, int digit);
+void s_itox(unsigned int n, char *s, int digit);
 void s_itoa(int n, char *s);
 void s_uitoa(unsigned int n, char *s);
+void s_itob(unsigned int n, char *s);
+void s_itoB(unsigned int n, char *s);
 int  s_atoi(const char *s);
 void s_size(unsigned int size_B, char *s);
+
+int s_snprintf(char *s, unsigned int n, const char *fmt, ...);
 
 void s_dbg_int(char *s, const char *name, unsigned int var);
 void s_dbg_intx(char *s, const char *name, unsigned int var);

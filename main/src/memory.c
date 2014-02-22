@@ -369,6 +369,13 @@ void mem_dbg(void)
 
         dbg_intln(l_mng_b->total_free * l_mng_b->unit);
     }
+
+    char s[256];
+    int ret;
+
+    ret = s_snprintf(s, 256, "b %p %b %% %x %u %s a\n", l_mng_b, 0xabcd1204, 0xFFFFFFFF, 0xFFFFFFFF, "test");
+    dbg_strln(s);
+    dbg_intln(ret);
 }
 
 static void dbg_mem_mng(MEM_MNG *mng)

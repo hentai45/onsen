@@ -1,3 +1,8 @@
+/**
+ * 文字列
+ */
+
+
 #ifndef HEADER_STRING
 #define HEADER_STRING
 
@@ -10,11 +15,16 @@ int s_ncmp(const char *s, const char *t, int n);
 
 void s_to_upper(char *s);
 
-void s_itox(int n, char *s, int digit);
+void s_itoxs(unsigned int n, char *s, int digit);
+void s_itox(unsigned int n, char *s, int digit);
 void s_itoa(int n, char *s);
 void s_uitoa(unsigned int n, char *s);
+void s_itob(unsigned int n, char *s);
+void s_itoB(unsigned int n, char *s);
 int  s_atoi(const char *s);
 void s_size(unsigned int size_B, char *s);
+
+int s_snprintf(char *s, unsigned int n, const char *fmt, ...);
 
 void s_dbg_int(char *s, const char *name, unsigned int var);
 void s_dbg_intx(char *s, const char *name, unsigned int var);
@@ -26,6 +36,9 @@ void *memmove(void *dst, const void *src, unsigned int);
 void *memset(void *dst, int c, unsigned int count);
 
 #endif
+
+
+#include <stdarg.h>
 
 
 int s_len(const char *s)
@@ -87,7 +100,28 @@ int s_ncmp(const char *s, const char *t, int n)
     return *s - *t;
 }
 
-void s_itox(int n, char *s, int digit)
+void s_itoxs(unsigned int n, char *s, int digit)
+{
+    int i, d;
+
+    if (digit > 8)
+        digit = 8;
+
+    for (i = 0; i < digit; i++) {
+        d = n & 0x0F;
+        if (d < 10)
+            s[i] = d + '0';
+        else
+            s[i] = d - 10 + 'a';
+        n >>= 4;
+    }
+
+    s[i] = '\0';
+
+    s_reverse(s);
+}
+
+void s_itox(unsigned int n, char *s, int digit)
 {
     int i, d;
 
@@ -103,8 +137,6 @@ void s_itox(int n, char *s, int digit)
         n >>= 4;
     }
 
-    //s[i++] = 'x';
-    //s[i++] = '0';
     s[i] = '\0';
 
     s_reverse(s);
@@ -146,6 +178,41 @@ void s_uitoa(unsigned int n, char *s)
     s[i] = '\0';
 
     s_reverse(s);
+}
+
+
+void s_itob(unsigned int n, char *s)
+{
+    int i;
+
+    for (i = 31; i >= 0; i--) {
+        if (n & (1 << i)) {
+            *s++ = '1';
+        } else {
+            *s++ = '0';
+        }
+    }
+
+    *s = '\0';
+}
+
+void s_itoB(unsigned int n, char *s)
+{
+    int i;
+
+    for (i = 31; i >= 0; i--) {
+        if (n & (1 << i)) {
+            *s++ = '1';
+        } else {
+            *s++ = '0';
+        }
+
+        if ((i & 0x7) == 0) {
+            *s++ = ' ';
+        }
+    }
+
+    *s = '\0';
 }
 
 
@@ -199,6 +266,100 @@ void s_size(unsigned int size_B, char *s)
         s_cat(s, " GB");
         break;
     }
+}
+
+static char l_tmp[256];
+
+#define ADD_CHAR(ch)  do { \
+    s[i++] = (ch);         \
+    ret++;                 \
+    if (i >= n-1)          \
+        break;             \
+} while (0)
+
+int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
+{
+    if (n == 0)
+        return 0;
+
+    if (n == 1) {
+        s[0] = 0;
+        return 0;
+    }
+
+    char *s_val;
+    unsigned char ch_val;
+
+    int i = 0;
+    int ret = 0;
+
+    va_list ap;
+    va_start(ap, n);
+
+    for (char *p = fmt; *p; p++) {
+        if (*p != '%') {
+            ADD_CHAR(*p);
+            continue;
+        }
+
+        p++;
+
+        if (*p == '%') {  // %
+            ADD_CHAR('%');
+        } else if (*p == 'c') {  // 1文字
+            ch_val = (unsigned char) va_arg(ap, int);
+            ADD_CHAR(ch_val);
+        } else if (*p == 's') {  // 文字列
+            for (s_val = va_arg(ap, char *); *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'd' || *p == 'i') {  // 整数
+            s_itoa(va_arg(ap, int), l_tmp);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'u') {  // 符号なし整数
+            s_uitoa(va_arg(ap, unsigned int), l_tmp);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'x') {  // 符号なし16進数(10以上はabcdef)
+            s_itoxs(va_arg(ap, unsigned int), l_tmp, 8);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'X') {  // 符号なし16進数(10以上はABCDEF)
+            s_itox(va_arg(ap, unsigned int), l_tmp, 8);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'p') {  // ポインタ
+            ADD_CHAR('0');
+            ADD_CHAR('x');
+            s_itox((unsigned int) va_arg(ap, void *), l_tmp, 8);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'b') {  // ビット表示
+            s_itob(va_arg(ap, unsigned int), l_tmp);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else if (*p == 'B') {  // ビット表示（8ビットごとにスペースが入る）
+            s_itoB(va_arg(ap, unsigned int), l_tmp);
+            for (s_val = l_tmp; *s_val; s_val++) {
+                ADD_CHAR(*s_val);
+            }
+        } else {
+            ADD_CHAR(*s_val);
+        }
+    }
+
+    va_end(ap);
+
+    s[i] = 0;
+
+    return ret;
 }
 
 
