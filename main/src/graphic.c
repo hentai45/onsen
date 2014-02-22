@@ -756,7 +756,11 @@ void graphic_dbg(void)
 
         if (srf->flags & SRF_FLG_ALLOC) {
             dbg_int(sid);
-            dbg_char(' ');
+            dbg_str(": pid = ");
+            dbg_int(srf->pid);
+            dbg_str(", buf = ");
+            dbg_addr((unsigned long) srf->buf);
+            dbg_str("\n");
         }
     }
     dbg_newline();
@@ -952,6 +956,10 @@ static void blit_src_invert(SURFACE *src, int src_x, int src_y, int w, int h,
 /// １文字を画面に出力する
 static int draw_char(SURFACE *srf, int x, int y, unsigned short color, char ch)
 {
+    if (x + HANKAKU_W >= srf->w || y + HANKAKU_H >= srf->h) {
+        return x + HANKAKU_W;
+    }
+
     extern char hankaku[4096];
     char *font = hankaku + (((unsigned char) ch) * 16);
 
@@ -974,6 +982,10 @@ static int draw_char(SURFACE *srf, int x, int y, unsigned short color, char ch)
 static int draw_char_bg(SURFACE *srf, int x, int y, unsigned short color,
         unsigned short bg_color, char ch)
 {
+    if (x + HANKAKU_W >= srf->w || y + HANKAKU_H >= srf->h) {
+        return x + HANKAKU_W;
+    }
+
     extern char hankaku[4096];
     char *font = hankaku + (((unsigned char) ch) * 16);
 

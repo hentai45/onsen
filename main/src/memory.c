@@ -249,6 +249,10 @@ static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size)
  */
 void *mem_alloc(unsigned int size_B)
 {
+    dbg_str("alloc size_B = ");
+    dbg_int(size_B);
+    dbg_newline();
+
     if (size_B == 0) {
         return 0;
     }
