@@ -320,14 +320,11 @@ void timer_dbg(void)
 {
     TIMER *t;
 
-    DBG_STR("TIMER DEBUG");
+    DBGF("TIMER DEBUG");
 
-    dbg_str("count_10ms = " );
-    dbg_uint(l_mng.count_10ms);
-    dbg_newline();
-    dbg_newline();
+    dbgf("count_10ms = %u\n\n", l_mng.count_10ms);
 
-    dbg_strln("ALL TIMERS:");
+    dbgf("ALL TIMERS:\n");
     for (int i = 0; i < TIMER_MAX; i++) {
         t = &l_mng.timers[i];
 
@@ -335,42 +332,20 @@ void timer_dbg(void)
             print_timer(t);
         }
     }
-    dbg_newline();
 
-    dbg_strln("USED TIMERS:");
+    dbgf("\nUSED TIMERS:\n");
     for (t = l_mng.head_use; t; t = t->next_use) {
         print_timer(t);
     }
-    dbg_newline();
+
+    dbgf("\n");
 }
+
+static char *status[] = { "free", "alloc", "using" };
 
 static void print_timer(TIMER *t)
 {
-    dbg_str("tid = ");
-    dbg_int(t->tid);
-
-    dbg_str(", pid = ");
-    dbg_int(t->tid);
-
-    dbg_str(", timeout_10ms = ");
-    dbg_uint(t->timeout_10ms);
-
-    dbg_str(", status = ");
-    switch (t->flags) {
-    case TIMER_FLG_FREE:
-        dbg_str("free");
-        break;
-
-    case TIMER_FLG_ALLOC:
-        dbg_str("alloc");
-        break;
-
-    case TIMER_FLG_USING:
-        dbg_str("using");
-        break;
-    }
-
-    dbg_newline();
+    dbgf("tid = %d, pid = %d, timeout_10ms = %u, status = %s\n", t->tid, t->pid, t->timeout_10ms, status[t->flags]);
 }
 
 

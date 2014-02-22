@@ -224,27 +224,17 @@ int task_run_app(void *p, unsigned int size, const char *name)
     memcpy(p_code, p, size);
     char *p_data = (char *) mem_alloc_user(esp, stack_and_data_size);
 
-    dbg_str("\nsize: 0x");
-    dbg_intx(size);
-    dbg_str("\nstack_and_data_size: 0x");
-    dbg_intx(stack_and_data_size);
-    dbg_str("\nesp: 0x");
-    dbg_intx(esp);
-    dbg_str("\ndata_size: 0x");
-    dbg_intx(data_size);
-    dbg_str("\ndata_addr: 0x");
-    dbg_intx(data_addr);
-    dbg_str("\np_data: 0x");
-    dbg_intx(p_data);
-    dbg_str("\np_code: 0x");
-    dbg_intx(p_code);
-    dbg_newline();
+    dbgf("\nsize: 0x%X\n", size);
+    dbgf("stack_and_data_size: 0x%X\n", stack_and_data_size);
+    dbgf("esp: 0x%X\n", esp);
+    dbgf("data_size: 0x%X\n", data_size);
+    dbgf("data_addr: 0x%X\n", data_addr);
+    dbgf("p_data: 0x%X\n", p_data);
+    dbgf("p_code: 0x%X\n\n", p_code);
 
     memcpy(p_code + esp, p + data_addr, data_size);
 
-    dbg_strln((char *) (esp));
-    dbg_intx(p_code + data_addr);
-    dbg_newline();
+    dbgf("%s %X\n", (char *) esp, p_code + data_addr);
 
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
@@ -280,7 +270,7 @@ int task_new(char *name)
     }
 
     // もう全部使用中
-    DBG_STR("could not allocate new task.");
+    DBGF("could not allocate new task.");
     return ERROR_PID;
 }
 
@@ -393,7 +383,7 @@ void task_sleep(int pid)
 
     if (i_rt >= l_mng.num_running) {
         // ここに来たらOSのバグ
-        DBG_STR("[task_sleep] FOUND BUG!!");
+        DBGF("[task_sleep] FOUND BUG!!");
         i_rt = l_mng.num_running - 1;
     }
 
@@ -472,26 +462,17 @@ const char *task_get_name(int pid)
 
 void task_dbg(void)
 {
-    dbg_int(l_mng.num_running);
-    dbg_newline();
+    dbgf("num running : %d\n", l_mng.num_running);
 
     for (int pid = 0; pid < TASK_MAX; pid++) {
         TSS *t = &l_mng.tss[pid];
 
         if (t->flags != TASK_FLG_FREE) {
-            dbg_int(pid);
-            dbg_str(" ");
-            dbg_str(t->name);
-            dbg_str(" cs : ");
-            dbg_seg_reg(t->cs);
-            dbg_str(", ds : ");
-            dbg_seg_reg(t->ds);
-            dbg_str(", ss : ");
-            dbg_seg_reg(t->ss);
-            dbg_newline();
+            dbgf("%d %s cs : %X, ds : %X, ss : %X\n", pid, t->name, t->cs, t->ds, t->ss);
         }
     }
-    dbg_newline();
+
+    dbgf("\n");
 }
 
 

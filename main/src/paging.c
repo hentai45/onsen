@@ -236,14 +236,11 @@ static void map_page(void *vp_vaddr, void *vp_maddr, int flg)
 
 void paging_dbg(void)
 {
-    DBG_STR("DEBUG PAGING");
+    DBGF("DEBUG PAGING");
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {
         if (l_pd[i_pd] & PTE_4MB) {
-            dbg_int(i_pd);
-            dbg_str(": 4MB Page = 0x");
-            dbg_intx(i_pd * (4 * 1024 * 1024));
-            dbg_newline();
+            dbgf("%d : 4MB Page = 0X%X\n", i_pd, i_pd * (4 * 1024 * 1024));
             continue;
         }
 
@@ -253,16 +250,13 @@ void paging_dbg(void)
             continue;
         }
 
-        dbg_int(i_pd);
-        dbg_str(": ");
-        dbg_addr(pt);
-        dbg_strln(":");
+        dbgf("%d : 0x%X:\n", i_pd, pt);
 
         int num_pages = 0;
 
         pt = (PTE *) (0xFFC00000 | (i_pd << 12));
 
-        dbg_str("    ");
+        dbgf("    ");
         for (int i_pt = 0; i_pt < NUM_PTE; i_pt++) {
             PTE pte = pt[i_pt];
 
@@ -272,21 +266,18 @@ void paging_dbg(void)
 
             if (num_pages < 3) {
                 if (num_pages != 0) {
-                    dbg_str(", ");
+                    dbgf(", ");
                 }
 
-                dbg_int(i_pt);
-                dbg_str(": ");
-                dbg_addr(pte);
+                dbgf("%d : 0x%X", i_pt, pte);
             }
 
             num_pages++;
         }
 
-        dbg_str(", page = ");
-        dbg_intln(num_pages);
+        dbgf(", page = %d\n", num_pages);
     }
 
-    dbg_newline();
+    dbgf("\n");
 }
 

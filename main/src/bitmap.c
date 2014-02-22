@@ -100,14 +100,14 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
     // サイズチェック
     int cur_size_B = sizeof (BMP_FILE_HDR) + sizeof (BMP_INFO_HDR);
     if (size_B <= cur_size_B) {
-        DBG_STR("file size error");
+        DBGF("file size error");
         return false;
     }
 
     BMP_FILE_HDR *f_hdr = (BMP_FILE_HDR *) p;
 
     if (f_hdr->type != TYPE_BMP) {
-        DBG_STR("[header] type error");
+        DBGF("[header] type error");
         return false;
     }
 
@@ -117,13 +117,9 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
     BMP_INFO_HDR *i_hdr = (BMP_INFO_HDR *) (f_hdr + 1);
 
     if (i_hdr->size_B != sizeof (BMP_INFO_HDR)) {
-        DBG_STR("[header] info size error");
-        dbg_str("expect: ");
-        dbg_int(sizeof(BMP_INFO_HDR));
-        dbg_newline();
-        dbg_str("passed: ");
-        dbg_int(i_hdr->size_B);
-        dbg_newline();
+        DBGF("[header] info size error");
+        dbgf("expect: %d\n", sizeof(BMP_INFO_HDR));
+        dbgf("passed: %d\n", i_hdr->size_B);
 
         return false;
     }
@@ -132,7 +128,7 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
     *h = i_hdr->height_px;
 
     if (i_hdr->bits != 24) {
-        DBG_STR("bits is not 24");
+        DBGF("bits is not 24");
         return false;
     }
 

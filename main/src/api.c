@@ -77,19 +77,19 @@ int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
         break;
 
     case API_DBG_STR:
-        dbg_str((char *) arg1);
+        dbgf((char *) arg1);
         break;
 
     case API_DBG_INT:
-        dbg_int(arg1);
+        dbgf("%d", arg1);
         break;
 
     case API_DBG_INTX:
-        dbg_intx(arg1);
+        dbgf("%X", arg1);
         break;
 
     case API_DBG_NEWLINE:
-        dbg_newline();
+        dbgf("\n");
         break;
 
     case API_GET_SCREEN:

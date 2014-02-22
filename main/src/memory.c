@@ -335,47 +335,11 @@ static void dbg_mem_mng(MEM_MNG *mng);
 
 void mem_dbg(void)
 {
-    DBG_STR("DEBUG BYTE UNIT MEMORY MANAGE");
+    DBGF("DEBUG BYTE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_b);
 
-    DBG_STR("DEBUG PAGE UNIT MEMORY MANAGE");
+    DBGF("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
-
-    dbg_intln(l_mng_b->total_free * l_mng_b->unit);
-
-    void *p[5];
-    for (int i = 0; i < 5; i++) {
-        p[i] = mem_alloc(16);
-
-        dbg_addr(p[i]);
-        dbg_str(": ");
-        INFO_8BYTES *info = (INFO_8BYTES *) ((unsigned long) p[i] - 8);
-        dbg_intx(info->signature);
-        dbg_str(", ");
-        dbg_int(info->size);
-        dbg_newline();
-
-        dbg_intln(l_mng_b->total_free * l_mng_b->unit);
-    }
-
-    for (int i = 0; i < 5; i++) {
-        int ret = mem_free(p[i]);
-
-        if (ret < 0) {
-            dbg_str("err: ");
-            dbg_int(ret);
-            dbg_newline();
-        }
-
-        dbg_intln(l_mng_b->total_free * l_mng_b->unit);
-    }
-
-    char s[256];
-    int ret;
-
-    ret = s_snprintf(s, 256, "b %p %b %% %x %u %s a\n", l_mng_b, 0xabcd1204, 0xFFFFFFFF, 0xFFFFFFFF, "test");
-    dbg_strln(s);
-    dbg_intln(ret);
 }
 
 static void dbg_mem_mng(MEM_MNG *mng)
@@ -385,18 +349,10 @@ static void dbg_mem_mng(MEM_MNG *mng)
     for (i = 0; i < mng->num_free; i++) {
         MEMORY *mem = &mng->free[i];
 
-        dbg_int(i);
-        dbg_str(" : addr = ");
-        dbg_addr(mem->addr);
-
-        dbg_str(", size = ");
-        dbg_int((mem->size * mng->unit) / (1024));
-        dbg_str("KB");
-
-        dbg_newline();
+        dbgf("%d : addr = 0x%X, size = %Z\n", i, mem->addr, mem->size * mng->unit);
     }
 
-    dbg_newline();
+    dbgf("\n");
 }
 
 

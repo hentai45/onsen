@@ -136,12 +136,12 @@ ENTRY_FUNC elf_load(void *p)
     // ---- 形式チェック
 
     if (! is_elf(ehdr)) {
-        DBG_STR("This is not ELF file.");
+        DBGF("This is not ELF file.");
         return 0;
     }
 
     if (ehdr->e_type != ET_EXEC) {
-        DBG_STR("This is not executable file.");
+        DBGF("This is not executable file.");
         return 0;
     }
 
@@ -158,11 +158,11 @@ ENTRY_FUNC elf_load(void *p)
 
         switch (phdr->p_flags) {
         case PF_R | PF_X:
-            DBG_STR(".text");
+            DBGF(".text");
             break;
 
         case PF_R | PF_W:
-            DBG_STR(".data");
+            DBGF(".data");
             break;
         }
 

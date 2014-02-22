@@ -38,6 +38,7 @@ void console_main(void);
 #include "memory.h"
 #include "msg_q.h"
 #include "paging.h"
+#include "stdarg.h"
 #include "str.h"
 #include "sysinfo.h"
 #include "task.h"
@@ -84,9 +85,7 @@ static int i_line = 0;
 
 static void newline(void);
 static void put_char(char ch);
-static void put_str(const char *s);
-static void put_int(int n);
-static void put_intx(int n);
+static void putf(const char *fmt, ...);
 static void del_char(void);
 static void put_prompt(void);
 
@@ -322,28 +321,19 @@ static void put_char(char ch)
     }
 }
 
+#define TMP_SIZE  (4096)
+static char l_tmp[TMP_SIZE];
 
-static void put_str(const char *s)
+static void putf(const char *fmt, ...)
 {
-    for (int i = 0; i < s_len(s); i++) {
-        put_char(s[i]);
+    va_list ap;
+    va_start(ap, fmt);
+    s_snprintf2(l_tmp, TMP_SIZE, fmt, ap);
+    va_end(ap);
+
+    for (char *s = l_tmp; *s; s++) {
+        put_char(*s);
     }
-}
-
-
-static void put_int(int n)
-{
-    char s[32];
-    s_itoa(n, s);
-    put_str(s);
-}
-
-
-static void put_intx(int n)
-{
-    char s[9];
-    s_itox(n, s, 8);
-    put_str(s);
 }
 
 
@@ -362,7 +352,7 @@ static void del_char(void)
 
 static void put_prompt(void)
 {
-    put_str("$ ");
+    putf("$ ");
     i_line = 0;
 }
 
@@ -397,9 +387,9 @@ static void run_cmd(char *cmd_name)
     }
 
     if (run_status == -1) {
-        put_str("format error.\n\n");
+        putf("format error.\n\n");
     } else if (run_status == -2) {
-        put_str("Command not found.\n\n");
+        putf("Command not found.\n\n");
     }
 }
 
@@ -431,10 +421,7 @@ void cmd_ls(void)
         s[11] = finfo[i].ext[2];
         s[12] = 0;
 
-        put_str(s);
-        put_str("   ");
-        put_int(finfo[i].size);
-        newline();
+        putf("%s   %d\n", s, finfo[i].size);
     }
 
     newline();
@@ -459,10 +446,10 @@ static void cmd_cat(char *fname)
         char *p = (char *) mem_alloc(finfo[i].size + 1);
         fat12_load_file(finfo[i].clustno, finfo[i].size, p);
         p[finfo[i].size] = 0;
-        put_str(p);
+        putf("%s", p);
         mem_free(p);
     } else {  // ファイルが見つからなかった
-        put_str("File not found.\n");
+        putf("File not found.\n");
     }
 
     newline();
@@ -475,10 +462,7 @@ static void cmd_ps(void)
         const char *name = task_get_name(i);
 
         if (name != 0) {
-            put_int(i);
-            put_str(" : ");
-            put_str(name);
-            newline();
+            putf("%d : %s\n", i, name);
         }
     }
 
@@ -488,16 +472,10 @@ static void cmd_ps(void)
 
 static void cmd_mem(void)
 {
-    put_str("memory\n");
-    put_str("total : ");
-    put_int(mem_total_B() / (1024 * 1024));
-    put_str(" MB\n");
-    put_str("mfree  : ");
-    put_int(mem_total_mfree_B() / (1024));
-    put_str(" KB\n");
-    put_str("vfree  : ");
-    put_int(mem_total_vfree_B() / (1024 * 1024));
-    put_str(" MB\n\n");
+    putf("memory:\n");
+    putf("total  : %Z\n", mem_total_B());
+    putf("mfree  : %Z\n", mem_total_mfree_B());
+    putf("vfree  : %Z\n\n", mem_total_vfree_B());
 }
 
 
@@ -508,9 +486,7 @@ static void cmd_kill(int pid)
     if (status == 0) {
         // そういうものだ
     } else {
-        put_str("could not kill pid ");
-        put_int(pid);
-        newline();
+        putf("could not kill pid %d\n", pid);
     }
 
     newline();
@@ -527,21 +503,10 @@ static void cmd_dbg(char *name)
         timer_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "sysinfo") == 0) {
-        dbg_str("vram = ");
-        dbg_intx(g_sys_info->vram);
-        dbg_newline();
-
-        dbg_str("width = ");
-        dbg_int(g_sys_info->w);
-        dbg_newline();
-
-        dbg_str("height = ");
-        dbg_int(g_sys_info->h);
-        dbg_newline();
-
-        dbg_str("end_free_maddr = ");
-        dbg_int(g_sys_info->end_free_maddr);
-        dbg_newline();
+        dbgf("vram = %X\n", g_sys_info->vram);
+        dbgf("width = %d\n", g_sys_info->w);
+        dbgf("height = %d\n", g_sys_info->h);
+        dbgf("end_free_maddr = %X\n", g_sys_info->end_free_maddr);
 
         switch_debug_screen();
     } else if (s_cmp(name, "task") == 0) {
@@ -560,7 +525,7 @@ static void cmd_dbg(char *name)
         graphic_dbg();
         switch_debug_screen();
     } else {
-        put_str("invalid dbg argment\n\n");
+        putf("invalid dbg argment\n\n");
     }
 }
 

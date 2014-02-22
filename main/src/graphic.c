@@ -281,7 +281,7 @@ int surface_new(int w, int h)
     SURFACE *srf = srf_alloc();
 
     if (srf == 0) {
-        dbg_str("[surface_new] could't create surface\n");
+        DBGF("could't create surface");
         return ERROR_SID;
     }
 
@@ -305,7 +305,7 @@ int surface_new_from_buf(int w, int h, unsigned short *buf)
     SURFACE *srf = srf_alloc();
 
     if (srf == 0) {
-        dbg_str("[surface_new_from_buf] could't create surface\n");
+        DBGF("could't create surface");
         return ERROR_SID;
     }
 
@@ -746,36 +746,29 @@ void switch_debug_screen(void)
 
 void graphic_dbg(void)
 {
-    DBG_STR("DEBUG GRAPHIC");
+    DBGF("DEBUG GRAPHIC");
 
     SURFACE *srf;
 
-    dbg_strln("surfaces");
+    dbgf("surfaces:\n");
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
         srf = &l_mng.surfaces[sid];
 
         if (srf->flags & SRF_FLG_ALLOC) {
-            dbg_int(sid);
-            dbg_str(": pid = ");
-            dbg_int(srf->pid);
-            dbg_str(", buf = ");
-            dbg_addr((unsigned long) srf->buf);
-            dbg_str("\n");
+            dbgf("%d: pid = %d, buf = %p\n", sid, srf->pid, srf->buf);
         }
     }
-    dbg_newline();
 
-    dbg_strln("screen");
+    dbgf("\nscreen:\n");
 
     srf = l_mng.head_scr;
     do {
-        dbg_int(srf->sid);
-        dbg_char(' ');
+        dbgf("%d ", srf->sid);
 
         srf = srf->next_scr;
     } while (srf != l_mng.head_scr);
 
-    dbg_str("\n\n");
+    dbgf("\n\n");
 }
 
 
