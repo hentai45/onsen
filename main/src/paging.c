@@ -87,7 +87,6 @@ typedef unsigned long PTE;
 void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
-PDE *get_os_pd(void);
 PDE *create_user_pd(void);
 int paging_get_flags(void *vp_vaddr);
 
@@ -126,7 +125,6 @@ static PTE *get_pte(void *vp_vaddr);
 
 
 static PDE *l_pd = (PDE *) VADDR_PD_SELF;
-static PDE *l_os_pd = (PDE *) MADDR_OS_PDT;
 
 
 //=============================================================================
@@ -155,11 +153,15 @@ void paging_map(void *vp_vaddr, void *vp_maddr, int flg)
         PTE *pt_maddr = (PTE *) mem_alloc_maddr();
 
         int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
-        l_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+        int i_os_pd = VADDR_TO_PD_INDEX(VADDR_BASE);
 
-        /* カーネルじゃない場合もあるので、カーネルのPDにも割り当てておく */
-        PTE *os_vaddr_pd = VADDR_OS_PDT;
-        os_vaddr_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+        PDE pt = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+        l_pd[i_pd] = pt;
+
+        /* OS領域なら全プロセスのPDに作成したPTを設定する */
+        if (i_pd >= i_os_pd) {
+            task_set_pt(i_pd, pt);
+        }
 
         PTE *pt_vaddr = (PTE *) (0xFFC00000 | (i_pd << 12));
 
@@ -192,12 +194,6 @@ void *paging_get_maddr(void *vp_vaddr)
     PTE *pt = (PTE *) (0xFFC00000 | (i_pd << 12));
 
     return (void *) ((pt[i_pt] & ~0xFFF) + ((unsigned long) vp_vaddr & 0xFFF));
-}
-
-
-PDE *get_os_pd(void)
-{
-    return l_os_pd;
 }
 
 

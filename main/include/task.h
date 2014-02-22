@@ -27,6 +27,7 @@ void task_sleep(int pid);
 void task_wakeup(int pid);
 int  get_pid(void);
 const char *task_get_name(int pid);
+void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
 

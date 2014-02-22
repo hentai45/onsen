@@ -38,6 +38,7 @@ void task_sleep(int pid);
 void task_wakeup(int pid);
 int  get_pid(void);
 const char *task_get_name(int pid);
+void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
 
@@ -150,14 +151,13 @@ int pid2tss_sel(int pid)
 
 extern int timer_ts_tid(void);
 
-static int run_os_task(char *name, unsigned long pd,
-        void (*main)(void), int timeslice_ms, bool create_esp);
+static int run_os_task(char *name, void (*main)(void), int timeslice_ms, bool create_esp);
 static void idle_main(void);
 
 static void init_tss_seg(void);
-static void set_os_tss(int pid, unsigned long pd, void (*f)(void), void *esp);
-static void set_app_tss(int pid, unsigned long pd, void (*f)(void), void *esp, void *esp0);
-static void set_tss(int pid, int cs, int ds, unsigned long cr3,
+static void set_os_tss(int pid, void (*f)(void), void *esp);
+static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
+static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0);
 
@@ -183,14 +183,12 @@ void task_init(void)
 
     // ---- タスクを作成
 
-    unsigned long pd = (unsigned long) get_os_pd();
-
     init_tss_seg();
 
-    g_root_pid = run_os_task("root",    pd, 0,            20, false);
-    g_idle_pid = run_os_task("idle",    pd, idle_main,    10, true);
-    g_dbg_pid  = run_os_task("debug",   pd, debug_main,   20, true);
-    g_con_pid  = run_os_task("console", pd, console_main, 20, true);
+    g_root_pid = run_os_task("root",    0,            20, false);
+    g_idle_pid = run_os_task("idle",    idle_main,    10, true);
+    g_dbg_pid  = run_os_task("debug",   debug_main,   20, true);
+    g_con_pid  = run_os_task("console", console_main, 20, true);
 
     ltr(pid2tss_sel(g_root_pid));
 
@@ -230,13 +228,12 @@ int task_run_app(void *p, unsigned int size, const char *name)
     unsigned char *esp0 = stack0 + (64 * 1023);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, paging_get_maddr(pd), (void *) 0x1B, (unsigned char *) esp, esp0);
+    set_app_tss(pid, paging_get_maddr(pd), pd, (void *) 0x1B, (unsigned char *) esp, esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;
     t->data   = p_data;
     t->stack0 = stack0;
-    t->pd     = pd;
 
     task_run(pid, 20);
 
@@ -456,6 +453,18 @@ const char *task_get_name(int pid)
 }
 
 
+void task_set_pt(int i_pd, PDE pt)
+{
+    for (int pid = 0; pid < TASK_MAX; pid++) {
+        TSS *t = &l_mng.tss[pid];
+
+        if (t->flags != TASK_FLG_FREE && t->pd != 0) {
+            t->pd[i_pd] = pt;
+        }
+    }
+}
+
+
 void task_dbg(void)
 {
     dbgf("num running : %d\n", l_mng.num_running);
@@ -464,7 +473,8 @@ void task_dbg(void)
         TSS *t = &l_mng.tss[pid];
 
         if (t->flags != TASK_FLG_FREE) {
-            dbgf("%d %s cs : %X, ds : %X, ss : %X\n", pid, t->name, t->cs, t->ds, t->ss);
+            dbgf("%d %s, pd : %p, cs : %X, ds : %X, ss : %X\n",
+                    pid, t->name, t->pd, t->cs, t->ds, t->ss);
         }
     }
 
@@ -487,7 +497,7 @@ int is_os_task(int pid)
 //=============================================================================
 // 非公開関数
 
-static int run_os_task(char *name, unsigned long pd,
+static int run_os_task(char *name,
         void (*main)(void), int timeslice_ms, bool create_esp)
 {
     int pid = task_new(name);
@@ -499,7 +509,7 @@ static int run_os_task(char *name, unsigned long pd,
         esp += 64 * 1024;
     }
 
-    set_os_tss(pid, pd, main, esp);
+    set_os_tss(pid, main, esp);
 
     task_run(pid, timeslice_ms);
 
@@ -526,23 +536,23 @@ static void init_tss_seg(void)
 }
 
 
-static void set_os_tss(int pid, unsigned long pd, void (*f)(void), void *esp)
+static void set_os_tss(int pid, void (*f)(void), void *esp)
 {
-    set_tss(pid, KERNEL_CS, KERNEL_DS, pd, f, EFLAGS_INT_ENABLE,
+    set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f, EFLAGS_INT_ENABLE,
             esp, KERNEL_DS, 0, 0);
 }
 
 
-static void set_app_tss(int pid, unsigned long pd, void (*f)(void), void *esp, void *esp0)
+static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
 {
     // | 3 は要求者特権レベルを3にするため
-    set_tss(pid, USER_CS | 3, USER_DS, pd, f, EFLAGS_INT_ENABLE,
+    set_tss(pid, USER_CS | 3, USER_DS, maddr_pd, vaddr_pd, f, EFLAGS_INT_ENABLE,
             esp, USER_DS | 3, esp0, KERNEL_DS);
 }
 
 
 
-static void set_tss(int pid, int cs, int ds, unsigned long cr3,
+static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0)
 {
@@ -554,6 +564,7 @@ static void set_tss(int pid, int cs, int ds, unsigned long cr3,
     memset(tss, 0, TSS_REG_SIZE);
 
     tss->cr3 = cr3;
+    tss->pd = pd;
 
     // タスク実行開始時のレジスタ内容を設定する
     tss->cs = cs;

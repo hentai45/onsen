@@ -35,7 +35,6 @@ typedef unsigned long PTE;
 void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
-PDE *get_os_pd(void);
 PDE *create_user_pd(void);
 int paging_get_flags(void *vp_vaddr);
 
