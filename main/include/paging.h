@@ -9,6 +9,18 @@
 
 #define PAGE_SIZE_B (4096)  ///< ページサイズ
 
+#define PTE_PRESENT (0x001)  // 1ならページがメモリ上に存在する
+#define PTE_RW      (0x002)  // 0なら特権レベル3では書き込めない
+#define PTE_US      (0x004)  // 0なら特権レベル3ではアクセスできない
+#define PTE_ACCESS  (0x020)  // このエントリのページをアクセスするとCPUが1にする
+#define PTE_DIRTY   (0x040)  // このエントリのページに書き込むとCPUが1にする
+#define PTE_4MB     (0x080)  // 4MBページ
+
+/* メモリ管理用 */
+#define PTE_START   (0x200)  // 連続領域開始。カスタムフラグ
+#define PTE_CONT    (0x400)  // 連続領域続く。カスタムフラグ
+#define PTE_END     (0x800)  // 連続領域終了。カスタムフラグ
+
 #define IS_4KB_ALIGN(byte) (((byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
 #define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) ///< 4KB 単位で切り上げ
 #define FLOOR_4KB(byte) ((byte) & ~0xFFF)           ///< 4KB 単位で切り捨て
@@ -18,8 +30,10 @@
 
 void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr);
+void paging_map2(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
 unsigned long *get_os_pd(void);
+int get_page_flags(void *vp_vaddr);
 
 void paging_dbg(void);
 

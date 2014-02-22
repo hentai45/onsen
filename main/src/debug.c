@@ -97,8 +97,8 @@ void dbg_fault(const char *msg, int *esp);
 #include "task.h"
 
 
-unsigned short fg = COL_WHITE;
-unsigned short bg = COL_BLACK;
+static unsigned short fg = COL_WHITE;
+static unsigned short bg = COL_BLACK;
 
 //-----------------------------------------------------------------------------
 // メイン
@@ -244,13 +244,21 @@ void dbg_uint(unsigned int n)
 
 void dbg_bits(unsigned int n)
 {
-    unsigned int i;
+    int i;
 
-    for (i = 0x80000000; i > 0; i >>= 1) {
-        if (n & i) {
+    for (i = 31; i >= 0; i--) {
+        if (n & (1 << i)) {
             dbg_int(1);
         } else {
             dbg_int(0);
+        }
+
+        if ((i & 0x7) == 0) {
+            dbg_str(" ");
+        }
+
+        if ((i & 0x3) == 0) {
+            dbg_str(" ");
         }
     }
 }

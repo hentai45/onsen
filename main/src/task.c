@@ -63,6 +63,7 @@ static int is_os_task(int pid)
 #include "debug.h"
 #include "gdt.h"
 #include "graphic.h"
+#include "hrbbin.h"
 #include "memory.h"
 #include "msg_q.h"
 #include "paging.h"
@@ -205,13 +206,12 @@ void task_init(void)
 
 int task_run_app(void *p, unsigned int size, const char *name)
 {
-    unsigned long p_addr = (unsigned long) p;
-    //char *p_code = (char *) p;
+    HRB_HEADER *hdr = (HRB_HEADER *) p;
 
-    int stack_and_data_size  = *((int *) (p_addr + 0x0000));
-    int esp                  = *((int *) (p_addr + 0x000C));
-    int data_size            = *((int *) (p_addr + 0x0010));
-    int data_addr            = *((int *) (p_addr + 0x0014));
+    int stack_and_data_size  = hdr->stack_and_data_size;
+    int esp                  = hdr->dst_data;
+    int data_size            = hdr->data_size;
+    int data_addr            = hdr->src_data;
 
     char app_name[9];
     memcpy(app_name, name, 8);
@@ -219,12 +219,9 @@ int task_run_app(void *p, unsigned int size, const char *name)
 
     int pid = task_new(app_name);
 
-    //memcpy(0x350000, p_code, 0x400);
     char *p_code = 0;
     mem_alloc_user(p_code, size);
     memcpy(p_code, p, size);
-    //char *p_data = (char *) mem_alloc(stack_and_data_size); FIXME
-    //char *p_data = (char *) 0x350400;
     char *p_data = (char *) mem_alloc_user(esp, stack_and_data_size);
 
     dbg_str("\nsize: 0x");
@@ -242,22 +239,18 @@ int task_run_app(void *p, unsigned int size, const char *name)
     dbg_str("\np_code: 0x");
     dbg_intx(p_code);
     dbg_newline();
-    //memcpy(p_data + esp, p_code + data_addr, data_size); FIXME
-    //memcpy(esp, p_code + data_addr, data_size);
+
     memcpy(p_code + esp, p + data_addr, data_size);
+
     dbg_strln((char *) (esp));
     dbg_intx(p_code + data_addr);
     dbg_newline();
 
-    //p_code = (char *) 0x350000;
-
-    /*
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
 
     unsigned long pd = (unsigned long) get_os_pd();  // FIXME
-    //set_app_tss(pid, pd, (void *) 0x1B, (unsigned char *) esp, esp0); FIXME
-    set_app_tss(pid, pd, (void *) 0x35001B, (unsigned char *) esp, esp0);
+    set_app_tss(pid, pd, (void *) 0x1B, (unsigned char *) esp, esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;
@@ -265,7 +258,6 @@ int task_run_app(void *p, unsigned int size, const char *name)
     t->stack0 = stack0;
 
     task_run(pid, 20);
-    */
 
     return pid;
 }

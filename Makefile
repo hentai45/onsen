@@ -32,10 +32,12 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(APP_BIN)/hello test.bmp
+$(IMG) : $(IPL) $(ONSEN_SYS) $(APP_BIN)/hello $(APP_BIN)/test test.bmp
 	mformat -f 1440 -C -B $(IPL) -i $@ ::
 	mcopy $(ONSEN_SYS) -i $@ ::
 	mcopy $(APP_BIN)/hello -i $@ ::
+	mcopy app/hello/hello.c -i $@ ::
+	mcopy $(APP_BIN)/test -i $@ ::
 	mcopy test.bmp -i $@ ::
 
 

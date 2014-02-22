@@ -14,11 +14,16 @@ all :
 	cp $(MSG_H) $(INC_DIR)
 	cp $(KEY_H) $(INC_DIR)
 	make $(BIN_DIR)/hello
+	make $(BIN_DIR)/test
 
 
 $(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello/hello.c Makefile
 	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello/hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
 
 
+$(BIN_DIR)/test : $(ONSEN_LIB) $(LDS) test/test.c Makefile
+	$(CC) $(CFLAGS) test/test.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
+
+
 clean :
-	rm -f $(BIN_DIR)/hello $(BIN_DIR)/hello
+	rm -f $(BIN_DIR)/hello $(BIN_DIR)/test

@@ -67,6 +67,7 @@ unsigned int mem_total_vfree_B(void);
 #include "asmfunc.h"
 #include "debug.h"
 #include "paging.h"
+#include "stdbool.h"
 #include "str.h"
 #include "sysinfo.h"
 
@@ -155,7 +156,6 @@ static unsigned long l_mfree_B;
 
 static void *mem_alloc_page(unsigned int num_pages);
 static int page_free(void *maddr);
-
 
 //=============================================================================
 // 関数
@@ -363,17 +363,33 @@ void *mem_alloc_page(unsigned int num_pages)
 static int mem_alloc_page_sub(void *vp_vaddr, int num_pages)
 {
     unsigned long vaddr = (unsigned long) vp_vaddr;
-    int i, j;
     void *vp_maddr;
-    for (i = BITMAP_ST; i < l_bitmap_end; i++) {
+    bool first = true;
+
+    for (int i = BITMAP_ST; i < l_bitmap_end; i++) {
         if (l_bitmap[i] != 0) {
-            for (j = 31; j >= 0; j--) {
+            for (int j = 31; j >= 0; j--) {
                 if (l_bitmap[i] & (1 << j)) {
                     vp_maddr = IDX2MADDR(i, j);
                     SET_USED_MADDR(vp_maddr);
                     l_mfree_B -= PAGE_SIZE_B;
 
-                    paging_map(vaddr, vp_maddr);
+                    int flg = PTE_RW | PTE_US | PTE_PRESENT;
+
+                    if (first == false && num_pages != 1) {
+                        flg |= PTE_CONT;
+                    }
+
+                    if (first) {
+                        flg |= PTE_START;
+                        first = false;
+                    }
+
+                    if (num_pages == 1) {
+                        flg |= PTE_END;
+                    }
+
+                    paging_map2((void *) vaddr, vp_maddr, flg);
                     vaddr += PAGE_SIZE_B;
 
                     if (--num_pages == 0) {
@@ -388,8 +404,53 @@ static int mem_alloc_page_sub(void *vp_vaddr, int num_pages)
     return -1;
 }
 
+static int page_free_maddr(void *vp_vaddr);
 
-int page_free(void *vp_vaddr)
+static int page_free(void *vp_vaddr)
+{
+    int flg = get_page_flags(vp_vaddr);
+    if ((flg & PTE_START) == 0) {
+        return -2;
+    }
+
+    unsigned int num_pages = 1;
+
+    if (page_free_maddr(vp_vaddr) < 0) {
+        return -1;
+    }
+
+    if (flg & PTE_END) {
+        return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+    }
+
+    unsigned long vaddr = (unsigned long) vp_vaddr;
+    vaddr += PAGE_SIZE_B;
+    num_pages++;
+    flg = get_page_flags((void *) vaddr);
+
+    while ((flg & PTE_END) == 0) {
+        if ((flg & PTE_CONT) == 0) {
+            return -1;
+        }
+
+        /* ASSERT */
+        if (flg & PTE_START) {
+            return -1;
+        }
+
+        if (page_free_maddr((void *) vaddr) < 0) {
+            return -1;
+        }
+
+        vaddr += PAGE_SIZE_B;
+        num_pages++;
+        flg = get_page_flags((void *) vaddr);
+    }
+
+    return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+}
+
+static int page_free_maddr(void *vp_vaddr)
 {
     void *vp_maddr = paging_get_maddr(vp_vaddr);
 
@@ -397,12 +458,13 @@ int page_free(void *vp_vaddr)
         return -1;
     }
 
-    // 割り当てサイズの取得
-    unsigned int num_pages = 1; // TODO : どうにかして得る
+    if (IS_FREE_MADDR(vp_maddr)) {
+        return -1;
+    }
 
     SET_FREE_MADDR(vp_maddr);
 
-    return mem_set_free(l_mng_v, vp_maddr, num_pages);
+    return 0;
 }
 
 

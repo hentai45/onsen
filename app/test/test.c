@@ -1,8 +1,8 @@
 #include "onsen.h"
 #include "msg.h"
 
-#define TIME_MS 100
-#define TEXT  "hello"
+#define TIME_MS 200
+#define TEXT  "test"
 #define MAX_X 600
 #define MAX_Y 400
 
@@ -10,9 +10,9 @@ void OnSenMain(void)
 {
     int sid = get_screen();
     int x = 0, y = 0;
-    int step_x = 4, step_y = 0;
+    int step_x = 10, step_y = 0;
 
-    fill_surface(sid, COL_GREEN);
+    fill_surface(sid, COL_BLUE);
     draw_text(sid, x, y, COL_BLACK, TEXT);
     update_screen(sid);
 
@@ -32,7 +32,7 @@ void OnSenMain(void)
         }
 
         if (msg.message == MSG_TIMER) {
-            fill_surface(sid, COL_GREEN);
+            fill_surface(sid, COL_BLUE);
 
             x += step_x;
             if (x >= MAX_X) {

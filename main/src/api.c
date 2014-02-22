@@ -32,6 +32,7 @@
 #include "msg.h"
 #include "msg_q.h"
 #include "task.h"
+#include "timer.h"
 
 
 static void api_exit_app(int exit_status);
@@ -63,6 +64,17 @@ int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
 
     case API_GET_MESSAGE:
         return get_message((MSG *) arg1);
+
+    case API_TIMER_NEW:
+        return timer_new();
+
+    case API_TIMER_FREE:
+        timer_free(arg1);
+        break;
+
+    case API_TIMER_START:
+        timer_start(arg1, arg2);
+        break;
 
     case API_DBG_STR:
         dbg_str((char *) arg1);
