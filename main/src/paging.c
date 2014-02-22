@@ -73,7 +73,7 @@
 #define PTE_CONT    (0x400)  // 連続領域続く。カスタムフラグ
 #define PTE_END     (0x800)  // 連続領域終了。カスタムフラグ
 
-#define IS_4KB_ALIGN(byte) (((byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
+#define IS_4KB_ALIGN(byte) (((unsigned long) (byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
 #define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) ///< 4KB 単位で切り上げ
 #define FLOOR_4KB(byte) ((byte) & ~0xFFF)           ///< 4KB 単位で切り捨て
 

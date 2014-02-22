@@ -89,23 +89,28 @@ typedef struct _MEM_MNG {
     int num_free;    ///< 空き情報の数
     int total_free;  ///< free.sizeの合計
     int unit;        ///< sizeの単位
-    int info_size_b; ///< 管理情報のサイズ
+    int info_size;   ///< 管理情報のサイズ
 } MEM_MNG;
 
 
 static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size);
-static void dbg_mem_mng(MEM_MNG *mng);
-static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size_b);
+static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size);
 static void *get_free_addr(MEM_MNG *mng, unsigned int size);
 
 
 //-----------------------------------------------------------------------------
-// バイト単位メモリ管理
+// 8バイト単位メモリ管理（4096-8バイト以下のメモリ割り当てを管理する）
 
 #define BYTE_MEM_MNG_MAX  (4096)
-#define MEM_INFO_B        (4)                // メモリの先頭に置く管理情報のサイズ
+#define MEM_INFO_B        (8)                // メモリの先頭に置く管理情報のサイズ
 #define BYTE_MEM_BYTES    (1 * 1024 * 1024)  // バイト管理する容量
-#define MM_SIG            (0xBAD41000)       // メモリの先頭に置くシグネチャ
+#define MM_SIG            (0xBAD41BAD)       // メモリの先頭に置くシグネチャ
+#define BYTES_TO_8BYTES(b)   (((b) + 7) >> 3)  // バイトを8バイト単位に変換する
+
+typedef struct _INFO_8BYTES {
+    unsigned long signature;
+    unsigned long size;
+} INFO_8BYTES;
 
 static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
@@ -115,6 +120,9 @@ static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
 
 #define PAGE_MEM_MNG_MAX   (4096)
+
+#define SET_FLG  (true)
+#define NO_FLG   (false)
 
 /**
  * 物理アドレスからビットマップのインデックスに変換
@@ -154,7 +162,7 @@ static int l_bitmap_end;
 static unsigned long l_mfree_B;
 
 
-static void *mem_alloc_page(unsigned int num_pages);
+static void *mem_alloc_page(unsigned int num_pages, bool set_flg);
 static int page_free(void *maddr);
 
 //=============================================================================
@@ -212,43 +220,50 @@ static void init_vpage_mem(void)
  */
 static void init_byte_mem(void)
 {
-    init_mem_mng(l_mng_b, BYTE_MEM_MNG_MAX, 1, MEM_INFO_B);
+    init_mem_mng(l_mng_b, BYTE_MEM_MNG_MAX, /* unit = */ 8, BYTES_TO_8BYTES(MEM_INFO_B));
 
     unsigned long size_B = BYTE_MEM_BYTES;
     int num_pages = BYTE_TO_PAGE(size_B);
-    void *addr = mem_alloc_page(num_pages);
-    mem_set_free(l_mng_b, addr, size_B);
+    void *addr = mem_alloc_page(num_pages, NO_FLG);
+    mem_set_free(l_mng_b, addr, BYTES_TO_8BYTES(size_B));
 }
 
-static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size_b)
+/**
+ * メモリ管理構造体の初期化
+ */
+static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size)
 {
     mng->free = (MEMORY *) (mng + 1);
     mng->max_free = max_free;
     mng->num_free = 0;
     mng->total_free = 0;
     mng->unit = unit;
-    mng->info_size_b = info_size_b;
+    mng->info_size = info_size;
 }
 
 
 /**
- * @note 割り当てられたメモリの前に割り当てサイズが置かれる。
+ * @note 8バイト単位メモリ管理の場合は、割り当てられたメモリの前に割り当てサイズが置かれる。
  *
  * @note 4KB以上確保するならページ単位メモリ管理のほうで管理させる。
  */
 void *mem_alloc(unsigned int size_B)
 {
-    // TODO: align
- 
     if (size_B == 0) {
-        return 0;  // TODO: debug 出力
+        return 0;
     }
 
-    if (size_B >= PAGE_SIZE_B) {
-        return mem_alloc_page(BYTE_TO_PAGE(size_B));
+    if (size_B >= PAGE_SIZE_B - (l_mng_b->info_size * l_mng_b->unit)) {
+        return mem_alloc_page(BYTE_TO_PAGE(size_B), SET_FLG);
     }
 
-    return get_free_addr(l_mng_b, size_B);  // FIXME: 0ならmem_alloc_pageを使う
+    void *p = get_free_addr(l_mng_b, BYTES_TO_8BYTES(size_B));
+
+    if (p == 0) {
+        return mem_alloc_page(BYTE_TO_PAGE(size_B), SET_FLG);
+    }
+
+    return p;
 }
 
 
@@ -258,29 +273,36 @@ int mem_free(void *vp_vaddr)
         return -1;
     }
 
-    unsigned int vaddr = (unsigned int) vp_vaddr;
-
-    if (IS_4KB_ALIGN(vaddr)) {
-        // アドレスが4KB境界なのでページ単位メモリ管理のほうのメモリ。
-        // バイト単位メモリ管理ではアドレスの前にサイズを置くので
-        // 4KB境界になることはない。
-        // FIXME: 上に書いたことはウソ。信じるな
-        return page_free(vp_vaddr);
-    }
-
-    // 割り当てサイズの取得
-    unsigned int size_B_vaddr = vaddr - MEM_INFO_B;
-    unsigned int size_B = *((int *) size_B_vaddr);
-
-    // 「ここで管理されてます」という印はあるか？
-    if ((size_B & ~0xFFF) != MM_SIG) {
+    if ((unsigned long) vp_vaddr & 0x7) {
+        // メモリ管理が返すメモリは、下位3ビットが0であるはず
         return -1;
     }
 
-    size_B &= 0xFFF;  // 印を取り除く
-    size_B += MEM_INFO_B;
+    int flg = get_page_flags(vp_vaddr);
 
-    return mem_set_free(l_mng_b, (void *) size_B_vaddr, size_B);
+    if (flg & 0xE00) {  // ページ単位メモリ管理が使うフラグが立っている
+        /* ページ単位メモリ管理 */
+
+        if (IS_4KB_ALIGN(vp_vaddr)) {
+            return page_free(vp_vaddr);
+        } else {
+            return -1;
+        }
+    }
+
+    /* 8バイト単位メモリ管理 */
+
+    unsigned int vaddr = (unsigned int) vp_vaddr;
+
+    // 割り当てサイズの取得
+    INFO_8BYTES *info = (INFO_8BYTES *) (vaddr - MEM_INFO_B);
+
+    // 「ここで管理されてます」という印はあるか？
+    if (info->signature != MM_SIG) {
+        return -1;
+    }
+
+    return mem_set_free(l_mng_b, (void *) info, info->size);
 }
 
 
@@ -308,6 +330,9 @@ void *mem_alloc_maddr(void)
     return 0;
 }
 
+
+static void dbg_mem_mng(MEM_MNG *mng);
+
 void mem_dbg(void)
 {
     DBG_STR("DEBUG BYTE UNIT MEMORY MANAGE");
@@ -315,6 +340,56 @@ void mem_dbg(void)
 
     DBG_STR("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
+
+    dbg_intln(l_mng_b->total_free * l_mng_b->unit);
+
+    void *p[5];
+    for (int i = 0; i < 5; i++) {
+        p[i] = mem_alloc(16);
+
+        dbg_addr(p[i]);
+        dbg_str(": ");
+        INFO_8BYTES *info = (INFO_8BYTES *) ((unsigned long) p[i] - 8);
+        dbg_intx(info->signature);
+        dbg_str(", ");
+        dbg_int(info->size);
+        dbg_newline();
+
+        dbg_intln(l_mng_b->total_free * l_mng_b->unit);
+    }
+
+    for (int i = 0; i < 5; i++) {
+        int ret = mem_free(p[i]);
+
+        if (ret < 0) {
+            dbg_str("err: ");
+            dbg_int(ret);
+            dbg_newline();
+        }
+
+        dbg_intln(l_mng_b->total_free * l_mng_b->unit);
+    }
+}
+
+static void dbg_mem_mng(MEM_MNG *mng)
+{
+    int i;
+
+    for (i = 0; i < mng->num_free; i++) {
+        MEMORY *mem = &mng->free[i];
+
+        dbg_int(i);
+        dbg_str(" : addr = ");
+        dbg_addr(mem->addr);
+
+        dbg_str(", size = ");
+        dbg_int((mem->size * mng->unit) / (1024));
+        dbg_str("KB");
+
+        dbg_newline();
+    }
+
+    dbg_newline();
 }
 
 
@@ -322,13 +397,13 @@ void mem_dbg(void)
 // ページ単位メモリ管理
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages);
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg);
 
 void *mem_alloc_user(void *vp_vaddr, int size_B)
 {
     int num_pages = BYTE_TO_PAGE(size_B);
 
-    if (mem_alloc_page_sub(vp_vaddr, num_pages) < 0) {
+    if (mem_alloc_page_sub(vp_vaddr, num_pages, SET_FLG) < 0) {
         return 0;
     } else {
         return vp_vaddr;
@@ -339,7 +414,7 @@ void *mem_alloc_user(void *vp_vaddr, int size_B)
 /**
  * @return リニアアドレス。空き容量が足りなければ 0 が返ってくる
  */
-void *mem_alloc_page(unsigned int num_pages)
+void *mem_alloc_page(unsigned int num_pages, bool set_flg)
 {
     if (num_pages == 0) {
         return 0;
@@ -352,7 +427,7 @@ void *mem_alloc_page(unsigned int num_pages)
         return 0;
     }
 
-    if (mem_alloc_page_sub(vaddr, num_pages) < 0) {
+    if (mem_alloc_page_sub(vaddr, num_pages, set_flg) < 0) {
         return 0;
     } else {
         return vaddr;
@@ -360,7 +435,7 @@ void *mem_alloc_page(unsigned int num_pages)
 }
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages)
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg)
 {
     unsigned long vaddr = (unsigned long) vp_vaddr;
     void *vp_maddr;
@@ -376,17 +451,19 @@ static int mem_alloc_page_sub(void *vp_vaddr, int num_pages)
 
                     int flg = PTE_RW | PTE_US | PTE_PRESENT;
 
-                    if (first == false && num_pages != 1) {
-                        flg |= PTE_CONT;
-                    }
+                    if (set_flg) {
+                        if (first == false && num_pages != 1) {
+                            flg |= PTE_CONT;
+                        }
 
-                    if (first) {
-                        flg |= PTE_START;
-                        first = false;
-                    }
+                        if (first) {
+                            flg |= PTE_START;
+                            first = false;
+                        }
 
-                    if (num_pages == 1) {
-                        flg |= PTE_END;
+                        if (num_pages == 1) {
+                            flg |= PTE_END;
+                        }
                     }
 
                     paging_map2((void *) vaddr, vp_maddr, flg);
@@ -410,7 +487,7 @@ static int page_free(void *vp_vaddr)
 {
     int flg = get_page_flags(vp_vaddr);
     if ((flg & PTE_START) == 0) {
-        return -2;
+        return -1;
     }
 
     unsigned int num_pages = 1;
@@ -468,34 +545,11 @@ static int page_free_maddr(void *vp_vaddr)
 }
 
 
-static void dbg_mem_mng(MEM_MNG *mng)
-{
-    int i;
-
-    for (i = 0; i < mng->num_free; i++) {
-        MEMORY *mem = &mng->free[i];
-
-        dbg_int(i);
-        dbg_str(" : addr = ");
-        dbg_addr(mem->addr);
-
-        dbg_str(", size = ");
-        dbg_int((mem->size * mng->unit) / (1024));
-        dbg_str("KB");
-
-        dbg_newline();
-    }
-
-    dbg_newline();
-}
-
-
 static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
 {
     char *addr = (char *) vp_addr;
 
-    // 4KB 境界でなかったらエラー
-    if (size == 0 || ! IS_4KB_ALIGN((unsigned int) addr)) {
+    if (size == 0) {
         return -1;
     }
 
@@ -532,25 +586,21 @@ static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
     // 前があるか？
     if (i > 0) {
         MEMORY *prev = &mng->free[i - 1];
-        char *prev_end_addr = (char *) prev->addr + prev->size * mng->unit;
+        char *prev_end_addr = (char *) prev->addr + (prev->size * mng->unit);
 
         // 前とまとめれるか？
         if (prev_end_addr == addr) {
             prev->size += size;
+            mng->total_free += size;
 
-            // 後ろがあるか？
-            if (next != 0) {
+            // 後ろとまとめれるか？
+            if (next != 0 && end_addr == next->addr) {
+                prev->size += next->size;
 
-                // 後ろとまとめれるか？
-                if (end_addr == next->addr) {
-                    prev->size += next->size;
+                mng->num_free--; // 空き１つ追加されて前後２つ削除された
 
-                    mng->num_free--; // 空き１つ追加されて前後２つ削除された
-                    mng->total_free += size;
-
-                    for (; i < mng->num_free; i++) {
-                        mng->free[i] = mng->free[i + 1];
-                    }
+                for (; i < mng->num_free; i++) {
+                    mng->free[i] = mng->free[i + 1];
                 }
             }
 
@@ -560,18 +610,13 @@ static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
 
     // 前とはまとめれなかった
 
-    // 後ろがあるか？
-    if (next != 0) {
-
-        // 後ろとまとめれるか？
-        if (end_addr == next->addr) {
-            next->addr = addr;
-            next->size += size;
-
-            // 空きが１つ追加されて１つ削除されたのでmng->num_freeは変わらない
-            mng->total_free += size;
-            return 0;
-        }
+    // 後ろとまとめれるか？
+    if (next != 0 && end_addr == next->addr) {
+        next->addr = addr;
+        next->size += size;
+        mng->total_free += size;
+        // 空きが１つ追加されて１つ削除されたのでmng->num_freeは変わらない
+        return 0;
     }
 
     // 前にも後ろにもまとめれなかった
@@ -605,26 +650,28 @@ static void *get_free_addr(MEM_MNG *mng, unsigned int size)
     }
 
     for (int i = 0; i < mng->num_free; i++) {
-        if (mng->free[i].size >= size + mng->info_size_b) {
+        if (mng->free[i].size >= size + mng->info_size) {
             // 空きが見つかった
 
             MEMORY *mem = &mng->free[i];
 
             unsigned int addr = (unsigned int) mem->addr;
 
-            if (mng->info_size_b > 0) {
+            if (mng->info_size > 0) {
                 // 割り当てサイズの記録。
                 // ここで管理していることを表す印も追加する。
-                *((unsigned int *) addr) = MM_SIG | size;
-                addr += mng->info_size_b;
+                INFO_8BYTES *info = (INFO_8BYTES *) addr;
+                info->signature = MM_SIG;
+                info->size = size + mng->info_size;
+                addr += mng->info_size * mng->unit;
             }
 
             // 空きアドレスをずらす
-            mem->addr += (size * mng->unit + mng->info_size_b);
-            mem->size -= (size + mng->info_size_b);
-            mng->total_free -= size + mng->info_size_b;
+            mem->addr += ((size + mng->info_size) * mng->unit);
+            mem->size -= (size + mng->info_size);
+            mng->total_free -= size + mng->info_size;
 
-            if (mem->size <= mng->info_size_b) {
+            if (mem->size <= mng->info_size) {
                 // 空いた隙間をずらす
                 mng->num_free--;
                 for ( ; i < mng->num_free; i++) {
