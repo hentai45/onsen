@@ -157,6 +157,10 @@ void paging_map(void *vp_vaddr, void *vp_maddr, int flg)
         int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
         l_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
 
+        /* カーネルじゃない場合もあるので、カーネルのPDにも割り当てておく */
+        PTE *os_vaddr_pd = VADDR_OS_PDT;
+        os_vaddr_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+
         PTE *pt_vaddr = (PTE *) (0xFFC00000 | (i_pd << 12));
 
         memset(pt_vaddr, 0, PAGE_SIZE_B);
@@ -205,11 +209,9 @@ PDE *create_user_pd(void)
 
     app_area_clear();
 
-    /*
     int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
     void *p = paging_get_maddr(pd);
     pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_US | PTE_PRESENT);
-    */
 
     return pd;
 }
@@ -262,7 +264,7 @@ void paging_dbg(void)
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {
         if (l_pd[i_pd] & PTE_4MB) {
-            dbgf("%d : 4MB Page = 0X%X\n", i_pd, i_pd * (4 * 1024 * 1024));
+            dbgf("%d : 4MB Page = 0x%X\n", i_pd, i_pd * (4 * 1024 * 1024));
             continue;
         }
 

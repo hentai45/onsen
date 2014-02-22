@@ -30,13 +30,7 @@ const char *task_get_name(int pid);
 
 void task_dbg(void);
 
-
-inline __attribute__ ((always_inline))
-static int is_os_task(int pid)
-{
-    return (pid == g_root_pid || pid == g_idle_pid || pid == g_con_pid ||
-            pid == g_dbg_pid  || pid == g_world_pid);
-}
+int is_os_task(int pid);
 
 
 #endif

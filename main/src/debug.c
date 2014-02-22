@@ -268,7 +268,7 @@ void dbg_fault(const char *msg, int *esp)
     dbg_fault_reg((REGISTER_FAULT *) (esp + 9));
 
     dbgf("DS = %d * 8 + %d", esp[8] >> 3, esp[8] & 0x07);
-    dbgf(", SS = %d * 8 + %d\n", esp[9] >> 3, esp[9] & 0x07);
+    dbgf(", ES = %d * 8 + %d\n", esp[9] >> 3, esp[9] & 0x07);
 
     unsigned long cr2;
     __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));

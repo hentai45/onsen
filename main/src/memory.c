@@ -20,6 +20,7 @@
 /* FREE START               (0x00001000) */
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
 #define MADDR_OS_PDT        (0x00001000)  // 4KB(0x1000)境界であること
+#define VADDR_OS_PDT        (0xC0001000)  // 4KB(0x1000)境界であること
 #define VADDR_BITMAP_START  (0xC0010000)  // 物理アドレス管理用ビットマップ
 #define VADDR_BITMAP_END    (0xC0030000)
 #define VADDR_BMEM_MNG      (VADDR_BITMAP_END)

@@ -41,13 +41,7 @@ const char *task_get_name(int pid);
 
 void task_dbg(void);
 
-
-inline __attribute__ ((always_inline))
-static int is_os_task(int pid)
-{
-    return (pid == g_root_pid || pid == g_idle_pid || pid == g_con_pid ||
-            pid == g_dbg_pid  || pid == g_world_pid);
-}
+int is_os_task(int pid);
 
 
 #endif
@@ -475,6 +469,18 @@ void task_dbg(void)
     }
 
     dbgf("\n");
+}
+
+
+int is_os_task(int pid)
+{
+    TSS *t = pid2tss(pid);
+
+    if (t->cr3 == MADDR_OS_PDT) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
