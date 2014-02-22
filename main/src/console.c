@@ -473,9 +473,9 @@ static void cmd_ps(void)
 static void cmd_mem(void)
 {
     putf("memory:\n");
-    putf("total  : %Z\n", mem_total_B());
-    putf("mfree  : %Z\n", mem_total_mfree_B());
-    putf("vfree  : %Z\n\n", mem_total_vfree_B());
+    putf("total  : %z\n", mem_total_B());
+    putf("mfree  : %z\n", mem_total_mfree_B());
+    putf("vfree  : %z\n\n", mem_total_vfree_B());
 }
 
 
@@ -496,6 +496,7 @@ static void cmd_kill(int pid)
 static void cmd_dbg(char *name)
 {
     if (s_cmp(name, "all") == 0) {
+        dbg_clear();
         graphic_dbg();
         mem_dbg();
         paging_dbg();
@@ -503,6 +504,7 @@ static void cmd_dbg(char *name)
         timer_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "sysinfo") == 0) {
+        dbg_clear();
         dbgf("vram = %X\n", g_sys_info->vram);
         dbgf("width = %d\n", g_sys_info->w);
         dbgf("height = %d\n", g_sys_info->h);
@@ -510,18 +512,23 @@ static void cmd_dbg(char *name)
 
         switch_debug_screen();
     } else if (s_cmp(name, "task") == 0) {
+        dbg_clear();
         task_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "timer") == 0) {
+        dbg_clear();
         timer_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "mem") == 0) {
+        dbg_clear();
         mem_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "paging") == 0) {
+        dbg_clear();
         paging_dbg();
         switch_debug_screen();
     } else if (s_cmp(name, "graphic") == 0) {
+        dbg_clear();
         graphic_dbg();
         switch_debug_screen();
     } else {

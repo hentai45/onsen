@@ -39,6 +39,7 @@ typedef struct REGISTER {
 
 
 void dbgf(const char *fmt, ...);
+void dbg_clear(void);
 void dbg_reg(const REGISTER *r);
 void dbg_seg(void);
 
@@ -210,6 +211,18 @@ void dbgf(const char *fmt, ...)
 }
 
 
+void dbg_clear(void)
+{
+    for (int y = 0; y < HEIGHT; y++) {
+        l_buf[y][0] = 0;
+    }
+
+    l_x = l_y = 0;
+
+    update_all();
+}
+
+
 void dbg_reg(const REGISTER *r)
 {
     dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n", r->eax, r->ebx, r->ecx, r->edx);
@@ -256,6 +269,10 @@ void dbg_fault(const char *msg, int *esp)
 
     dbgf("DS = %d * 8 + %d", esp[8] >> 3, esp[8] & 0x07);
     dbgf(", SS = %d * 8 + %d\n", esp[9] >> 3, esp[9] & 0x07);
+
+    unsigned long cr2;
+    __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
+    dbgf("CR2 = %X", cr2);
 
     fg = bk_fg;
     bg = bk_bg;

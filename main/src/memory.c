@@ -49,6 +49,7 @@ void *mem_alloc(unsigned int size_B);
 void *mem_alloc_user(void *vp_vaddr, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
+int   mem_free_user(void *vp_vaddr);
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
@@ -96,6 +97,7 @@ typedef struct _MEM_MNG {
 static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size);
 static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size);
 static void *get_free_addr(MEM_MNG *mng, unsigned int size);
+static int page_free_maddr(void *vp_vaddr);
 
 
 //-----------------------------------------------------------------------------
@@ -278,7 +280,7 @@ int mem_free(void *vp_vaddr)
         return -1;
     }
 
-    int flg = get_page_flags(vp_vaddr);
+    int flg = paging_get_flags(vp_vaddr);
 
     if (flg & 0xE00) {  // ページ単位メモリ管理が使うフラグが立っている
         /* ページ単位メモリ管理 */
@@ -303,6 +305,55 @@ int mem_free(void *vp_vaddr)
     }
 
     return mem_set_free(l_mng_b, (void *) info, info->size);
+}
+
+
+int mem_free_user(void *vp_vaddr)
+{
+    if (vp_vaddr == 0) {
+        return -1;
+    }
+
+    if ( ! IS_4KB_ALIGN(vp_vaddr)) {
+        return -1;
+    }
+
+    int flg = paging_get_flags(vp_vaddr);
+    if ((flg & PTE_START) == 0) {
+        return -1;
+    }
+
+    if (page_free_maddr(vp_vaddr) < 0) {
+        return -1;
+    }
+
+    if (flg & PTE_END) {
+        return 0;
+    }
+
+    unsigned long vaddr = (unsigned long) vp_vaddr;
+    vaddr += PAGE_SIZE_B;
+    flg = paging_get_flags((void *) vaddr);
+
+    while ((flg & PTE_END) == 0) {
+        if ((flg & PTE_CONT) == 0) {
+            return -1;
+        }
+
+        /* ASSERT */
+        if (flg & PTE_START) {
+            return -1;
+        }
+
+        if (page_free_maddr((void *) vaddr) < 0) {
+            return -1;
+        }
+
+        vaddr += PAGE_SIZE_B;
+        flg = paging_get_flags((void *) vaddr);
+    }
+
+    return 0;
 }
 
 
@@ -361,6 +412,7 @@ static void dbg_mem_mng(MEM_MNG *mng)
 
 
 static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg);
+
 
 void *mem_alloc_user(void *vp_vaddr, int size_B)
 {
@@ -429,7 +481,7 @@ static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg)
                         }
                     }
 
-                    paging_map2((void *) vaddr, vp_maddr, flg);
+                    paging_map((void *) vaddr, vp_maddr, flg);
                     vaddr += PAGE_SIZE_B;
 
                     if (--num_pages == 0) {
@@ -444,11 +496,10 @@ static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg)
     return -1;
 }
 
-static int page_free_maddr(void *vp_vaddr);
 
 static int page_free(void *vp_vaddr)
 {
-    int flg = get_page_flags(vp_vaddr);
+    int flg = paging_get_flags(vp_vaddr);
     if ((flg & PTE_START) == 0) {
         return -1;
     }
@@ -466,7 +517,7 @@ static int page_free(void *vp_vaddr)
     unsigned long vaddr = (unsigned long) vp_vaddr;
     vaddr += PAGE_SIZE_B;
     num_pages++;
-    flg = get_page_flags((void *) vaddr);
+    flg = paging_get_flags((void *) vaddr);
 
     while ((flg & PTE_END) == 0) {
         if ((flg & PTE_CONT) == 0) {
@@ -484,7 +535,7 @@ static int page_free(void *vp_vaddr)
 
         vaddr += PAGE_SIZE_B;
         num_pages++;
-        flg = get_page_flags((void *) vaddr);
+        flg = paging_get_flags((void *) vaddr);
     }
 
     return mem_set_free(l_mng_v, vp_vaddr, num_pages);

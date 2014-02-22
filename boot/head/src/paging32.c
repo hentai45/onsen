@@ -48,13 +48,11 @@ static PDE *create_os_pd(void)
     PDE *pd = (PDE *) MADDR_OS_PDT;
     zero_clear_pde(pd);
 
-    // 最初の物理メモリ8MBを論理アドレスにそのまま対応させる
+    // 最初の物理メモリ4MBを論理アドレスにそのまま対応させる
     map_4MB_page(pd, (void *) 0, (void *) 0);
-    //map_4MB_page(pd, (void *) SIZE_4MB, (void *) SIZE_4MB);
 
-    // 最初の物理メモリ8MBを論理アドレスVADDR_BASEに対応させる
+    // 最初の物理メモリ4MBを論理アドレスVADDR_BASEに対応させる
     map_4MB_page(pd, (void *) VADDR_BASE, (void *) 0);
-    //map_4MB_page(pd, (void *) (VADDR_BASE + SIZE_4MB), (void *) SIZE_4MB);
 
     // VRAMを論理アドレスVADDR_VRAMから8MBを対応させる
     unsigned short *vram = (unsigned short *) g_sys_info->vram;

@@ -8,6 +8,7 @@
 // ページング
 
 #define PAGE_SIZE_B (4096)  ///< ページサイズ
+#define CUR_PD      (VADDR_PD_SELF)
 
 #define PTE_PRESENT (0x001)  // 1ならページがメモリ上に存在する
 #define PTE_RW      (0x002)  // 0なら特権レベル3では書き込めない
@@ -28,12 +29,18 @@
 #define BYTE_TO_PAGE(byte) ((CEIL_4KB(byte)) >> 12)
 
 
+typedef unsigned long PDE;
+typedef unsigned long PTE;
+
 void paging_init(void);
-void paging_map(void *vp_vaddr, void *vp_maddr);
-void paging_map2(void *vp_vaddr, void *vp_maddr, int flg);
+void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
-unsigned long *get_os_pd(void);
-int get_page_flags(void *vp_vaddr);
+PDE *get_os_pd(void);
+PDE *create_user_pd(void);
+int paging_get_flags(void *vp_vaddr);
+
+void app_area_copy(PDE *pd);
+void app_area_clear(void);
 
 void paging_dbg(void);
 

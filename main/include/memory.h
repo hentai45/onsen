@@ -43,6 +43,7 @@ void *mem_alloc(unsigned int size_B);
 void *mem_alloc_user(void *vp_vaddr, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
+int   mem_free_user(void *vp_vaddr);
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------

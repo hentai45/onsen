@@ -101,6 +101,10 @@ typedef struct TSS {
 
     int ppid;  ///< 親 PID
 
+    /* ページディレクトリ。CR3に入っているのは
+     * 物理アドレスなのでアクセスできない。こっちは論理アドレス */
+    PDE *pd;
+
     char name[TASK_NAME_MAX];
     int timeslice_ms;
 
@@ -219,33 +223,26 @@ int task_run_app(void *p, unsigned int size, const char *name)
 
     int pid = task_new(app_name);
 
-    char *p_code = 0;
-    mem_alloc_user(p_code, size);
+    /* .text */
+    char *p_code = mem_alloc_user(0, size);
     memcpy(p_code, p, size);
+
+    /* .data */
     char *p_data = (char *) mem_alloc_user(esp, stack_and_data_size);
+    memcpy(p_data, p + data_addr, data_size);
 
-    dbgf("\nsize: 0x%X\n", size);
-    dbgf("stack_and_data_size: 0x%X\n", stack_and_data_size);
-    dbgf("esp: 0x%X\n", esp);
-    dbgf("data_size: 0x%X\n", data_size);
-    dbgf("data_addr: 0x%X\n", data_addr);
-    dbgf("p_data: 0x%X\n", p_data);
-    dbgf("p_code: 0x%X\n\n", p_code);
-
-    memcpy(p_code + esp, p + data_addr, data_size);
-
-    dbgf("%s %X\n", (char *) esp, p_code + data_addr);
-
+    /* stack */
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
 
-    unsigned long pd = (unsigned long) get_os_pd();  // FIXME
-    set_app_tss(pid, pd, (void *) 0x1B, (unsigned char *) esp, esp0);
+    PDE *pd = create_user_pd();
+    set_app_tss(pid, paging_get_maddr(pd), (void *) 0x1B, (unsigned char *) esp, esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;
     t->data   = p_data;
     t->stack0 = stack0;
+    t->pd     = pd;
 
     task_run(pid, 20);
 
@@ -289,9 +286,14 @@ int task_free(int pid, int exit_status)
 
     task_sleep(pid);
 
-    mem_free(t->code);
-    mem_free(t->data);
-    mem_free(t->stack0);
+    app_area_copy(t->pd);
+
+    mem_free_user(t->code);
+    mem_free_user(t->data);
+    mem_free_user(t->stack0);
+    mem_free(t->pd);
+
+    app_area_clear();
 
     timer_task_free(pid);
 

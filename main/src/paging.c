@@ -60,6 +60,7 @@
 // ページング
 
 #define PAGE_SIZE_B (4096)  ///< ページサイズ
+#define CUR_PD      (VADDR_PD_SELF)
 
 #define PTE_PRESENT (0x001)  // 1ならページがメモリ上に存在する
 #define PTE_RW      (0x002)  // 0なら特権レベル3では書き込めない
@@ -80,12 +81,18 @@
 #define BYTE_TO_PAGE(byte) ((CEIL_4KB(byte)) >> 12)
 
 
+typedef unsigned long PDE;
+typedef unsigned long PTE;
+
 void paging_init(void);
-void paging_map(void *vp_vaddr, void *vp_maddr);
-void paging_map2(void *vp_vaddr, void *vp_maddr, int flg);
+void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
-unsigned long *get_os_pd(void);
-int get_page_flags(void *vp_vaddr);
+PDE *get_os_pd(void);
+PDE *create_user_pd(void);
+int paging_get_flags(void *vp_vaddr);
+
+void app_area_copy(PDE *pd);
+void app_area_clear(void);
 
 void paging_dbg(void);
 
@@ -113,13 +120,9 @@ void paging_dbg(void);
 
 #define MAKE_PTE(maddr, flg)  (((unsigned long) (maddr) & ~0xFFF) | (flg & 0xFFF))
 
-typedef unsigned long PDE;
-typedef unsigned long PTE;
-
 
 static PDE *get_pt(int i_pd);
 static PTE *get_pte(void *vp_vaddr);
-static void map_page(void *vp_vaddr, void *vp_maddr, int flg);
 
 
 static PDE *l_pd = (PDE *) VADDR_PD_SELF;
@@ -138,20 +141,35 @@ void paging_init(void)
 }
 
 
-void paging_map(void *vp_vaddr, void *vp_maddr)
+/**
+ * ページの物理アドレスをリニアアドレスに対応づける。
+ * PT がなければ自動でつくる
+ */
+void paging_map(void *vp_vaddr, void *vp_maddr, int flg)
 {
-    int flg = PTE_RW | PTE_US | PTE_PRESENT;
-    map_page(vp_vaddr, vp_maddr, flg);
+    PTE *pte = get_pte(vp_vaddr);
+
+    if (pte == 0) {
+        // PT がなかったのでつくる
+
+        PTE *pt_maddr = (PTE *) mem_alloc_maddr();
+
+        int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
+        l_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+
+        PTE *pt_vaddr = (PTE *) (0xFFC00000 | (i_pd << 12));
+
+        memset(pt_vaddr, 0, PAGE_SIZE_B);
+
+        int i_pt  = VADDR_TO_PT_INDEX(vp_vaddr);
+        pte = &pt_vaddr[i_pt];
+    }
+
+    *pte = MAKE_PTE(vp_maddr, flg | PTE_PRESENT);
 }
 
 
-void paging_map2(void *vp_vaddr, void *vp_maddr, int flg)
-{
-    map_page(vp_vaddr, vp_maddr, flg);
-}
-
-
-int get_page_flags(void *vp_vaddr)
+int paging_get_flags(void *vp_vaddr)
 {
     PTE *pte = get_pte(vp_vaddr);
 
@@ -176,6 +194,24 @@ void *paging_get_maddr(void *vp_vaddr)
 PDE *get_os_pd(void)
 {
     return l_os_pd;
+}
+
+
+PDE *create_user_pd(void)
+{
+    PDE *pd = mem_alloc(PAGE_SIZE_B);
+
+    memcpy(pd, l_pd, PAGE_SIZE_B);
+
+    app_area_clear();
+
+    /*
+    int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
+    void *p = paging_get_maddr(pd);
+    pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_US | PTE_PRESENT);
+    */
+
+    return pd;
 }
 
 
@@ -206,31 +242,17 @@ static PTE *get_pte(void *vp_vaddr)
 }
 
 
-/**
- * ページの物理アドレスをリニアアドレスに対応づける。
- * PT がなければ自動でつくる
- */
-static void map_page(void *vp_vaddr, void *vp_maddr, int flg)
+void app_area_copy(PDE *pd)
 {
-    PTE *pte = get_pte(vp_vaddr);
+    int i = VADDR_TO_PD_INDEX(VADDR_BASE);
+    memcpy(l_pd, pd, i * 4);
+}
 
-    if (pte == 0) {
-        // PT がなかったのでつくる
 
-        PTE *pt_maddr = (PTE *) mem_alloc_maddr();
-
-        int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
-        l_pd[i_pd] = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
-
-        PTE *pt_vaddr = (PTE *) (0xFFC00000 | (i_pd << 12));
-
-        memset(pt_vaddr, 0, PAGE_SIZE_B);
-
-        int i_pt  = VADDR_TO_PT_INDEX(vp_vaddr);
-        pte = &pt_vaddr[i_pt];
-    }
-
-    *pte = MAKE_PTE(vp_maddr, flg | PTE_PRESENT);
+void app_area_clear(void)
+{
+    int i = VADDR_TO_PD_INDEX(VADDR_BASE);
+    memset(l_pd, 0, i * 4);
 }
 
 

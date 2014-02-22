@@ -24,6 +24,7 @@ typedef struct REGISTER {
 
 
 void dbgf(const char *fmt, ...);
+void dbg_clear(void);
 void dbg_reg(const REGISTER *r);
 void dbg_seg(void);
 
