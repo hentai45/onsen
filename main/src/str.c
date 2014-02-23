@@ -7,6 +7,7 @@
 #define HEADER_STRING
 
 #include <stdarg.h>
+#include "file.h"
 
 int  s_len(const char *s);
 void s_cpy(char *s, const char *t);
@@ -19,8 +20,10 @@ void s_to_upper(char *s);
 
 int  s_atoi(const char *s);
 
+int  s_printf(const char *fmt, ...);
+int  s_fprintf(FILE_T *f, const char *fmt, ...);
 int  s_snprintf(char *s, unsigned int n, const char *fmt, ...);
-int  s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap);
+int  s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 int   memcmp(const void *buf1, const void *buf2, unsigned int);
 void *memcpy(void *dst, const void *src, unsigned int);
@@ -31,6 +34,7 @@ void *memset(void *dst, int c, unsigned int count);
 
 
 #include <stdbool.h>
+#include "debug.h"
 
 
 int s_len(const char *s)
@@ -91,13 +95,60 @@ int s_ncmp(const char *s, const char *t, int n)
 
     return *s - *t;
 }
-static char l_tmp[256];
+
 
 static void s_itox(unsigned int n, char *s, int digit, bool capital);
 static void s_itoa(int n, char *s);
 static void s_uitoa(unsigned int n, char *s);
 static void s_itob(unsigned int n, char *s, bool space);
 static void s_size(unsigned int size_B, char *s, int max);
+
+
+int s_printf(const char *fmt, ...)
+{
+    char l_printf_buf[4096];
+
+    FILE_T *f = f_get_file(STDOUT_FILENO);
+
+    if (f == 0 || f->write == 0)
+        f = f_debug;
+
+    va_list ap;
+    va_start(ap, fmt);
+    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
+    va_end(ap);
+
+    f->write(f->self, l_printf_buf, cnt);
+}
+
+
+int s_fprintf(FILE_T *f, const char *fmt, ...)
+{
+    char l_printf_buf[4096];
+
+    if (f == 0 || f->write == 0)
+        f = &f_debug;
+
+    va_list ap;
+    va_start(ap, fmt);
+    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
+    va_end(ap);
+
+    f->write(f->self, l_printf_buf, cnt);
+}
+
+
+int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = s_vsnprintf(s, n, fmt, ap);
+    va_end(ap);
+
+    return ret;
+}
+
+#define FLG_HASH_SIGN (1)
 
 #define ADD_CHAR(ch)  do { \
     s[i++] = (ch);         \
@@ -106,18 +157,15 @@ static void s_size(unsigned int size_B, char *s, int max);
         break;             \
 } while (0)
 
-int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    int ret = s_snprintf2(s, n, fmt, ap);
-    va_end(ap);
+#define INCREMENT_P do { \
+    if (*++p == 0)       \
+        break;           \
+} while (0)
 
-    return ret;
-}
-
-int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
+int s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
 {
+    char l_tmp[256];
+
     if (n == 0)
         return 0;
 
@@ -138,7 +186,37 @@ int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
             continue;
         }
 
-        p++;
+        INCREMENT_P;
+
+        int flags = 0;
+
+        if (*p == '#') {
+            flags = FLG_HASH_SIGN;
+
+            INCREMENT_P;
+        }
+
+        unsigned int precision = 0;
+
+        if (*p == '.') {
+            INCREMENT_P;
+
+            if (*p == '*') {
+               precision = va_arg(ap, int);
+
+               INCREMENT_P;
+            } else {
+                while ('0' <= *p && *p <= '9') {
+                    precision *= 10;
+                    precision += *p - '0';
+
+                    INCREMENT_P;
+                }
+
+                if (*p == 0)
+                    break;
+            }
+        }
 
         if (*p == '%') {  // %
             ADD_CHAR('%');
@@ -146,7 +224,10 @@ int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
             ch_val = (unsigned char) va_arg(ap, int);
             ADD_CHAR(ch_val);
         } else if (*p == 's') {  // 文字列
-            for (s_val = va_arg(ap, char *); *s_val; s_val++) {
+            if (precision == 0)
+                precision = 0xFFFFFFFF;
+
+            for (s_val = va_arg(ap, char *); *s_val && precision > 0; s_val++, precision--) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'd' || *p == 'i') {  // 整数
@@ -160,11 +241,21 @@ int s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap)
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'x') {  // 符号なし16進数(10以上はabcdef)
+            if (flags == FLG_HASH_SIGN) {
+                ADD_CHAR('0');
+                ADD_CHAR('x');
+            }
+
             s_itox(va_arg(ap, unsigned int), l_tmp, 8, false);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
         } else if (*p == 'X') {  // 符号なし16進数(10以上はABCDEF)
+            if (flags == FLG_HASH_SIGN) {
+                ADD_CHAR('0');
+                ADD_CHAR('x');
+            }
+
             s_itox(va_arg(ap, unsigned int), l_tmp, 8, true);
             for (s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);

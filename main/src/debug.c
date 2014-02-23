@@ -19,6 +19,7 @@
 #define HEADER_DEBUG
 
 #include <stdarg.h>
+#include "file.h"
 
 //-----------------------------------------------------------------------------
 // メイン
@@ -34,7 +35,6 @@ typedef struct _REGISTERS {
     int edi, esi, ebp, ebx, edx, ecx, eax;
 } REGISTERS;
 
-
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 
@@ -44,6 +44,8 @@ void dbg_reg(const REGISTERS *r);
 void dbg_seg(void);
 
 void dbg_fault(const char *msg, int *esp);
+
+extern FILE_T *f_debug;
 
 #endif
 
@@ -87,7 +89,10 @@ static int l_y = 0;
 static char l_tmp[TMP_SIZE];
 
 static void dbg_fault_reg(const REGISTERS_FAULT *r);
+static int dbg_write(void *self, const void *buf, int cnt);
 
+FILE_T l_f_debug = { .write = dbg_write};
+FILE_T *f_debug = &l_f_debug;
 
 //=============================================================================
 // 公開関数
@@ -204,7 +209,7 @@ void dbgf(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    s_snprintf2(l_tmp, TMP_SIZE, fmt, ap);
+    s_vsnprintf(l_tmp, TMP_SIZE, fmt, ap);
     va_end(ap);
 
     buf_str(l_tmp);
@@ -307,3 +312,9 @@ static void dbg_fault_reg(const REGISTERS_FAULT *r)
     dbgf(", APP SS = %d * 8 + %d\n", r->app_ss >> 3, r->app_ss & 0x07);
 }
 
+
+static int dbg_write(void *self, const void *buf, int cnt)
+{
+    dbgf("%.*s", cnt, (char *) buf);
+    return 0;
+}

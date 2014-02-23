@@ -26,9 +26,11 @@ typedef struct _PUSHAL_REGISTERS {
 int hrb_api(PUSHAL_REGISTERS reg)
 {
     if (reg.edx == 1) {
-        dbgf("%c", reg.eax);
+        s_printf("%c", reg.eax);
     } else if (reg.edx == 2) {
-        dbgf("%s", reg.ebx);
+        s_printf("%s", reg.ebx);
+    } else if (reg.edx == 3) {
+        s_printf("%.*s", reg.ecx, reg.ebx);
     } else if (reg.edx == 4) {
         api_exit_app(0);
     }

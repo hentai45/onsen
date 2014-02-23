@@ -4,10 +4,12 @@
 #define HEADER_TASK
 
 #include <stdbool.h>
+#include "file.h"
 
-#define ERROR_PID   -1
+#define ERROR_PID        (-1)
 
-#define TASK_MAX    32  ///< 最大タスク数
+#define TASK_MAX         (32)  ///< 最大タスク数
+#define FILE_TABLE_SIZE  (16)
 
 
 extern int g_root_pid;
@@ -30,6 +32,10 @@ const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
+
+int get_free_fd(void);
+FILE_T *task_get_file(int fd);
+int task_set_file(int fd, FILE_T *f);
 
 int is_os_task(int pid);
 

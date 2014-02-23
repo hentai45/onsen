@@ -3,5 +3,38 @@
 #ifndef HEADER_FILE
 #define HEADER_FILE
 
+#define STDIN_FILENO   (0)
+#define STDOUT_FILENO  (1)
+#define STDERR_FILENO  (2)
+
+#define FILE_FLG_FREE  (0)
+#define FILE_FLG_USED  (1)
+
+#define O_RDONLY  (0)
+#define O_WRONLY  (1)
+#define O_RDWR    (2)
+
+typedef struct _FILE_T {
+    void *self;
+    int refs;
+    int (*close)(void *self);
+    int (*read)(void *self, void *buf, int cnt);
+    int (*write)(void *self, const void *buf, int cnt);
+} FILE_T;
+
+typedef struct _FILE_TABLE_ENTRY {
+    int flags;
+    FILE_T *file;
+} FTE;
+
+
+FILE_T *f_get_file(int fd);
+
+int f_open(const char *name, int flags);
+int f_close(int fd);
+int f_read(int fd, void *buf, int cnt);
+int f_write(int fd, const void *buf, int cnt);
+
+extern FILE_T *f_keyboard;
 
 #endif

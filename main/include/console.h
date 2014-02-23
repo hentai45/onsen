@@ -3,6 +3,10 @@
 #ifndef HEADER_CONSOLE
 #define HEADER_CONSOLE
 
+#include "file.h"
+
 void console_main(void);
+
+extern FILE_T *f_console;
 
 #endif

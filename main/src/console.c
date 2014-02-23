@@ -20,7 +20,11 @@
 #ifndef HEADER_CONSOLE
 #define HEADER_CONSOLE
 
+#include "file.h"
+
 void console_main(void);
+
+extern FILE_T *f_console;
 
 #endif
 
@@ -53,6 +57,11 @@ void console_main(void);
 
 static int cursor_tid;
 static int cursor_on = 0;
+
+int cons_write(void *self, const void *buf, int cnt);
+
+FILE_T l_f_console = { .write = cons_write };
+FILE_T *f_console = &l_f_console;
 
 
 //-----------------------------------------------------------------------------
@@ -328,7 +337,7 @@ static void putf(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    s_snprintf2(l_tmp, TMP_SIZE, fmt, ap);
+    s_vsnprintf(l_tmp, TMP_SIZE, fmt, ap);
     va_end(ap);
 
     for (char *s = l_tmp; *s; s++) {
@@ -588,6 +597,13 @@ static int cmd_app(char *cmd_name, int bgp)
         timer_stop(cursor_tid);
     }
 
+    return 0;
+}
+
+
+int cons_write(void *self, const void *buf, int cnt)
+{
+    putf("%.*s", cnt, (char *) buf);
     return 0;
 }
 

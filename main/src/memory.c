@@ -384,6 +384,7 @@ void *mem_alloc_maddr(void)
 
 
 static void dbg_mem_mng(MEM_MNG *mng);
+#include "console.h"
 
 void mem_dbg(void)
 {
@@ -401,7 +402,7 @@ static void dbg_mem_mng(MEM_MNG *mng)
     for (i = 0; i < mng->num_free; i++) {
         MEMORY *mem = &mng->free[i];
 
-        dbgf("%d : addr = 0x%X, size = %Z\n", i, mem->addr, mem->size * mng->unit);
+        dbgf("%d : addr = %#X, size = %Z\n", i, mem->addr, mem->size * mng->unit);
     }
 
     dbgf("\n");

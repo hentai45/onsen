@@ -4,6 +4,7 @@
 #define HEADER_STRING
 
 #include <stdarg.h>
+#include "file.h"
 
 int  s_len(const char *s);
 void s_cpy(char *s, const char *t);
@@ -16,8 +17,10 @@ void s_to_upper(char *s);
 
 int  s_atoi(const char *s);
 
+int  s_printf(const char *fmt, ...);
+int  s_fprintf(FILE_T *f, const char *fmt, ...);
 int  s_snprintf(char *s, unsigned int n, const char *fmt, ...);
-int  s_snprintf2(char *s, unsigned int n, const char *fmt, va_list ap);
+int  s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 int   memcmp(const void *buf1, const void *buf2, unsigned int);
 void *memcpy(void *dst, const void *src, unsigned int);

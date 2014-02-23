@@ -15,10 +15,12 @@
 #define HEADER_TASK
 
 #include <stdbool.h>
+#include "file.h"
 
-#define ERROR_PID   -1
+#define ERROR_PID        (-1)
 
-#define TASK_MAX    32  ///< 最大タスク数
+#define TASK_MAX         (32)  ///< 最大タスク数
+#define FILE_TABLE_SIZE  (16)
 
 
 extern int g_root_pid;
@@ -41,6 +43,10 @@ const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
+
+int get_free_fd(void);
+FILE_T *task_get_file(int fd);
+int task_set_file(int fd, FILE_T *f);
 
 int is_os_task(int pid);
 
@@ -107,6 +113,8 @@ typedef struct TSS {
     void *code;
     void *data;
     void *stack0;
+
+    FTE file_table[FILE_TABLE_SIZE];
 } __attribute__ ((__packed__)) TSS;
 
 
@@ -130,23 +138,8 @@ int g_world_pid;
 
 static TASK_MNG l_mng;
 
-
-inline __attribute__ ((always_inline))
-static TSS *pid2tss(int pid)
-{
-    if (pid < 0 || TASK_MAX <= pid) {
-        return 0;
-    }
-
-    return &l_mng.tss[pid];
-}
-
-
-inline __attribute__ ((always_inline))
-int pid2tss_sel(int pid)
-{
-    return (SEG_TSS + pid) << 3;
-}
+static TSS *pid2tss(int pid);
+static int pid2tss_sel(int pid);
 
 
 extern int timer_ts_tid(void);
@@ -157,7 +150,7 @@ static void idle_main(void);
 static void init_tss_seg(void);
 static void set_os_tss(int pid, void (*f)(void), void *esp);
 static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
-static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
+static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0);
 
@@ -178,6 +171,7 @@ void task_init(void)
         t->flags = TASK_FLG_FREE;
         t->ppid = 0;
         memset(t->name, 0, TASK_NAME_MAX);
+        memset(t->file_table, 0, FILE_TABLE_SIZE * sizeof(FTE));
     }
 
 
@@ -220,7 +214,7 @@ int task_run_app(void *p, unsigned int size, const char *name)
     memcpy(p_code, p, size);
 
     /* .data */
-    char *p_data = (char *) mem_alloc_user(esp, stack_and_data_size);
+    char *p_data = (char *) mem_alloc_user((void *) esp, stack_and_data_size);
     memcpy(p_data, p + data_addr, data_size);
 
     /* stack */
@@ -228,7 +222,7 @@ int task_run_app(void *p, unsigned int size, const char *name)
     unsigned char *esp0 = stack0 + (64 * 1023);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, paging_get_maddr(pd), pd, (void *) 0x1B, (unsigned char *) esp, esp0);
+    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) 0x1B, (void *) esp, (void *) esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;
@@ -437,6 +431,33 @@ int get_pid(void)
 }
 
 
+int get_free_fd(void)
+{
+    TSS *t = l_mng.run[l_mng.cur_run];
+
+    for (int fd = 0; fd < FILE_TABLE_SIZE; fd++) {
+        if (t->file_table[fd].flags == FILE_FLG_FREE) {
+            return fd;
+        }
+    }
+
+    return -1;
+}
+
+
+FILE_T *task_get_file(int fd)
+{
+    TSS *t = l_mng.run[l_mng.cur_run];
+    return t->file_table[fd].file;
+}
+
+
+int task_set_file(int fd, FILE_T *f)
+{
+    return 0;
+}
+
+
 const char *task_get_name(int pid)
 {
     TSS *t = pid2tss(pid);
@@ -538,21 +559,28 @@ static void init_tss_seg(void)
 
 static void set_os_tss(int pid, void (*f)(void), void *esp)
 {
-    set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f, EFLAGS_INT_ENABLE,
-            esp, KERNEL_DS, 0, 0);
+    TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
+            EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
 }
 
 
 static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
 {
     // | 3 は要求者特権レベルを3にするため
-    set_tss(pid, USER_CS | 3, USER_DS, maddr_pd, vaddr_pd, f, EFLAGS_INT_ENABLE,
-            esp, USER_DS | 3, esp0, KERNEL_DS);
+    TSS *tss = set_tss(pid, USER_CS | 3, USER_DS, maddr_pd, vaddr_pd, f,
+            EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
+
+    tss->file_table[0].flags = FILE_FLG_USED;
+    tss->file_table[0].file  = f_keyboard;
+    tss->file_table[1].flags = FILE_FLG_USED;
+    tss->file_table[1].file  = f_console;
+    tss->file_table[2].flags = FILE_FLG_USED;
+    tss->file_table[2].file  = f_console;
 }
 
 
 
-static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
+static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0)
 {
@@ -564,7 +592,7 @@ static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
     memset(tss, 0, TSS_REG_SIZE);
 
     tss->cr3 = cr3;
-    tss->pd = pd;
+    tss->pd = (PDE *) pd;
 
     // タスク実行開始時のレジスタ内容を設定する
     tss->cs = cs;
@@ -577,6 +605,22 @@ static void set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
     // 特権レベル0に移行したときのスタック領域を設定する
     tss->esp0 = (unsigned long) esp0;
     tss->ss0 = ss0;
+
+    return tss;
 }
 
 
+static TSS *pid2tss(int pid)
+{
+    if (pid < 0 || TASK_MAX <= pid) {
+        return 0;
+    }
+
+    return &l_mng.tss[pid];
+}
+
+
+static int pid2tss_sel(int pid)
+{
+    return (SEG_TSS + pid) << 3;
+}
