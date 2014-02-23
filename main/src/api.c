@@ -35,7 +35,7 @@
 #include "timer.h"
 
 
-static void api_exit_app(int exit_status);
+void api_exit_app(int exit_status);
 
 
 //=============================================================================
@@ -115,7 +115,7 @@ int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
 //=============================================================================
 // 非公開関数
 
-static void api_exit_app(int exit_status)
+void api_exit_app(int exit_status)
 {
     MSG msg;
     msg.message = MSG_REQUEST_EXIT;

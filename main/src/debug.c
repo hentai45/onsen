@@ -30,9 +30,9 @@ void debug_main(void);
 // 画面出力
 
 // pushal でスタックに格納されるレジスタ
-typedef struct REGISTER {
+typedef struct _REGISTERS {
     int edi, esi, ebp, ebx, edx, ecx, eax;
-} REGISTER;
+} REGISTERS;
 
 
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
@@ -40,7 +40,7 @@ typedef struct REGISTER {
 
 void dbgf(const char *fmt, ...);
 void dbg_clear(void);
-void dbg_reg(const REGISTER *r);
+void dbg_reg(const REGISTERS *r);
 void dbg_seg(void);
 
 void dbg_fault(const char *msg, int *esp);
@@ -69,9 +69,9 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param);
 // 画面出力
 
 // 例外発生時に CPU が自動で push するレジスタ
-typedef struct REGISTER_FAULT {
+typedef struct _REGISTERS_FAULT {
     int err_code, eip, cs, eflags, app_esp, app_ss;
-} REGISTER_FAULT;
+} REGISTERS_FAULT;
 
 
 #define WIDTH  (80)
@@ -86,7 +86,7 @@ static int l_y = 0;
 #define TMP_SIZE  (4096)
 static char l_tmp[TMP_SIZE];
 
-static void dbg_fault_reg(const REGISTER_FAULT *r);
+static void dbg_fault_reg(const REGISTERS_FAULT *r);
 
 
 //=============================================================================
@@ -223,7 +223,7 @@ void dbg_clear(void)
 }
 
 
-void dbg_reg(const REGISTER *r)
+void dbg_reg(const REGISTERS *r)
 {
     dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n", r->eax, r->ebx, r->ecx, r->edx);
     dbgf("EBP = %X, ESI = %X, EDI = %X\n", r->ebp, r->esi, r->edi);
@@ -264,8 +264,8 @@ void dbg_fault(const char *msg, int *esp)
 
     // ---- レジスタの内容を表示
 
-    dbg_reg((REGISTER *) esp);
-    dbg_fault_reg((REGISTER_FAULT *) (esp + 9));
+    dbg_reg((REGISTERS *) esp);
+    dbg_fault_reg((REGISTERS_FAULT *) (esp + 9));
 
     dbgf("DS = %d * 8 + %d", esp[8] >> 3, esp[8] & 0x07);
     dbgf(", ES = %d * 8 + %d\n", esp[9] >> 3, esp[9] & 0x07);
@@ -293,7 +293,7 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param)
 //-----------------------------------------------------------------------------
 // 画面出力
 
-static void dbg_fault_reg(const REGISTER_FAULT *r)
+static void dbg_fault_reg(const REGISTERS_FAULT *r)
 {
     dbgf("ERROR CODE = %X\n", r->err_code);
     dbgf("EIP = %X", r->eip);

@@ -2,17 +2,31 @@
 #ifndef HEADER_ASMAPI
 #define HEADER_ASMAPI
 
+void asm_hrb_api(void);
 void asm_api(void);
 
 #endif
 */
 
 
+.globl asm_hrb_api
 .globl asm_api
 
+.extern hrb_api
 .extern onsen_api
 
 .text
+
+
+# API(システムコール)を処理するトラップゲートから呼ばれる
+# C の hrb_api 関数を呼び出す
+asm_hrb_api:
+    pushal
+    pushal
+    call   hrb_api
+    addl   $32, %esp
+    popal
+    iret
 
 
 # API(システムコール)を処理するトラップゲートから呼ばれる

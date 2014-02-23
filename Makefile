@@ -6,6 +6,7 @@ QEMU_FLAGS = -m 32 -localtime -vga std
 # ディレクトリ
 BIN_DIR = bin
 APP_BIN = app/bin
+HRB_APP_BIN = app/haribote/bin
 
 
 # ファイル
@@ -32,10 +33,10 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(APP_BIN)/hello $(APP_BIN)/test test.bmp
+$(IMG) : $(IPL) $(ONSEN_SYS) $(HRB_APP_BIN)/hello.hrb $(APP_BIN)/test test.bmp
 	mformat -f 1440 -C -B $(IPL) -i $@ ::
 	mcopy $(ONSEN_SYS) -i $@ ::
-	mcopy $(APP_BIN)/hello -i $@ ::
+	mcopy $(HRB_APP_BIN)/hello.hrb -i $@ ::
 	mcopy app/hello/hello.c -i $@ ::
 	mcopy $(APP_BIN)/test -i $@ ::
 	mcopy test.bmp -i $@ ::
