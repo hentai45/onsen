@@ -154,12 +154,12 @@ int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
     s[i++] = (ch);         \
     ret++;                 \
     if (i >= n-1)          \
-        break;             \
+        goto end_loop;     \
 } while (0)
 
 #define INCREMENT_P do { \
     if (*++p == 0)       \
-        break;           \
+        goto end_loop;   \
 } while (0)
 
 int s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
@@ -291,6 +291,8 @@ int s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
             ADD_CHAR(*s_val);
         }
     }
+
+end_loop:
 
     s[i] = 0;
 

@@ -384,7 +384,6 @@ void *mem_alloc_maddr(void)
 
 
 static void dbg_mem_mng(MEM_MNG *mng);
-#include "console.h"
 
 void mem_dbg(void)
 {
