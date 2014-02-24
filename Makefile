@@ -1,6 +1,7 @@
 # ソフトウェア
 QEMU = qemu-system-i386
 QEMU_FLAGS = -m 32 -localtime -vga std
+BOCHS = bochs
 
 
 # ディレクトリ
@@ -50,6 +51,15 @@ umount:
 
 
 run :
+	make runb
+
+
+runb :
+	make img
+	$(BOCHS)
+
+
+runq :
 	make img
 	$(QEMU) $(QEMU_FLAGS) -fda $(IMG) &
 
