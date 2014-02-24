@@ -80,6 +80,7 @@ void set_video_mode(void)
     g_sys_info->vram = svga_mode.vram;
     g_sys_info->w = svga_mode.w;
     g_sys_info->h = svga_mode.h;
+    g_sys_info->color_width = svga_mode.color_width;
 }
 
 

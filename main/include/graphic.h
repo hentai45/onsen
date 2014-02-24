@@ -5,7 +5,10 @@
 
 #define ERROR_SID  -1
 
-#define RGB(R, G, B) ((unsigned short) (((R) & 0xF8) << 8) | (((G) & 0xFC) << 3) | (((B) & 0xF8) >> 3))
+typedef unsigned short COLOR;
+
+#define RGB(R, G, B) ((COLOR) (((R) & 0xF8) << 8) | (((G) & 0xFC) << 3) | (((B) & 0xF8) >> 3))
+#define RGB2(rgb)    ((COLOR) (((rgb) & 0xF80000) >> 8) | (((rgb) & 0xFC00) >> 5) | (((rgb) & 0xF8) >> 3))
 
 #define GET_RED(RGB)   (((RGB) & 0xF800) >> 8)
 #define GET_GREEN(RGB) (((RGB) & 0x07E0) >> 3)
@@ -16,6 +19,14 @@
 #define COL_GREEN    RGB(  0, 255,   0)
 #define COL_BLUE     RGB(  0,   0, 255)
 #define COL_WHITE    RGB(255, 255, 255)
+
+#define TITLE_BAR_HEIGHT  (18)
+#define BORDER_WIDTH      (2)
+#define WINDOW_EXT_HEIGHT (TITLE_BAR_HEIGHT + (BORDER_WIDTH * 2))
+#define WINDOW_EXT_WIDTH  (BORDER_WIDTH * 2)
+
+#define CLIENT_X  (BORDER_WIDTH)
+#define CLIENT_Y  (TITLE_BAR_HEIGHT + BORDER_WIDTH)
 
 
 enum {
@@ -33,12 +44,14 @@ extern const int g_w;
 extern const int g_h;
 
 
-void graphic_init(unsigned short *vram);
+void graphic_init(COLOR *vram);
 
-int  surface_new(int w, int h);
-int  surface_new_from_buf(int w, int h, unsigned short *buf);
-void surface_free(int sid);
-void surface_task_free(int pid);
+int  new_window(int cw, int ch, char *title);
+
+int  new_surface(int w, int h);
+int  new_surface_from_buf(int w, int h, COLOR *buf);
+void free_surface(int sid);
+void free_surface_task(int pid);
 int  get_screen(void);
 
 void set_sprite_pos(int sid, int x, int y);
@@ -51,19 +64,19 @@ void draw_sprite(int src_sid, int dst_sid, int op);
 void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
         int dst_sid, int dst_x, int dst_y, int op);
 
-void fill_surface(int sid, unsigned short color);
+void fill_surface(int sid, COLOR color);
 void fill_rect(int sid, int x, int y, int w, int h,
-        unsigned short color);
-void draw_text(int sid, int x, int y, unsigned short color,
+        COLOR color);
+void draw_text(int sid, int x, int y, COLOR color,
         const char *text);
-void draw_text_bg(int sid, int x, int y, unsigned short color,
-        unsigned short bg_color, const char *text);
+void draw_text_bg(int sid, int x, int y, COLOR color,
+        COLOR bg_color, const char *text);
 
-void draw_pixel(int sid, unsigned int x, unsigned int y, unsigned short color);
+void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR color);
 
 void scroll_surface(int sid, int cx, int cy);
 
-void set_colorkey(int sid, unsigned short colorkey);
+void set_colorkey(int sid, COLOR colorkey);
 void clear_colorkey(int sid);
 void set_alpha(int sid, unsigned char alpha);
 void clear_alpha(int sid);

@@ -51,7 +51,7 @@ umount:
 
 
 run :
-	make runb
+	make runq
 
 
 runb :

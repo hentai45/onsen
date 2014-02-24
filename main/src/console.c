@@ -126,12 +126,14 @@ static int  cmd_app(char *cmd_name, int bgp);
 void test_draw_rainbow(void);
 void test_draw_bitmap(void);
 void test_draw_textbox(void);
+void test_draw_window(void);
 
 void console_main(void)
 {
     test_draw_rainbow();
     test_draw_bitmap();
     test_draw_textbox();
+    test_draw_window();
 
     update_screen(g_con_sid);
 
@@ -177,13 +179,20 @@ void test_draw_bitmap(void)
 
 void test_draw_textbox(void)
 {
-    int sid = surface_new(g_w / 4, g_h / 4);
+    int sid = new_surface(g_w / 4, g_h / 4);
     fill_surface(sid, COL_BLACK);
     set_alpha(sid, 50);
     set_sprite_pos(sid, 150, 30);
     draw_sprite(sid, g_con_sid, OP_SRC_COPY);
 
     draw_text(g_con_sid, 155, 35, COL_WHITE, "HELLO");
+}
+
+void test_draw_window(void)
+{
+    int win_sid = new_window(100, 100, "test window");
+    set_sprite_pos(win_sid, 40, 300);
+    draw_sprite(win_sid, g_con_sid, OP_SRC_COPY);
 }
 
 
@@ -517,7 +526,8 @@ static void cmd_dbg(char *name)
         dbgf("vram = %X\n", g_sys_info->vram);
         dbgf("width = %d\n", g_sys_info->w);
         dbgf("height = %d\n", g_sys_info->h);
-        dbgf("end_free_maddr = %X\n", g_sys_info->end_free_maddr);
+        dbgf("color width = %d\n", g_sys_info->color_width);
+        dbgf("end_free_maddr = %#X\n", g_sys_info->end_free_maddr);
 
         switch_debug_screen();
     } else if (s_cmp(name, "task") == 0) {

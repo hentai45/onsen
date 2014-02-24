@@ -5,6 +5,7 @@ typedef struct _SYSTEM_INFO {
     unsigned long vram;
     int w;
     int h;
+    int color_width;
     unsigned long end_free_maddr;
 } SYSTEM_INFO;
 

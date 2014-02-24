@@ -165,7 +165,7 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
         return ERROR_SID;
     }
 
-    int sid = surface_new_from_buf(w, h, buf);
+    int sid = new_surface_from_buf(w, h, buf);
 
     if (sid == ERROR_SID) {
         return sid;
