@@ -85,6 +85,7 @@ static void keychar_handler(int ch);
 
 #define SCROLL_LINES  15
 
+static int l_sid = ERROR_SID;
 
 static int x_ch = 0;
 static int y_ch = 0;
@@ -123,22 +124,12 @@ static int  cmd_app(char *cmd_name, int bgp);
 //-----------------------------------------------------------------------------
 // メイン
 
-void test_draw_rainbow(void);
-void test_draw_bitmap(void);
-void test_draw_textbox(void);
-void test_draw_window(void);
-
 void console_main(void)
 {
-    test_draw_rainbow();
-    test_draw_bitmap();
-    test_draw_textbox();
-    test_draw_window();
-
-    update_screen(g_con_sid);
-
     cursor_tid = timer_new();
     timer_start(cursor_tid, CURSOR_INTERVAL_MS);
+
+    l_sid = new_window(200, 200, "console");
 
     put_prompt();
 
@@ -147,52 +138,6 @@ void console_main(void)
     while (get_message(&msg)) {
         dispatch_message(&msg, console_proc);
     }
-}
-
-void test_draw_rainbow(void)
-{
-    for (int y = 0; y < g_h; y++) {
-        for (int x = 0; x < g_w; x++) {
-            draw_pixel(g_con_sid, x, y, RGB(x % 256, y % 256, 255 - (x % 256)));
-        }
-    }
-}
-
-void test_draw_bitmap(void)
-{
-    FILEINFO *finfo = fat12_get_file_info();
-    int i_fi = fat12_search_file(finfo, "test.bmp");
-
-    if (i_fi >= 0) {
-        FILEINFO *fi = &finfo[i_fi];
-
-        char *p = (char *) mem_alloc(fi->size);
-        fat12_load_file(fi->clustno, fi->size, p);
-
-        int bmp_sid = load_bmp(p, fi->size);
-        set_sprite_pos(bmp_sid, 250, 250);
-        draw_sprite(bmp_sid, g_con_sid, OP_SRC_COPY);
-
-        mem_free(p);
-    }
-}
-
-void test_draw_textbox(void)
-{
-    int sid = new_surface(g_w / 4, g_h / 4);
-    fill_surface(sid, COL_BLACK);
-    set_alpha(sid, 50);
-    set_sprite_pos(sid, 150, 30);
-    draw_sprite(sid, g_con_sid, OP_SRC_COPY);
-
-    draw_text(g_con_sid, 155, 35, COL_WHITE, "HELLO");
-}
-
-void test_draw_window(void)
-{
-    int win_sid = new_window(100, 100, "test window");
-    set_sprite_pos(win_sid, 40, 300);
-    draw_sprite(win_sid, g_con_sid, OP_SRC_COPY);
 }
 
 
@@ -245,14 +190,14 @@ static void cursor_timer_handler(int id)
     if (cursor_on == 0) {
         cursor_on = 1;
 
-        fill_rect(g_con_sid, x, y, 8, 16, fg);
-        update_rect(g_con_sid, x, y, 8, 16);
+        fill_rect(l_sid, x, y, 8, 16, fg);
+        update_rect(l_sid, x, y, 8, 16);
 
         timer_start(id, CURSOR_INTERVAL_MS);
     } else {
         cursor_on = 0;
-        fill_rect(g_con_sid, x, y, 8, 16, bg);
-        update_rect(g_con_sid, x, y, 8, 16);
+        fill_rect(l_sid, x, y, 8, 16, bg);
+        update_rect(l_sid, x, y, 8, 16);
         timer_start(id, CURSOR_INTERVAL_MS);
     }
 }
@@ -269,8 +214,8 @@ static void keydown_handler(int keycode)
     // Enter
     if (keycode == KC_ENTER) {
         if (cursor_on) {
-            fill_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-            update_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16);
+            fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
+            update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
         }
 
         newline();
@@ -310,9 +255,9 @@ static void newline(void)
 
     if (y_ch >= 30) {
         int cy = 16 * SCROLL_LINES;
-        scroll_surface(g_con_sid, 0, -cy);
-        fill_rect(g_con_sid, 0, g_h - cy, g_w, cy, COL_BLACK);
-        update_screen(g_con_sid);
+        scroll_surface(l_sid, 0, -cy);
+        fill_rect(l_sid, 0, g_h - cy, g_w, cy, COL_BLACK);
+        update_surface(l_sid);
 
         y_ch = 30 - SCROLL_LINES;
     }
@@ -330,8 +275,8 @@ static void put_char(char ch)
     s[0] = ch;
     s[1] = 0;
 
-    draw_text_bg(g_con_sid, x_ch * 8, y_ch * 16, fg, bg, s);
-    update_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16);
+    draw_text_bg(l_sid, x_ch * 8, y_ch * 16, fg, bg, s);
+    update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
 
     x_ch++;
     if (x_ch >= 80) {
@@ -358,12 +303,12 @@ static void putf(const char *fmt, ...)
 static void del_char(void)
 {
     if (x_ch > 0 && i_line > 0) {
-        fill_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-        update_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16);
+        fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
+        update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
         x_ch--;
         i_line--;
-        fill_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-        update_rect(g_con_sid, x_ch * 8, y_ch * 16, 8, 16);
+        fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
+        update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
     }
 }
 
@@ -448,8 +393,8 @@ void cmd_ls(void)
 
 static void cmd_clear(void)
 {
-    fill_surface(g_con_sid, bg);
-    update_screen(g_con_sid);
+    fill_surface(l_sid, bg);
+    update_surface(l_sid);
     x_ch = 0;
     y_ch = 0;
 }

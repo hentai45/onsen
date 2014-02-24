@@ -44,9 +44,7 @@ enum {
 
 
 extern int g_vram_sid;
-extern int g_dbg_sid;
-extern int g_con_sid;
-extern int g_world_sid;
+extern int g_dt_sid;
 
 extern const int g_w;
 extern const int g_h;
@@ -65,7 +63,7 @@ int  get_screen(void);
 void set_sprite_pos(int sid, int x, int y);
 void move_sprite(int sid, int dx, int dy);
 
-void update_screen(int sid);
+void update_surface(int sid);
 void update_rect(int sid, int x, int y, int w, int h);
 
 void draw_sprite(int src_sid, int dst_sid, int op);
@@ -165,9 +163,7 @@ typedef struct SURFACE_MNG {
 
 
 int g_vram_sid;  ///< この SID を使うと更新しなくても画面に直接表示される
-int g_dbg_sid;
-int g_con_sid;
-int g_world_sid;
+int g_dt_sid;
 
 const int g_w = 640;  ///< 横の解像度
 const int g_h = 480;  ///< 縦の解像度
@@ -179,24 +175,7 @@ static SURFACE_MNG l_mng;
 static int l_mouse_sid;
 static SURFACE *l_mouse_srf;
 
-
-inline __attribute__ ((always_inline))
-static SURFACE *sid2srf(int sid)
-{
-    if (sid < 0 || SURFACE_MAX <= sid) {
-        return 0;
-    }
-
-    return &l_mng.surfaces[sid];
-}
-
-
-inline __attribute__ ((always_inline))
-static int is_reserved_sid(int sid)
-{
-    return (sid == g_vram_sid || sid == g_dbg_sid || sid == g_con_sid ||
-            sid == g_world_sid);
-}
+static SURFACE *sid2srf(int sid);
 
 
 static SURFACE *srf_alloc(void);
@@ -254,32 +233,11 @@ void graphic_init(COLOR *vram)
     // -------- デバッグ画面の作成
 
     sid = new_surface(g_w, g_h);
-    g_dbg_sid = sid;
+    g_dt_sid = sid;
     srf = sid2srf(sid);
-    srf->pid = g_dbg_pid;
+    srf->pid = g_root_pid;
 
     add_screen_head(srf);
-
-
-    // -------- コンソール画面の作成
-
-    sid = new_surface(g_w, g_h);
-    g_con_sid = sid;
-    srf = sid2srf(sid);
-    srf->pid = g_con_pid;
-
-    add_screen_head(srf);
-
-    // -------- WORLD 画面の作成
-
-    /*
-    sid = new_surface(g_w, g_h);
-    g_world_sid = sid;
-    srf = sid2srf(sid);
-    srf->pid = g_world_pid;
-
-    add_screen_head(srf);
-    */
 
 
     // -------- マウス SURFACE の作成
@@ -448,7 +406,7 @@ int new_surface_from_buf(int w, int h, COLOR *buf)
 
 void surface_free(int sid)
 {
-    if (is_reserved_sid(sid)) {
+    if (sid == g_vram_sid || sid == g_dt_sid) {
         return;
     }
 
@@ -520,7 +478,7 @@ int get_screen(void)
 
     // 画面をアプリケーションに切り替える
     add_screen_head(srf);
-    update_screen(sid);
+    update_surface(sid);
 
     return sid;
 }
@@ -552,7 +510,7 @@ void move_sprite(int sid, int dx, int dy)
 }
 
 
-void update_screen(int sid)
+void update_surface(int sid)
 {
     update_rect(sid, 0, 0, 0, 0);
 }
@@ -856,17 +814,19 @@ void switch_screen(void)
     remove_from_scr_list(old_head);
     add_screen_tail(old_head);
 
-    update_screen(l_mng.head_scr->sid);
+    update_surface(l_mng.head_scr->sid);
 }
 
 
 void switch_debug_screen(void)
 {
+    /*
     SURFACE *dbg_srf = sid2srf(g_dbg_sid);
     remove_from_scr_list(dbg_srf);
     add_screen_head(dbg_srf);
 
-    update_screen(l_mng.head_scr->sid);
+    update_surface(l_mng.head_scr->sid);
+    */
 }
 
 
@@ -1202,3 +1162,11 @@ static void remove_from_scr_list(SURFACE *srf)
 }
 
 
+static SURFACE *sid2srf(int sid)
+{
+    if (sid < 0 || SURFACE_MAX <= sid) {
+        return 0;
+    }
+
+    return &l_mng.surfaces[sid];
+}

@@ -14,9 +14,6 @@
 
 extern int g_root_pid;
 extern int g_idle_pid;
-extern int g_dbg_pid;
-extern int g_con_pid;
-extern int g_world_pid;
 
 
 void task_init(void);
@@ -27,6 +24,7 @@ int  task_run_app(void *p, unsigned int size, const char *name);
 void task_switch(int ts_tid);
 void task_sleep(int pid);
 void task_wakeup(int pid);
+int run_os_task(char *name, void (*main)(void), int timeslice_ms, bool create_esp);
 int  get_pid(void);
 const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);

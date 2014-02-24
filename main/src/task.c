@@ -25,9 +25,6 @@
 
 extern int g_root_pid;
 extern int g_idle_pid;
-extern int g_dbg_pid;
-extern int g_con_pid;
-extern int g_world_pid;
 
 
 void task_init(void);
@@ -38,6 +35,7 @@ int  task_run_app(void *p, unsigned int size, const char *name);
 void task_switch(int ts_tid);
 void task_sleep(int pid);
 void task_wakeup(int pid);
+int run_os_task(char *name, void (*main)(void), int timeslice_ms, bool create_esp);
 int  get_pid(void);
 const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
@@ -133,7 +131,6 @@ int g_root_pid;
 int g_idle_pid;
 int g_dbg_pid;
 int g_con_pid;
-int g_world_pid;
 
 
 static TASK_MNG l_mng;
@@ -144,7 +141,6 @@ static int pid2tss_sel(int pid);
 
 extern int timer_ts_tid(void);
 
-static int run_os_task(char *name, void (*main)(void), int timeslice_ms, bool create_esp);
 static void idle_main(void);
 
 static void init_tss_seg(void);
@@ -181,8 +177,6 @@ void task_init(void)
 
     g_root_pid = run_os_task("root",    0,            20, false);
     g_idle_pid = run_os_task("idle",    idle_main,    10, true);
-    g_dbg_pid  = run_os_task("debug",   debug_main,   20, true);
-    g_con_pid  = run_os_task("console", console_main, 20, true);
 
     ltr(pid2tss_sel(g_root_pid));
 
@@ -515,10 +509,7 @@ int is_os_task(int pid)
 }
 
 
-//=============================================================================
-// 非公開関数
-
-static int run_os_task(char *name,
+int run_os_task(char *name,
         void (*main)(void), int timeslice_ms, bool create_esp)
 {
     int pid = task_new(name);
@@ -537,6 +528,10 @@ static int run_os_task(char *name,
     return pid;
 }
 
+
+
+//=============================================================================
+// 非公開関数
 
 static void idle_main(void)
 {

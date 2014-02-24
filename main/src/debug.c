@@ -47,6 +47,7 @@ void dbg_fault(const char *msg, int *esp);
 
 extern FILE_T *f_debug;
 
+
 #endif
 
 
@@ -79,6 +80,8 @@ typedef struct _REGISTERS_FAULT {
 #define WIDTH  (80)
 #define HEIGHT (30)
 
+static int l_sid = ERROR_SID;
+
 static int is_initialized = 0;
 
 static char l_buf[HEIGHT][WIDTH + 1];
@@ -106,6 +109,8 @@ void debug_main(void)
 {
     is_initialized = 1;
 
+    l_sid = new_window(200, 200, "debug");
+
     update_all();
 
     MSG msg;
@@ -127,13 +132,13 @@ static void update_all(void)
         return;
     }
 
-    fill_surface(g_dbg_sid, bg);
+    fill_surface(l_sid, bg);
 
     for (int y = 0; y < HEIGHT; y++) {
-        draw_text_bg(g_dbg_sid, 0, y * 16, fg, bg, l_buf[y]);
+        draw_text_bg(l_sid, 0, y * 16, fg, bg, l_buf[y]);
     }
 
-    update_screen(g_dbg_sid);
+    update_surface(l_sid);
 }
 
 static void update(void)
@@ -146,8 +151,8 @@ static void update(void)
     s[0] = l_buf[l_y][l_x];
     s[1] = 0;
 
-    draw_text_bg(g_dbg_sid, l_x * 8, l_y * 16, fg, bg, s);
-    update_rect(g_dbg_sid, l_x * 8, l_y * 16, 8, 16);
+    draw_text_bg(l_sid, l_x * 8, l_y * 16, fg, bg, s);
+    update_rect(l_sid, l_x * 8, l_y * 16, 8, 16);
 }
 
 static void scroll(int n)

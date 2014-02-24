@@ -2,14 +2,13 @@
  * メイン
  *
  * ブートしたらまず OnSenMain が呼ばれる
- *
- * @file _main.c
- * @author Ivan Ivanovich Ivanov
  */
 
 #include <stdbool.h>
 
 #include "asmfunc.h"
+#include "bitmap.h"
+#include "console.h"
 #include "debug.h"
 #include "fat12.h"
 #include "gdt.h"
@@ -36,7 +35,10 @@ static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
 
 
-static void onsen_init(void);
+static void init_onsen(void);
+static void init_gui(void);
+static void run_console(void);
+static void run_debug(void);
 static void main_proc(unsigned int message, unsigned long u_param,
         long l_param);
 
@@ -46,7 +48,12 @@ static void keydown_handler(unsigned long keycode);
 
 void OnSenMain(void)
 {
-    onsen_init();
+    init_onsen();
+
+    init_gui();
+
+    run_console();
+    run_debug();
 
     MSG msg;
 
@@ -56,7 +63,7 @@ void OnSenMain(void)
 }
 
 
-static void onsen_init(void)
+static void init_onsen(void)
 {
     mem_init();     // メモリ初期化
     paging_init();
@@ -76,6 +83,82 @@ static void onsen_init(void)
     set_mouse_pos(g_w / 2, g_h / 2);
 
     screen_pid = get_screen_pid();
+}
+
+
+static void test_draw_rainbow(void);
+static void test_draw_bitmap(void);
+static void test_draw_textbox(void);
+static void test_draw_window(void);
+
+static void init_gui(void)
+{
+    fill_surface(g_dt_sid, RGB2(0x008484));
+
+    test_draw_rainbow();
+    test_draw_bitmap();
+    test_draw_textbox();
+    test_draw_window();
+
+    update_surface(g_dt_sid);
+}
+
+static void test_draw_rainbow(void)
+{
+    for (int y = 0; y < g_h; y++) {
+        for (int x = 0; x < g_w; x++) {
+            draw_pixel(g_dt_sid, x, y, RGB(x % 256, y % 256, 255 - (x % 256)));
+        }
+    }
+}
+
+static void test_draw_bitmap(void)
+{
+    FILEINFO *finfo = fat12_get_file_info();
+    int i_fi = fat12_search_file(finfo, "test.bmp");
+
+    if (i_fi >= 0) {
+        FILEINFO *fi = &finfo[i_fi];
+
+        char *p = (char *) mem_alloc(fi->size);
+        fat12_load_file(fi->clustno, fi->size, p);
+
+        int bmp_sid = load_bmp(p, fi->size);
+        set_sprite_pos(bmp_sid, 250, 250);
+        draw_sprite(bmp_sid, g_dt_sid, OP_SRC_COPY);
+
+        mem_free(p);
+    }
+}
+
+static void test_draw_textbox(void)
+{
+    int sid = new_surface(g_w / 4, g_h / 4);
+    fill_surface(sid, COL_BLACK);
+    set_alpha(sid, 50);
+    set_sprite_pos(sid, 150, 30);
+    draw_sprite(sid, g_dt_sid, OP_SRC_COPY);
+
+    draw_text(g_dt_sid, 155, 35, COL_WHITE, "HELLO");
+}
+
+static void test_draw_window(void)
+{
+    int win_sid = new_window(100, 100, "test window");
+    set_sprite_pos(win_sid, 40, 300);
+    draw_sprite(win_sid, g_dt_sid, OP_SRC_COPY);
+}
+
+
+static void run_console(void)
+{
+    run_os_task("console", console_main, 20, true);
+}
+
+
+static void run_debug(void)
+{
+    run_os_task("debug", console_main, 20, true);
 }
 
 

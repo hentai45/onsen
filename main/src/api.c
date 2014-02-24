@@ -96,7 +96,7 @@ int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
         return get_screen();
 
     case API_UPDATE_SCREEN:
-        update_screen(arg1);
+        update_surface(arg1);
         break;
 
     case API_FILL_SURFACE:

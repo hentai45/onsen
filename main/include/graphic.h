@@ -36,9 +36,7 @@ enum {
 
 
 extern int g_vram_sid;
-extern int g_dbg_sid;
-extern int g_con_sid;
-extern int g_world_sid;
+extern int g_dt_sid;
 
 extern const int g_w;
 extern const int g_h;
@@ -57,7 +55,7 @@ int  get_screen(void);
 void set_sprite_pos(int sid, int x, int y);
 void move_sprite(int sid, int dx, int dy);
 
-void update_screen(int sid);
+void update_surface(int sid);
 void update_rect(int sid, int x, int y, int w, int h);
 
 void draw_sprite(int src_sid, int dst_sid, int op);
