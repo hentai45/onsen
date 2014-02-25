@@ -10,6 +10,7 @@
 #include "haribote.h"
 
 #include "debug.h"
+#include "str.h"
 
 
 void api_exit_app(int exit_status);

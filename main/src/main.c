@@ -29,7 +29,7 @@
 
 SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
 
-static int screen_pid;
+static int screen_pid = 2;
 
 static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
@@ -82,7 +82,8 @@ static void init_onsen(void)
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
 
-    screen_pid = get_screen_pid();
+    // TODO
+    //screen_pid = get_screen_pid();
 }
 
 
@@ -133,7 +134,7 @@ static void test_draw_bitmap(void)
 
 static void test_draw_textbox(void)
 {
-    int sid = new_surface(g_w / 4, g_h / 4);
+    int sid = new_surface(NO_PARENT_SID, g_w / 4, g_h / 4);
     fill_surface(sid, COL_BLACK);
     set_alpha(sid, 50);
     set_sprite_pos(sid, 150, 30);
@@ -144,9 +145,7 @@ static void test_draw_textbox(void)
 
 static void test_draw_window(void)
 {
-    int win_sid = new_window(100, 100, "test window");
-    set_sprite_pos(win_sid, 40, 300);
-    draw_sprite(win_sid, g_dt_sid, OP_SRC_COPY);
+    //int win_sid = new_window(100, 100, "test window");
 }
 
 
@@ -158,7 +157,7 @@ static void run_console(void)
 
 static void run_debug(void)
 {
-    run_os_task("debug", console_main, 20, true);
+    run_os_task("debug", debug_main, 20, true);
 }
 
 
@@ -170,7 +169,8 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
         break;
 
     case MSG_SCREEN_SWITCHED:
-        screen_pid = u_param;
+        //TODO
+        //screen_pid = u_param;
         break;
 
     case MSG_RAW_MOUSE:

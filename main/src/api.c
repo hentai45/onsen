@@ -24,11 +24,12 @@
 // 非公開ヘッダ
 
 // API 番号と機能の対応などが書かれたヘッダ。/api/include
-#include "onsen.h"
+#include "onsen/apino.h"
 
 #include "asmfunc.h"
 #include "debug.h"
 #include "gdt.h"
+#include "graphic.h"
 #include "msg.h"
 #include "msg_q.h"
 #include "task.h"

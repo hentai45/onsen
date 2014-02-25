@@ -3,6 +3,8 @@
 #ifndef HEADER_BITMAP
 #define HEADER_BITMAP
 
+#include "graphic.h"
+
 int load_bmp(void *p, unsigned int size_B);
 
 #endif

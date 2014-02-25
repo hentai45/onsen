@@ -59,8 +59,8 @@ extern FILE_T *f_debug;
 #include "str.h"
 #include "task.h"
 
-static unsigned short fg = COL_WHITE;
-static unsigned short bg = COL_BLACK;
+static COLOR fg = COL_WHITE;
+static COLOR bg = COL_BLACK;
 
 //-----------------------------------------------------------------------------
 // メイン
@@ -77,14 +77,14 @@ typedef struct _REGISTERS_FAULT {
 } REGISTERS_FAULT;
 
 
-#define WIDTH  (80)
-#define HEIGHT (30)
+#define WIDTH_CH   (39)
+#define HEIGHT_CH  (28)
 
 static int l_sid = ERROR_SID;
 
 static int is_initialized = 0;
 
-static char l_buf[HEIGHT][WIDTH + 1];
+static char l_buf[HEIGHT_CH][WIDTH_CH + 1];
 static int l_x = 0;
 static int l_y = 0;
 
@@ -109,7 +109,9 @@ void debug_main(void)
 {
     is_initialized = 1;
 
-    l_sid = new_window(200, 200, "debug");
+    int w = WIDTH_CH * HANKAKU_W;
+    int h = HEIGHT_CH * HANKAKU_H;
+    l_sid = new_window(0, 0, w, h, "debug");
 
     update_all();
 
@@ -134,7 +136,7 @@ static void update_all(void)
 
     fill_surface(l_sid, bg);
 
-    for (int y = 0; y < HEIGHT; y++) {
+    for (int y = 0; y < HEIGHT_CH; y++) {
         draw_text_bg(l_sid, 0, y * 16, fg, bg, l_buf[y]);
     }
 
@@ -157,11 +159,11 @@ static void update(void)
 
 static void scroll(int n)
 {
-    for (int y = 0; y < HEIGHT - n; y++) {
-        memcpy(l_buf[y], l_buf[y + n], WIDTH + 1);
+    for (int y = 0; y < HEIGHT_CH - n; y++) {
+        memcpy(l_buf[y], l_buf[y + n], WIDTH_CH + 1);
     }
 
-    for (int y = HEIGHT - n; y < HEIGHT; y++) {
+    for (int y = HEIGHT_CH - n; y < HEIGHT_CH; y++) {
         l_buf[y][0] = 0;
     }
 
@@ -174,7 +176,7 @@ static void buf_newline(void)
     l_y++;
     l_x = 0;
 
-    if (l_y >= HEIGHT) {
+    if (l_y >= HEIGHT_CH) {
         scroll(5);
 
         l_y -= 5;
@@ -194,7 +196,7 @@ static void buf_ch(char ch)
 
     l_buf[l_y][l_x] = 0;
 
-    if (l_x >= WIDTH) {
+    if (l_x >= WIDTH_CH) {
         buf_newline();
     }
 }
@@ -223,7 +225,7 @@ void dbgf(const char *fmt, ...)
 
 void dbg_clear(void)
 {
-    for (int y = 0; y < HEIGHT; y++) {
+    for (int y = 0; y < HEIGHT_CH; y++) {
         l_buf[y][0] = 0;
     }
 

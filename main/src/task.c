@@ -282,7 +282,7 @@ int task_free(int pid, int exit_status)
         switch_screen();
     }
 
-    surface_task_free(pid);
+    free_surface_task(pid);
 
     t->flags = TASK_FLG_FREE;
 

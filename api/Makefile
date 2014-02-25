@@ -20,7 +20,7 @@ C_OBJS  := $(C_SRCS:.c=.o)
 
 all :
 	make mkhdr
-	cp $(INC_DIR)/onsen.h ../main/$(INC_DIR)
+	cp $(INC_DIR)/apino.h ../main/$(INC_DIR)/onsen
 	make $(LIB)
 	make -C haribote
 

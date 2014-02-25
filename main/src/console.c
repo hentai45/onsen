@@ -1,8 +1,5 @@
 /**
  * コンソール
- *
- * @file console.c
- * @author Ivan Ivanovich Ivanov
  */
 
 /*
@@ -49,11 +46,11 @@ extern FILE_T *f_console;
 #include "timer.h"
 
 
-#define fg COL_WHITE
-#define bg COL_BLACK
-
 #define CURSOR_INTERVAL_MS 500
 
+
+static COLOR fg = COL_WHITE;
+static COLOR bg = COL_BLACK;
 
 static int cursor_tid;
 static int cursor_on = 0;
@@ -73,7 +70,7 @@ static void console_proc(unsigned int msg, unsigned long u_param, long l_param);
 //-----------------------------------------------------------------------------
 // メッセージ処理ハンドラ
 
-static void cursor_timer_handler(int id);
+static void cursor_timer_handler(int tid);
 static void keydown_handler(int keycode);
 static void keychar_handler(int ch);
 
@@ -83,7 +80,10 @@ static void keychar_handler(int ch);
 
 #define MAX_LINE_CHAR 1024
 
-#define SCROLL_LINES  15
+#define WIDTH_CH   (39)
+#define HEIGHT_CH  (28)
+
+#define SCROLL_LINES  5
 
 static int l_sid = ERROR_SID;
 
@@ -129,7 +129,11 @@ void console_main(void)
     cursor_tid = timer_new();
     timer_start(cursor_tid, CURSOR_INTERVAL_MS);
 
-    l_sid = new_window(200, 200, "console");
+    int w = WIDTH_CH * HANKAKU_W;
+    int h = HEIGHT_CH * HANKAKU_H;
+    l_sid = new_window(320, 0, w, h, "console");
+    fill_surface(l_sid, bg);
+    update_surface(l_sid);
 
     put_prompt();
 
@@ -182,24 +186,14 @@ static void console_proc(unsigned int msg, unsigned long u_param, long l_param)
 //-----------------------------------------------------------------------------
 // メッセージ処理ハンドラ
 
-static void cursor_timer_handler(int id)
+static void cursor_timer_handler(int tid)
 {
-    int x = x_ch * 8;
-    int y = y_ch * 16;
+    COLOR color = (cursor_on) ? bg : fg;
 
-    if (cursor_on == 0) {
-        cursor_on = 1;
+    erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, color, true);
 
-        fill_rect(l_sid, x, y, 8, 16, fg);
-        update_rect(l_sid, x, y, 8, 16);
-
-        timer_start(id, CURSOR_INTERVAL_MS);
-    } else {
-        cursor_on = 0;
-        fill_rect(l_sid, x, y, 8, 16, bg);
-        update_rect(l_sid, x, y, 8, 16);
-        timer_start(id, CURSOR_INTERVAL_MS);
-    }
+    cursor_on = ! cursor_on;
+    timer_start(tid, CURSOR_INTERVAL_MS);
 }
 
 
@@ -214,8 +208,7 @@ static void keydown_handler(int keycode)
     // Enter
     if (keycode == KC_ENTER) {
         if (cursor_on) {
-            fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-            update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
+            erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, bg, true);
         }
 
         newline();
@@ -248,18 +241,26 @@ static void keychar_handler(int ch)
 //-----------------------------------------------------------------------------
 // 画面出力
 
+static void scroll(int n)
+{
+    int cy = HANKAKU_H * SCROLL_LINES;
+    scroll_surface(l_sid, 0, -cy);
+    int y = HEIGHT_CH * HANKAKU_H - cy;
+    fill_rect(l_sid, 0, y, WIDTH_CH * HANKAKU_W, cy, bg);
+
+    update_surface(l_sid);
+}
+
+
 static void newline(void)
 {
     y_ch++;
     x_ch = 0;
 
-    if (y_ch >= 30) {
-        int cy = 16 * SCROLL_LINES;
-        scroll_surface(l_sid, 0, -cy);
-        fill_rect(l_sid, 0, g_h - cy, g_w, cy, COL_BLACK);
-        update_surface(l_sid);
+    if (y_ch >= HEIGHT_CH) {
+        scroll(SCROLL_LINES);
 
-        y_ch = 30 - SCROLL_LINES;
+        y_ch -= SCROLL_LINES;
     }
 }
 
@@ -275,11 +276,11 @@ static void put_char(char ch)
     s[0] = ch;
     s[1] = 0;
 
-    draw_text_bg(l_sid, x_ch * 8, y_ch * 16, fg, bg, s);
-    update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
+    draw_text_bg(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, fg, bg, s);
+    update_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H);
 
     x_ch++;
-    if (x_ch >= 80) {
+    if (x_ch >= WIDTH_CH) {
         newline();
     }
 }
@@ -303,12 +304,10 @@ static void putf(const char *fmt, ...)
 static void del_char(void)
 {
     if (x_ch > 0 && i_line > 0) {
-        fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-        update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
+        erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, bg, true);
         x_ch--;
         i_line--;
-        fill_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16, bg);
-        update_rect(l_sid, x_ch * 8, y_ch * 16, 8, 16);
+        erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, bg, true);
     }
 }
 
