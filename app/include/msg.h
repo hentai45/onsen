@@ -16,6 +16,7 @@ typedef struct MSG {
 typedef void (*ONSEN_PROC) (unsigned int, unsigned long, long);
 
 int get_message(MSG *msg);
+int peek_message(MSG *msg);
 void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 
 
@@ -74,9 +75,9 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 #define MSG_NOTIFY_CHILD_EXIT   9
 
 
-// ---- 画面切り替わりメッセージ
-// u_param : 切り替わった画面の PID
-#define MSG_SCREEN_SWITCHED    10
+// ---- ウィンドウ切り替わりメッセージ
+// u_param : 切り替わったウィンドウの PID
+#define MSG_WINDOW_SWITCHED    10
 
 
 #endif

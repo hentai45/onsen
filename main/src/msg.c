@@ -1,19 +1,10 @@
 /**
  * メッセージ
- *
- * @file msg.c
- * @author Ivan Ivanovich Ivanov
- */
-
-/*
- * ＜目次＞
- * ・メッセージ処理
- * ・メッセージ定義
  */
 
 
 //=============================================================================
-// 公開ヘッダ
+// ヘッダ
 
 #ifndef HEADER_MSG
 #define HEADER_MSG
@@ -31,6 +22,7 @@ typedef struct MSG {
 typedef void (*ONSEN_PROC) (unsigned int, unsigned long, long);
 
 int get_message(MSG *msg);
+int peek_message(MSG *msg);
 void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 
 
@@ -89,16 +81,13 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 #define MSG_NOTIFY_CHILD_EXIT   9
 
 
-// ---- 画面切り替わりメッセージ
-// u_param : 切り替わった画面の PID
-#define MSG_SCREEN_SWITCHED    10
+// ---- ウィンドウ切り替わりメッセージ
+// u_param : 切り替わったウィンドウの PID
+#define MSG_WINDOW_SWITCHED    10
 
 
 #endif
 
-
-//=============================================================================
-// 非公開ヘッダ
 
 #include "asmfunc.h"
 #include "msg_q.h"
@@ -106,10 +95,7 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 
 
 //=============================================================================
-// 公開関数
-
-//-----------------------------------------------------------------------------
-// メッセージ処理
+// 関数
 
 int get_message(MSG *msg)
 {
@@ -129,14 +115,27 @@ int get_message(MSG *msg)
     }
 }
 
+
+int peek_message(MSG *msg)
+{
+    int pid = get_pid();
+
+    for (;;) {
+        cli();
+
+        if (msg_q_size(pid) == 0) {
+            sti();
+            return 0;
+        } else {
+            msg_q_get(pid, msg);
+            sti();
+            return 1;
+        }
+    }
+}
+
 void dispatch_message(const MSG *msg, ONSEN_PROC proc)
 {
     proc(msg->message, msg->u_param, msg->l_param);
 }
-
-
-//=============================================================================
-// 非公開関数
-
-
 

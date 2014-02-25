@@ -280,10 +280,10 @@ int task_free(int pid, int exit_status)
 
     timer_task_free(pid);
 
-    int screen_pid = get_screen_pid();
+    int active_win_pid = get_active_win_pid();
 
-    if (pid == screen_pid) {
-        switch_screen();
+    if (pid == active_win_pid) {
+        switch_window();
     }
 
     free_surface_task(pid);
@@ -461,11 +461,11 @@ const char *task_get_name(int pid)
     TSS *t = pid2tss(pid);
 
     if (t == 0) {
-        return 0;
+        return "ERROR";
     }
 
     if (t->flags == TASK_FLG_FREE) {
-        return 0;
+        return "ERROR";
     }
 
     return t->name;
@@ -486,7 +486,7 @@ void task_set_pt(int i_pd, PDE pt)
 
 void task_dbg(void)
 {
-    dbgf("num running : %d\n", l_mng.num_running);
+    dbgf("\nnum running : %d\n", l_mng.num_running);
 
     for (int pid = 0; pid < TASK_MAX; pid++) {
         TSS *t = &l_mng.tss[pid];

@@ -29,7 +29,7 @@
 
 SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
 
-static int screen_pid = 2;
+static int active_win_pid = ERROR_PID;
 
 static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
@@ -49,11 +49,6 @@ static void keydown_handler(unsigned long keycode);
 void OnSenMain(void)
 {
     init_onsen();
-
-    init_gui();
-
-    run_console();
-    run_debug();
 
     MSG msg;
 
@@ -82,8 +77,12 @@ static void init_onsen(void)
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
 
-    // TODO
-    //screen_pid = get_screen_pid();
+    init_gui();
+
+    run_debug();
+    run_console();
+
+    active_win_pid = get_active_win_pid();
 }
 
 
@@ -99,7 +98,6 @@ static void init_gui(void)
     test_draw_rainbow();
     test_draw_bitmap();
     test_draw_textbox();
-    test_draw_window();
 
     update_surface(g_dt_sid);
 }
@@ -143,11 +141,6 @@ static void test_draw_textbox(void)
     draw_text(g_dt_sid, 155, 35, COL_WHITE, "HELLO");
 }
 
-static void test_draw_window(void)
-{
-    //int win_sid = new_window(100, 100, "test window");
-}
-
 
 static void run_console(void)
 {
@@ -165,12 +158,13 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 {
     switch (message) {
     case MSG_REQUEST_EXIT:
+        dbgf("request exit: %s\n", task_get_name(u_param));
         task_free(/* exit app pid =  */ u_param, /* exit status =  */ l_param);
         break;
 
-    case MSG_SCREEN_SWITCHED:
-        //TODO
-        //screen_pid = u_param;
+    case MSG_WINDOW_SWITCHED:
+        dbgf("change active window: %s\n", task_get_name(u_param));
+        active_win_pid = u_param;
         break;
 
     case MSG_RAW_MOUSE:
@@ -196,33 +190,39 @@ static void mouse_handler(unsigned long data)
         set_mouse_pos(mdec->x, mdec->y);
     }
 
+    if (active_win_pid == ERROR_PID)
+        return;
+
     MSG msg;
     msg.l_param = mdec->y << 16 | mdec->x;
 
     if (mdec->btn_left) {
         msg.message = MSG_LEFT_CLICK;
 
-        msg_q_put(screen_pid, &msg);
+        msg_q_put(active_win_pid, &msg);
     }
 
     if (mdec->btn_right) {
         msg.message = MSG_RIGHT_CLICK;
 
-        msg_q_put(screen_pid, &msg);
+        msg_q_put(active_win_pid, &msg);
     }
 
     if (mdec->btn_center) {
         msg.message = MSG_CENTER_CLICK;
 
-        msg_q_put(screen_pid, &msg);
+        msg_q_put(active_win_pid, &msg);
     }
 }
 
 
 static void keydown_handler(unsigned long keycode)
 {
+    if (active_win_pid == ERROR_PID)
+        return;
+
     if (keycode == KC_TAB) {
-        switch_screen();
+        switch_window();
         return;
     }
 
@@ -246,11 +246,14 @@ static void keydown_handler(unsigned long keycode)
         break;
     }
 
+    // 押下時だけメッセージを送る（離したときは0x80がプラスされた値になる）
     MSG msg;
-    msg.message = MSG_KEYDOWN;
-    msg.u_param = keycode;
+    if (keycode < 0x80) {
+        msg.message = MSG_KEYDOWN;
+        msg.u_param = keycode;
+    }
 
-    msg_q_put(screen_pid, &msg);
+    msg_q_put(active_win_pid, &msg);
 
     char ch = keycode2char(keycode, is_shift_on);
 
@@ -258,14 +261,14 @@ static void keydown_handler(unsigned long keycode)
         if (ch == 'c' || ch == 'C') {
             msg.message = MSG_INTR;
 
-            msg_q_put(screen_pid, &msg);
+            msg_q_put(active_win_pid, &msg);
         }
     } else {
         if (ch != 0) {
             msg.message = MSG_CHAR;
             msg.u_param = ch;
 
-            msg_q_put(screen_pid, &msg);
+            msg_q_put(active_win_pid, &msg);
         }
     }
 }

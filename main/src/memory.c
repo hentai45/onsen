@@ -387,11 +387,13 @@ static void dbg_mem_mng(MEM_MNG *mng);
 
 void mem_dbg(void)
 {
+    dbgf("\n");
     DBGF("DEBUG BYTE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_b);
 
     DBGF("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
+    dbgf("\n");
 }
 
 static void dbg_mem_mng(MEM_MNG *mng)

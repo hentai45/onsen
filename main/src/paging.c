@@ -256,6 +256,7 @@ void app_area_clear(void)
 
 void paging_dbg(void)
 {
+    dbgf("\n");
     DBGF("DEBUG PAGING");
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {

@@ -70,20 +70,21 @@ void move_sprite(int sid, int dx, int dy);
 void update_surface(int sid);
 void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
+void update_text(int sid, int x, int y, int len);
 
 void draw_sprite(int src_sid, int dst_sid, int op);
 void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
         int dst_sid, int dst_x, int dst_y, int op);
 
 void fill_surface(int sid, COLOR color);
-void fill_rect(int sid, int x, int y, int w, int h,
-        COLOR color);
-void draw_text(int sid, int x, int y, COLOR color,
-        const char *text);
+void fill_rect(int sid, int x, int y, int w, int h, COLOR color);
+void draw_text(int sid, int x, int y, COLOR color, const char *text);
 void draw_text_bg(int sid, int x, int y, COLOR color,
         COLOR bg_color, const char *text);
 
 void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR color);
+
+void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR color);
 
 void erase_char(int sid, int x, int y, COLOR color, bool update);
 
@@ -96,11 +97,13 @@ void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
 
-int  get_screen_pid(void);
-void switch_screen(void);
-void switch_debug_screen(void);
+int  get_active_win_pid(void);
+void switch_window(void);
 
 void graphic_dbg(void);
+
+int hrb_sid2addr(int sid);
+int hrb_addr2sid(int addr);
 
 #endif
 
@@ -201,6 +204,7 @@ static void add_child_head(SURFACE *srf);
 static void remove_child(SURFACE *srf);
 
 static SURFACE *l_vram_srf;
+static SURFACE *l_dt_srf;
 
 //=============================================================================
 // 公開関数
@@ -240,6 +244,7 @@ void graphic_init(COLOR *vram)
     srf = sid2srf(sid);
     srf->pid = g_root_pid;
 
+    l_dt_srf = srf;
 
     // -------- マウス SURFACE の作成
 
@@ -254,8 +259,6 @@ int new_window(int x, int y, int cw, int ch, char *title)
     int w = cw + WINDOW_EXT_WIDTH;
     int h = ch + WINDOW_EXT_HEIGHT;
 
-    // TODO
-    //int parent_sid = get_screen_pid();
     int parent_sid = g_dt_sid;
 
     int sid = new_surface(parent_sid, w, h);
@@ -402,7 +405,11 @@ int new_surface_from_buf(int parent_sid, int w, int h, COLOR *buf)
     srf->buf = buf;
     srf->parent = parent;
 
-    add_child(srf);
+    if (parent_sid == g_dt_sid) {
+        add_child_head(srf);
+    } else {
+        add_child(srf);
+    }
 
     return srf->sid;
 }
@@ -424,11 +431,17 @@ void free_surface(int sid)
         return;
     }
 
+    SURFACE *parent = srf->parent;
+
     remove_child(srf);
 
     mem_free(srf->buf);
     srf->flags = SRF_FLG_FREE;
     srf->pid = ERROR_PID;
+
+    if (parent != 0) {
+        update_surface(parent->sid);
+    }
 }
 
 
@@ -466,18 +479,6 @@ void set_sprite_pos(int sid, int x, int y)
 
     srf->x = x;
     srf->y = y;
-
-    /* TODO
-    SURFACE *parent = srf->parent;
-
-    if (parent == 0 || parent == l_vram_srf) {
-        srf->x = MAXMIN(0, x, g_w);
-        srf->y = MAXMIN(0, y, g_h);
-    } else {
-        srf->x = MAXMIN(0, x, parent->w);
-        srf->y = MAXMIN(0, y, parent->h);
-    }
-    */
 }
 
 
@@ -558,7 +559,6 @@ static void update_rect_sub(SURFACE *srf, int p_x, int p_y, int x, int y, int w,
 {
     blit_surface(srf->sid, x, y, w, h, g_vram_sid, p_x, p_y, OP_SRC_COPY);
 
-    /*
     if (srf->num_children == 0)
         return;
 
@@ -568,7 +568,12 @@ static void update_rect_sub(SURFACE *srf, int p_x, int p_y, int x, int y, int w,
 
         p = p->next_srf;
     } while (p != srf->children);
-    */
+}
+
+
+void update_text(int sid, int x, int y, int len)
+{
+    update_rect(sid, x, y, len * HANKAKU_W, HANKAKU_H);
 }
 
 
@@ -743,10 +748,90 @@ void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR color)
         return;
     }
 
+    int max_w = srf->w;
+    int max_h = srf->h;
+
+    if (srf->flags & SRF_FLG_WINDOW) {
+        x += CLIENT_X;
+        y += CLIENT_Y;
+        max_w -= WINDOW_EXT_WIDTH;
+        max_h -= WINDOW_EXT_HEIGHT;
+    }
+
     if (x < srf->w && y <= srf->h) {
         srf->buf[srf->w * y + x] = color;
     }
 }
+
+
+/**
+ * 線を引く。はりぼてOSから持ってきた
+ */
+void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR color)
+{
+    SURFACE *srf = sid2srf(sid);
+
+    if (srf == 0) {
+        return;
+    }
+
+    if (srf->flags & SRF_FLG_WINDOW) {
+        x0 += CLIENT_X;
+        y0 += CLIENT_Y;
+        x1 += CLIENT_X;
+        y1 += CLIENT_Y;
+    }
+
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int x = x0 << 10;
+    int y = y0 << 10;
+
+    if (dx < 0)
+        dx = -dx;
+
+    if (dy < 0)
+        dy = -dy;
+
+    int len;
+
+    if (dx >= dy) {
+        len = dx + 1;
+
+        if (x0 > x1) {
+            dx = -1024;
+        } else {
+            dx =  1024;
+        }
+
+        if (y0 <= y1) {
+            dy = ((y1 - y0 + 1) << 10) / len;
+        } else {
+            dy = ((y1 - y0 - 1) << 10) / len;
+        }
+    } else {
+        len = dy + 1;
+
+        if (y0 > y1) {
+            dy = -1024;
+        } else {
+            dy =  1024;
+        }
+
+        if (x0 <= x1) {
+            dx = ((x1 - x0 + 1) << 10) / len;
+        } else {
+            dx = ((x1 - x0 - 1) << 10) / len;
+        }
+    }
+
+    for (int i = 0; i < len; i++) {
+        srf->buf[(y >> 10) * srf->w + (x >> 10)] = color;
+        x += dx;
+        y += dy;
+    }
+}
+
 
 
 void erase_char(int sid, int x, int y, COLOR color, bool update)
@@ -877,17 +962,23 @@ void set_mouse_pos(int x, int y)
 }
 
 
-int get_screen_pid(void)
+int get_active_win_pid(void)
 {
-    return l_vram_srf->children->pid;
+    if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
+        return ERROR_PID;
+
+    return l_dt_srf->children->pid;
 }
 
 
-void switch_screen(void)
+void switch_window(void)
 {
-    // l_vram_srf->children が現在表示されている画面を表している。
+    // l_dt_srf->children の先頭が現在アクティブなウィンドウを表している。
 
-    SURFACE *old_head = l_vram_srf->children;
+    if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
+        return;
+
+    SURFACE *old_head = l_dt_srf->children;
     remove_child(old_head);
     add_child(old_head);
 
@@ -895,20 +986,9 @@ void switch_screen(void)
 }
 
 
-void switch_debug_screen(void)
-{
-    /*
-    SURFACE *dbg_srf = sid2srf(g_dbg_sid);
-    remove_from_scr_list(dbg_srf);
-    add_screen_head(dbg_srf);
-
-    update_surface(l_mng.head_scr->sid);
-    */
-}
-
-
 void graphic_dbg(void)
 {
+    dbgf("\n");
     DBGF("DEBUG GRAPHIC");
 
     SURFACE *srf;
@@ -944,6 +1024,26 @@ void graphic_dbg(void)
     } while (srf != l_vram_srf->children);
 
     dbgf("\n\n");
+}
+
+
+/**
+ * はりぼて互換のため
+ */
+int hrb_sid2addr(int sid)
+{
+    return (int) sid2srf(sid);
+}
+
+
+/**
+ * はりぼて互換のため
+ */
+int hrb_addr2sid(int addr)
+{
+    SURFACE *srf = (SURFACE *) addr;
+
+    return srf->sid;
 }
 
 
@@ -1245,10 +1345,12 @@ static void add_child_head(SURFACE *srf)
 
     parent->num_children++;
 
-    MSG msg;
-    msg.message = MSG_SCREEN_SWITCHED;
-    msg.u_param = srf->pid;
-    msg_q_put(g_root_pid, &msg);
+    if (parent == l_dt_srf) {
+        MSG msg;
+        msg.message = MSG_WINDOW_SWITCHED;
+        msg.u_param = srf->pid;
+        msg_q_put(g_root_pid, &msg);
+    }
 }
 
 
@@ -1271,6 +1373,13 @@ static void remove_child(SURFACE *srf)
             return;
         }
 
+        if (parent == l_dt_srf) {
+            MSG msg;
+            msg.message = MSG_WINDOW_SWITCHED;
+            msg.u_param = ERROR_PID;
+            msg_q_put(g_root_pid, &msg);
+        }
+
         parent->children = 0;
         parent->num_children--;
         return;
@@ -1288,10 +1397,12 @@ static void remove_child(SURFACE *srf)
             if (s == parent->children) {
                 parent->children = next;
 
-                MSG msg;
-                msg.message = MSG_SCREEN_SWITCHED;
-                msg.u_param = next->pid;
-                msg_q_put(g_root_pid, &msg);
+                if (parent == l_dt_srf) {
+                    MSG msg;
+                    msg.message = MSG_WINDOW_SWITCHED;
+                    msg.u_param = parent->children->pid;
+                    msg_q_put(g_root_pid, &msg);
+                }
             }
 
             return;

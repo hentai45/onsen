@@ -458,42 +458,27 @@ static void cmd_kill(int pid)
 static void cmd_dbg(char *name)
 {
     if (s_cmp(name, "all") == 0) {
-        dbg_clear();
         graphic_dbg();
         mem_dbg();
         paging_dbg();
         task_dbg();
         timer_dbg();
-        switch_debug_screen();
     } else if (s_cmp(name, "sysinfo") == 0) {
-        dbg_clear();
-        dbgf("vram = %X\n", g_sys_info->vram);
+        dbgf("\nvram = %X\n", g_sys_info->vram);
         dbgf("width = %d\n", g_sys_info->w);
         dbgf("height = %d\n", g_sys_info->h);
         dbgf("color width = %d\n", g_sys_info->color_width);
-        dbgf("end_free_maddr = %#X\n", g_sys_info->end_free_maddr);
-
-        switch_debug_screen();
+        dbgf("end_free_maddr = %#X\n\n", g_sys_info->end_free_maddr);
     } else if (s_cmp(name, "task") == 0) {
-        dbg_clear();
         task_dbg();
-        switch_debug_screen();
     } else if (s_cmp(name, "timer") == 0) {
-        dbg_clear();
         timer_dbg();
-        switch_debug_screen();
     } else if (s_cmp(name, "mem") == 0) {
-        dbg_clear();
         mem_dbg();
-        switch_debug_screen();
     } else if (s_cmp(name, "paging") == 0) {
-        dbg_clear();
         paging_dbg();
-        switch_debug_screen();
     } else if (s_cmp(name, "graphic") == 0) {
-        dbg_clear();
         graphic_dbg();
-        switch_debug_screen();
     } else {
         putf("invalid dbg argment\n\n");
     }

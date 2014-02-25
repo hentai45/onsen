@@ -318,11 +318,12 @@ static void print_timer(TIMER *t);
 
 void timer_dbg(void)
 {
-    TIMER *t;
-
+    dbgf("\n");
     DBGF("TIMER DEBUG");
 
     dbgf("count_10ms = %u\n\n", l_mng.count_10ms);
+
+    TIMER *t;
 
     dbgf("ALL TIMERS:\n");
     for (int i = 0; i < TIMER_MAX; i++) {
@@ -345,7 +346,8 @@ static char *status[] = { "free", "alloc", "using" };
 
 static void print_timer(TIMER *t)
 {
-    dbgf("tid = %d, pid = %d, timeout_10ms = %u, status = %s\n", t->tid, t->pid, t->timeout_10ms, status[t->flags]);
+    dbgf("tid = %d, pid = %d, timeout_10ms = %u, status = %s\n",
+            t->tid, t->pid, t->timeout_10ms, status[t->flags]);
 }
 
 

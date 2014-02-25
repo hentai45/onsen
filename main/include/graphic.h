@@ -65,20 +65,21 @@ void move_sprite(int sid, int dx, int dy);
 void update_surface(int sid);
 void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
+void update_text(int sid, int x, int y, int len);
 
 void draw_sprite(int src_sid, int dst_sid, int op);
 void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
         int dst_sid, int dst_x, int dst_y, int op);
 
 void fill_surface(int sid, COLOR color);
-void fill_rect(int sid, int x, int y, int w, int h,
-        COLOR color);
-void draw_text(int sid, int x, int y, COLOR color,
-        const char *text);
+void fill_rect(int sid, int x, int y, int w, int h, COLOR color);
+void draw_text(int sid, int x, int y, COLOR color, const char *text);
 void draw_text_bg(int sid, int x, int y, COLOR color,
         COLOR bg_color, const char *text);
 
 void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR color);
+
+void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR color);
 
 void erase_char(int sid, int x, int y, COLOR color, bool update);
 
@@ -91,10 +92,12 @@ void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
 
-int  get_screen_pid(void);
-void switch_screen(void);
-void switch_debug_screen(void);
+int  get_active_win_pid(void);
+void switch_window(void);
 
 void graphic_dbg(void);
+
+int hrb_sid2addr(int sid);
+int hrb_addr2sid(int addr);
 
 #endif

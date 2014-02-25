@@ -8,9 +8,6 @@
  * -# asmapi.S の asm_api 関数が呼び出される
  * -# 本ファイルの onsen_api 関数が呼び出される
  * -# onsen_api がシステムコールを処理する関数を呼び出す
- *
- * @file api.c
- * @author Ivan Ivanovich Ivanov
  */
 
 

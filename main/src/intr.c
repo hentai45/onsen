@@ -175,8 +175,6 @@ static void fault_handler(const char *message, int *esp)
     if (is_os_task(get_pid())) {
         dbg_fault(message, esp);
 
-        switch_debug_screen();
-
         for (;;) {
             hlt();
         }
@@ -188,8 +186,6 @@ static void fault_handler(const char *message, int *esp)
         msg_q_put(g_root_pid, &msg);
 
         dbg_fault(message, esp);
-
-        switch_debug_screen();
 
         sti();
 
