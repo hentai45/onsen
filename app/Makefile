@@ -15,6 +15,7 @@ all :
 	cp $(KEY_H) $(INC_DIR)
 	make $(BIN_DIR)/hello
 	make $(BIN_DIR)/test
+	make -C haribote
 
 
 $(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello/hello.c Makefile
@@ -27,3 +28,4 @@ $(BIN_DIR)/test : $(ONSEN_LIB) $(LDS) test/test.c Makefile
 
 clean :
 	rm -f $(BIN_DIR)/hello $(BIN_DIR)/test
+	make clean -C haribote

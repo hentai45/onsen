@@ -24,6 +24,8 @@ asm_hrb_api:
     pushal
     pushal
     call   hrb_api
+    movl   %eax, 60(%esp)  # 戻り値をこの関数の入り口の pushal で積んだ
+                           # eax レジスタに格納する。
     addl   $32, %esp
     popal
     iret

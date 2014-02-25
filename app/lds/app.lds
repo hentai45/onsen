@@ -23,6 +23,6 @@ SECTIONS
         *(.bss)
     }
 
-    .eh_frame : { *(.eh_frame) }
+    /DISCARD/ : { *(.eh_frame) }
 }
 

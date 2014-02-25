@@ -194,6 +194,7 @@ int task_run_app(void *p, unsigned int size, const char *name)
 
     int stack_and_data_size  = hdr->stack_and_data_size;
     int esp                  = hdr->dst_data;
+    int bss_size             = hdr->bss_size;
     int data_size            = hdr->data_size;
     int data_addr            = hdr->src_data;
 
@@ -211,12 +212,15 @@ int task_run_app(void *p, unsigned int size, const char *name)
     char *p_data = (char *) mem_alloc_user((void *) esp, stack_and_data_size);
     memcpy(p_data, p + data_addr, data_size);
 
+    /* .bss */
+    memset(p_data + data_size, 0, bss_size);
+
     /* stack */
     unsigned char *stack0 = mem_alloc(64 * 1024);
     unsigned char *esp0 = stack0 + (64 * 1023);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) 0x1B, (void *) esp, (void *) esp0);
+    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) 0x1B, (void *) esp + stack_and_data_size, (void *) esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = p_code;

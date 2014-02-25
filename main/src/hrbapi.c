@@ -7,9 +7,10 @@
 // 非公開ヘッダ
 
 // API 番号と機能の対応などが書かれたヘッダ。/api/haribote/include
-#include "haribote.h"
+#include "haribote/apino.h"
 
 #include "debug.h"
+#include "graphic.h"
 #include "str.h"
 
 
@@ -26,16 +27,23 @@ typedef struct _PUSHAL_REGISTERS {
 
 int hrb_api(PUSHAL_REGISTERS reg)
 {
-    if (reg.edx == 1) {
+    int ret = 0;
+
+    if (reg.edx == API_PUTCHAR) {
         s_printf("%c", reg.eax);
-    } else if (reg.edx == 2) {
+    } else if (reg.edx == API_PUTSTR0) {
         s_printf("%s", reg.ebx);
-    } else if (reg.edx == 3) {
+    } else if (reg.edx == API_PUTSTR1) {
         s_printf("%.*s", reg.ecx, reg.ebx);
-    } else if (reg.edx == 4) {
+    } else if (reg.edx == API_END) {
         api_exit_app(0);
+    } else if (reg.edx == API_OPENWIN) {
+        ret = new_window(0, 0, reg.esi, reg.edi, reg.ecx);
+        set_colorkey(ret, reg.eax);
+    } else if (reg.edx == API_PUTINTX) {
+        s_printf("%X", reg.eax);
     }
 
-    return 0;
+    return ret;
 }
 
