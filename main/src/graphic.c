@@ -111,6 +111,7 @@ int hrb_addr2sid(int addr);
 //=============================================================================
 // 非公開ヘッダ
 
+#include "asmfunc.h"
 #include "debug.h"
 #include "graphic.h"
 #include "memory.h"
@@ -139,7 +140,7 @@ int hrb_addr2sid(int addr);
 
 typedef struct SURFACE {
     int sid;    ///< SURFACE ID
-    int flags;
+    unsigned int flags;
     int pid;    ///< この SURFACE を持っているプロセス ID
     char *name;
 
@@ -405,11 +406,7 @@ int new_surface_from_buf(int parent_sid, int w, int h, COLOR *buf)
     srf->buf = buf;
     srf->parent = parent;
 
-    if (parent_sid == g_dt_sid) {
-        add_child_head(srf);
-    } else {
-        add_child(srf);
-    }
+    add_child(srf);
 
     return srf->sid;
 }
@@ -500,21 +497,40 @@ void move_sprite(int sid, int dx, int dy)
     srf->y = MAXMIN(0, srf->y + dy, g_h);
 }
 
-static void update_rect0(int sid, int x, int y, int w, int h, bool window);
+static void update_rect0(int sid, int x, int y, int w, int h);
 
 void update_surface(int sid)
 {
-    update_rect0(sid, 0, 0, 0, 0, true);
+    cli();
+
+    SURFACE *srf = sid2srf(sid);
+
+    if (srf == 0) {
+        return;
+    }
+
+    unsigned int flags = srf->flags;
+    srf->flags &= ~SRF_FLG_WINDOW;
+
+    update_rect0(sid, 0, 0, 0, 0);
+
+    srf->flags = flags;
+
+    sti();
 }
 
 void update_rect(int sid, int x, int y, int w, int h)
 {
-    update_rect0(sid, x, y, w, h, false);
+    cli();
+
+    update_rect0(sid, x, y, w, h);
+
+    sti();
 }
 
 static void update_rect_sub(SURFACE *srf, int p_x, int p_y, int x, int y, int w, int h);
 
-static void update_rect0(int sid, int x, int y, int w, int h, bool window)
+static void update_rect0(int sid, int x, int y, int w, int h)
 {
     SURFACE *srf = sid2srf(sid);
 
@@ -533,13 +549,8 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool window)
     conv_screen_cord(srf, &p_x, &p_y);
 
     if (srf->flags & SRF_FLG_WINDOW) {
-        if (window) {
-            p_x -= CLIENT_X;
-            p_y -= CLIENT_Y;
-        } else {
-            x += CLIENT_X;
-            y += CLIENT_Y;
-        }
+        x += CLIENT_X;
+        y += CLIENT_Y;
     }
 
     update_rect_sub(srf, p_x, p_y, x, y, w, h);
@@ -967,7 +978,7 @@ int get_active_win_pid(void)
     if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
         return ERROR_PID;
 
-    return l_dt_srf->children->pid;
+    return l_dt_srf->children->prev_srf->pid;
 }
 
 
@@ -975,7 +986,7 @@ void switch_window(void)
 {
     // l_dt_srf->children の先頭が現在アクティブなウィンドウを表している。
 
-    if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
+    if (l_dt_srf == 0 || l_dt_srf->num_children <= 1)
         return;
 
     SURFACE *old_head = l_dt_srf->children;
@@ -1317,6 +1328,13 @@ static void add_child(SURFACE *srf)
     }
 
     parent->num_children++;
+
+    if (parent == l_dt_srf) {
+        MSG msg;
+        msg.message = MSG_WINDOW_SWITCHED;
+        msg.u_param = srf->pid;
+        msg_q_put(g_root_pid, &msg);
+    }
 }
 
 
@@ -1330,6 +1348,13 @@ static void add_child_head(SURFACE *srf)
 
     if (parent->num_children == 0) {
         parent->children = srf;
+
+        if (parent == l_dt_srf) {
+            MSG msg;
+            msg.message = MSG_WINDOW_SWITCHED;
+            msg.u_param = srf->pid;
+            msg_q_put(g_root_pid, &msg);
+        }
     } else {
         SURFACE *old_head = parent->children;
         SURFACE *last = old_head->prev_srf;
@@ -1344,13 +1369,6 @@ static void add_child_head(SURFACE *srf)
     }
 
     parent->num_children++;
-
-    if (parent == l_dt_srf) {
-        MSG msg;
-        msg.message = MSG_WINDOW_SWITCHED;
-        msg.u_param = srf->pid;
-        msg_q_put(g_root_pid, &msg);
-    }
 }
 
 
@@ -1385,6 +1403,8 @@ static void remove_child(SURFACE *srf)
         return;
     }
 
+    int old_active_win_pid = get_active_win_pid();
+
     SURFACE *s = parent->children;
     do {
         if (s == srf) {
@@ -1396,13 +1416,13 @@ static void remove_child(SURFACE *srf)
 
             if (s == parent->children) {
                 parent->children = next;
+            }
 
-                if (parent == l_dt_srf) {
-                    MSG msg;
-                    msg.message = MSG_WINDOW_SWITCHED;
-                    msg.u_param = parent->children->pid;
-                    msg_q_put(g_root_pid, &msg);
-                }
+            if (parent == l_dt_srf && srf->pid == old_active_win_pid) {
+                MSG msg;
+                msg.message = MSG_WINDOW_SWITCHED;
+                msg.u_param = parent->children->prev_srf->pid;
+                msg_q_put(g_root_pid, &msg);
             }
 
             return;

@@ -479,6 +479,11 @@ static void cmd_dbg(char *name)
         paging_dbg();
     } else if (s_cmp(name, "graphic") == 0) {
         graphic_dbg();
+    } else if (s_cmp(name, "temp") == 0) {
+        int fd = f_open("/debug/temp", O_RDONLY);
+        char buf[4096];
+        int ret = f_read(fd, buf, 4096);
+        dbgf("%.*s\n", 4096, buf);
     } else {
         putf("invalid dbg argment\n\n");
     }

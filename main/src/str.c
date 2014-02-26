@@ -76,9 +76,14 @@ void s_reverse(char *s)
 // s<tなら<0, s==tなら0, s>tなら>0を返す
 int s_cmp(const char *s, const char *t)
 {
-    for ( ; *s == *t; s++, t++)
-        if (*s == '\0')
-            return 0;
+    for ( ; *s == *t; s++, t++) {
+        if (*s == '\0' || *t == '\0') {
+            if (*s == '\0' && *t == '\0')
+                return 0;
+            else
+                break;
+        }
+    }
 
     return *s - *t;
 }
@@ -86,9 +91,14 @@ int s_cmp(const char *s, const char *t)
 int s_ncmp(const char *s, const char *t, int n)
 {
     int i;
-    for (i = 0; i < n && *s == *t; i++, s++, t++)
-        if (*s == '\n')
-            return 0;
+    for (i = 0; i < n && *s == *t; i++, s++, t++) {
+        if (*s == '\0' || *t == '\0') {
+            if (*s == '\0' && *t == '\0')
+                return 0;
+            else
+                break;
+        }
+    }
 
     if (i == n)
         return 0;

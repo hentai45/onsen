@@ -31,6 +31,7 @@ void dbg_seg(void);
 void dbg_fault(const char *msg, int *esp);
 
 extern FILE_T *f_debug;
+extern FILE_T *f_dbg_temp;
 
 
 #endif

@@ -452,6 +452,9 @@ FILE_T *task_get_file(int fd)
 
 int task_set_file(int fd, FILE_T *f)
 {
+    TSS *t = l_mng.run[l_mng.cur_run];
+    t->file_table[fd].file = f;
+
     return 0;
 }
 

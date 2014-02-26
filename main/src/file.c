@@ -51,6 +51,7 @@ FILE_T *f_keyboard;
 // 非公開ヘッダ
 
 #include "console.h"
+#include "debug.h"
 #include "str.h"
 #include "task.h"
 
@@ -66,11 +67,14 @@ int f_open(const char *name, int flags)
     if (fd == -1)
         return -1;
 
-    if (s_ncmp(name, "/dev/tty", 8) && flags == O_WRONLY){
+    if (s_cmp(name, "/dev/tty") == 0 && flags == O_WRONLY){
         task_set_file(fd, f_console);
         return fd;
-    } else if (s_ncmp(name, "/dev/keyboard", 13) && flags == O_RDONLY) {
+    } else if (s_cmp(name, "/dev/keyboard") == 0 && flags == O_RDONLY) {
         task_set_file(fd, f_keyboard);
+        return fd;
+    } else if (s_cmp(name, "/debug/temp") == 0) {
+        task_set_file(fd, f_dbg_temp);
         return fd;
     }
 

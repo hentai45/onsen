@@ -1,14 +1,5 @@
 /**
  * デバッグ
- *
- * @file debug.c
- * @author Ivan Ivanovich Ivanov
- */
-
-/*
- * ＜目次＞
- * ・メイン
- * ・画面出力
  */
 
 
@@ -46,6 +37,7 @@ void dbg_seg(void);
 void dbg_fault(const char *msg, int *esp);
 
 extern FILE_T *f_debug;
+extern FILE_T *f_dbg_temp;
 
 
 #endif
@@ -97,6 +89,12 @@ static int dbg_write(void *self, const void *buf, int cnt);
 FILE_T l_f_debug = { .write = dbg_write};
 FILE_T *f_debug = &l_f_debug;
 
+static int dbg_temp_read(void *self, const void *buf, int cnt);
+static int dbg_temp_write(void *self, const void *buf, int cnt);
+
+FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write};
+FILE_T *f_dbg_temp = &l_f_dbg_temp;
+
 //=============================================================================
 // 公開関数
 
@@ -107,11 +105,11 @@ static void update_all(void);
 
 void debug_main(void)
 {
-    is_initialized = 1;
-
     int w = WIDTH_CH * HANKAKU_W;
     int h = HEIGHT_CH * HANKAKU_H;
     l_sid = new_window(0, 0, w, h, "debug");
+
+    is_initialized = 1;
 
     update_all();
 
@@ -323,5 +321,36 @@ static void dbg_fault_reg(const REGISTERS_FAULT *r)
 static int dbg_write(void *self, const void *buf, int cnt)
 {
     dbgf("%.*s", cnt, (char *) buf);
-    return 0;
+    return cnt;
 }
+
+static int l_temp_buf_i = 0;
+static char l_temp_buf[4096];
+
+static int dbg_temp_read(void *self, const void *buf, int cnt)
+{
+    int num_read = (l_temp_buf_i < cnt) ? l_temp_buf_i : cnt;
+
+    num_read = s_snprintf((char *) buf, cnt, "%.*s", num_read, l_temp_buf);
+
+    int from = num_read;
+    int to   = 0;
+
+    while (from < 4096) {
+        l_temp_buf[to++] = l_temp_buf[from++];
+    }
+
+    l_temp_buf_i -= num_read;
+
+    return num_read;
+}
+
+
+static int dbg_temp_write(void *self, const void *buf, int cnt)
+{
+    int num_write = s_snprintf(l_temp_buf, 4096 - l_temp_buf_i,
+            "%.*s", cnt, (char *) buf);
+    l_temp_buf_i += num_write;
+    return num_write;
+}
+
