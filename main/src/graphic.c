@@ -97,7 +97,6 @@ void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
 
-int  get_active_win_pid(void);
 void switch_window(void);
 
 void graphic_dbg(void);
@@ -203,6 +202,8 @@ static int draw_char_bg(SURFACE *srf, int x, int y, COLOR color,
 static void add_child(SURFACE *srf);
 static void add_child_head(SURFACE *srf);
 static void remove_child(SURFACE *srf);
+
+static SURFACE *get_active_win(void);
 
 static SURFACE *l_vram_srf;
 static SURFACE *l_dt_srf;
@@ -973,12 +974,12 @@ void set_mouse_pos(int x, int y)
 }
 
 
-int get_active_win_pid(void)
+SURFACE *get_active_win(void)
 {
     if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
-        return ERROR_PID;
+        return 0;
 
-    return l_dt_srf->children->prev_srf->pid;
+    return l_dt_srf->children->prev_srf;
 }
 
 
@@ -1314,6 +1315,8 @@ static void add_child(SURFACE *srf)
         return;
     }
 
+    SURFACE *old_active_win = get_active_win();
+
     if (parent->num_children == 0) {
         parent->children = srf;
     } else {
@@ -1331,7 +1334,14 @@ static void add_child(SURFACE *srf)
 
     if (parent == l_dt_srf) {
         MSG msg;
-        msg.message = MSG_WINDOW_SWITCHED;
+
+        if (old_active_win != 0) {
+            msg.message = MSG_WINDOW_DEACTIVE;
+            msg.u_param = old_active_win->pid;
+            msg_q_put(g_root_pid, &msg);
+        }
+
+        msg.message = MSG_WINDOW_ACTIVE;
         msg.u_param = srf->pid;
         msg_q_put(g_root_pid, &msg);
     }
@@ -1351,7 +1361,7 @@ static void add_child_head(SURFACE *srf)
 
         if (parent == l_dt_srf) {
             MSG msg;
-            msg.message = MSG_WINDOW_SWITCHED;
+            msg.message = MSG_WINDOW_ACTIVE;
             msg.u_param = srf->pid;
             msg_q_put(g_root_pid, &msg);
         }
@@ -1393,7 +1403,12 @@ static void remove_child(SURFACE *srf)
 
         if (parent == l_dt_srf) {
             MSG msg;
-            msg.message = MSG_WINDOW_SWITCHED;
+
+            msg.message = MSG_WINDOW_DEACTIVE;
+            msg.u_param = srf->pid;
+            msg_q_put(g_root_pid, &msg);
+
+            msg.message = MSG_WINDOW_ACTIVE;
             msg.u_param = ERROR_PID;
             msg_q_put(g_root_pid, &msg);
         }
@@ -1403,7 +1418,7 @@ static void remove_child(SURFACE *srf)
         return;
     }
 
-    int old_active_win_pid = get_active_win_pid();
+    SURFACE *old_active_win = get_active_win();
 
     SURFACE *s = parent->children;
     do {
@@ -1418,9 +1433,14 @@ static void remove_child(SURFACE *srf)
                 parent->children = next;
             }
 
-            if (parent == l_dt_srf && srf->pid == old_active_win_pid) {
+            if (parent == l_dt_srf && srf == old_active_win) {
                 MSG msg;
-                msg.message = MSG_WINDOW_SWITCHED;
+
+                msg.message = MSG_WINDOW_DEACTIVE;
+                msg.u_param = old_active_win->pid;
+                msg_q_put(g_root_pid, &msg);
+
+                msg.message = MSG_WINDOW_ACTIVE;
                 msg.u_param = parent->children->prev_srf->pid;
                 msg_q_put(g_root_pid, &msg);
             }

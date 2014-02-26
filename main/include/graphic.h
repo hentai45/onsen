@@ -92,7 +92,6 @@ void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
 
-int  get_active_win_pid(void);
 void switch_window(void);
 
 void graphic_dbg(void);

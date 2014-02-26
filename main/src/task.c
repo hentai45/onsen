@@ -280,12 +280,6 @@ int task_free(int pid, int exit_status)
 
     timer_task_free(pid);
 
-    int active_win_pid = get_active_win_pid();
-
-    if (pid == active_win_pid) {
-        switch_window();
-    }
-
     free_surface_task(pid);
 
     t->flags = TASK_FLG_FREE;

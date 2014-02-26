@@ -75,9 +75,14 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 #define MSG_NOTIFY_CHILD_EXIT   9
 
 
-// ---- ウィンドウ切り替わりメッセージ
-// u_param : 切り替わったウィンドウの PID
-#define MSG_WINDOW_SWITCHED    10
+// ---- ウィンドウアクティブメッセージ
+// u_param : アクティブになったウィンドウの PID
+#define MSG_WINDOW_ACTIVE    10
+
+
+// ---- ウィンドウ非アクティブメッセージ
+// u_param : 非アクティブウィンドウの PID
+#define MSG_WINDOW_DEACTIVE    11
 
 
 #endif

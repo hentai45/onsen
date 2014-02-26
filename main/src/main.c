@@ -81,8 +81,6 @@ static void init_onsen(void)
 
     run_debug();
     run_console();
-
-    active_win_pid = get_active_win_pid();
 }
 
 
@@ -162,9 +160,13 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
         task_free(/* exit app pid =  */ u_param, /* exit status =  */ l_param);
         break;
 
-    case MSG_WINDOW_SWITCHED:
-        dbgf("change active window: %s\n", task_get_name(u_param));
+    case MSG_WINDOW_ACTIVE:
+        dbgf("window active: %s\n", task_get_name(u_param));
         active_win_pid = u_param;
+        break;
+
+    case MSG_WINDOW_DEACTIVE:
+        dbgf("window deactive: %s\n", task_get_name(u_param));
         break;
 
     case MSG_RAW_MOUSE:
