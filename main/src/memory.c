@@ -47,6 +47,7 @@
 
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
+void *mem_alloc_str(const char *s);
 void *mem_alloc_user(void *vp_vaddr, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
@@ -410,12 +411,19 @@ static void dbg_mem_mng(MEM_MNG *mng)
 }
 
 
+void *mem_alloc_str(const char *s)
+{
+    void *p = mem_alloc(s_len(s));
+    s_cpy(p, s);
+    return p;
+}
+
+
 //-----------------------------------------------------------------------------
 // ページ単位メモリ管理
 
 
 static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg);
-
 
 void *mem_alloc_user(void *vp_vaddr, int size_B)
 {

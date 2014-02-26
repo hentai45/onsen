@@ -458,11 +458,11 @@ const char *task_get_name(int pid)
     TSS *t = pid2tss(pid);
 
     if (t == 0) {
-        return "ERROR";
+        return 0;
     }
 
     if (t->flags == TASK_FLG_FREE) {
-        return "ERROR";
+        return 0;
     }
 
     return t->name;

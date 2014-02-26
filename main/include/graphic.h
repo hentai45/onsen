@@ -23,8 +23,8 @@ typedef unsigned short COLOR;
 #define COL_BLUE     RGB(  0,   0, 255)
 #define COL_WHITE    RGB(255, 255, 255)
 
-#define BORDER_WIDTH      (3)
-#define TITLE_BAR_HEIGHT  (19)
+#define BORDER_WIDTH      (2)
+#define TITLE_BAR_HEIGHT  (18)
 #define WINDOW_EXT_WIDTH  (BORDER_WIDTH * 2)
 #define WINDOW_EXT_HEIGHT (TITLE_BAR_HEIGHT + (BORDER_WIDTH * 2))
 
@@ -63,6 +63,7 @@ void set_sprite_pos(int sid, int x, int y);
 void move_sprite(int sid, int dx, int dy);
 
 void update_surface(int sid);
+void update_window(int pid);
 void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
 void update_text(int sid, int x, int y, int len);

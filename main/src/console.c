@@ -54,6 +54,7 @@ static COLOR bg = COL_BLACK;
 
 static int cursor_tid;
 static int cursor_on = 0;
+static bool l_active;
 
 int cons_write(void *self, const void *buf, int cnt);
 
@@ -166,6 +167,11 @@ static void console_proc(unsigned int msg, unsigned long u_param, long l_param)
         if (tid == cursor_tid) {
             cursor_timer_handler(cursor_tid);
         }
+    } else if (msg == MSG_WINDOW_ACTIVE) {
+        l_active = true;
+    } else if (msg == MSG_WINDOW_DEACTIVE) {
+        l_active = false;
+        erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, bg, true);
     } else if (msg == MSG_KEYDOWN) {
         keydown_handler(u_param);
     } else if (msg == MSG_CHAR) {
@@ -188,11 +194,14 @@ static void console_proc(unsigned int msg, unsigned long u_param, long l_param)
 
 static void cursor_timer_handler(int tid)
 {
-    COLOR color = (cursor_on) ? bg : fg;
+    if (l_active) {
+        COLOR color = (cursor_on) ? bg : fg;
 
-    erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, color, true);
+        erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, color, true);
 
-    cursor_on = ! cursor_on;
+        cursor_on = ! cursor_on;
+    }
+
     timer_start(tid, CURSOR_INTERVAL_MS);
 }
 

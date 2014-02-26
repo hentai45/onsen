@@ -14,6 +14,7 @@
 #include "graphic.h"
 #include "msg.h"
 #include "str.h"
+#include "task.h"
 
 
 void api_exit_app(int exit_status);

@@ -41,6 +41,7 @@
 
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
+void *mem_alloc_str(const char *s);
 void *mem_alloc_user(void *vp_vaddr, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);

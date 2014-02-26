@@ -25,6 +25,11 @@ int get_message(MSG *msg);
 int peek_message(MSG *msg);
 void dispatch_message(const MSG *msg, ONSEN_PROC proc);
 
+//-----------------------------------------------------------------------------
+// メッセージ
+
+void send_window_active_msg(int pid_recieve, int pid);
+void send_window_deactive_msg(int pid_recieve, int pid);
 
 //-----------------------------------------------------------------------------
 // メッセージ定義
@@ -144,3 +149,20 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc)
     proc(msg->message, msg->u_param, msg->l_param);
 }
 
+
+void send_window_active_msg(int pid_recieve, int pid)
+{
+    MSG msg;
+    msg.message = MSG_WINDOW_ACTIVE;
+    msg.u_param = pid;
+    msg_q_put(pid_recieve, &msg);
+}
+
+
+void send_window_deactive_msg(int pid_recieve, int pid)
+{
+    MSG msg;
+    msg.message = MSG_WINDOW_DEACTIVE;
+    msg.u_param = pid;
+    msg_q_put(pid_recieve, &msg);
+}

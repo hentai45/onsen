@@ -348,7 +348,7 @@ static int dbg_temp_read(void *self, const void *buf, int cnt)
 
 static int dbg_temp_write(void *self, const void *buf, int cnt)
 {
-    int num_write = s_snprintf(l_temp_buf, 4096 - l_temp_buf_i,
+    int num_write = s_snprintf(l_temp_buf + l_temp_buf_i, 4096 - l_temp_buf_i,
             "%.*s", cnt, (char *) buf);
     l_temp_buf_i += num_write;
     return num_write;

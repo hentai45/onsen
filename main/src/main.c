@@ -162,11 +162,19 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 
     case MSG_WINDOW_ACTIVE:
         dbgf("window active: %s\n", task_get_name(u_param));
-        active_win_pid = u_param;
+
+        if (u_param != g_root_pid) {
+            active_win_pid = u_param;
+            send_window_active_msg(u_param, u_param);
+        }
         break;
 
     case MSG_WINDOW_DEACTIVE:
         dbgf("window deactive: %s\n", task_get_name(u_param));
+
+        if (u_param != g_root_pid) {
+            send_window_deactive_msg(u_param, u_param);
+        }
         break;
 
     case MSG_RAW_MOUSE:
@@ -182,6 +190,9 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 
 static void mouse_handler(unsigned long data)
 {
+    if (active_win_pid <= 0)
+        return;
+
     MOUSE_DECODE *mdec = mouse_decode(data);
 
     if (mdec == 0) {
@@ -220,7 +231,7 @@ static void mouse_handler(unsigned long data)
 
 static void keydown_handler(unsigned long keycode)
 {
-    if (active_win_pid == ERROR_PID)
+    if (active_win_pid <= 0)
         return;
 
     if (keycode == KC_TAB) {
