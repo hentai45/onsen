@@ -2,6 +2,7 @@ bin/
 debug/
 *.bin
 *.map
+*.swp
 
 # Object files
 *.o

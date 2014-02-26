@@ -1036,7 +1036,7 @@ void set_mouse_pos(int x, int y)
     int mx = l_mouse_srf->x;
     int my = l_mouse_srf->y;
 
-    blit_surface(g_dt_sid, mx, my, MOUSE_W, MOUSE_H, g_vram_sid,
+    blit_surface(l_buf_sid, mx, my, MOUSE_W, MOUSE_H, g_vram_sid,
             mx, my, OP_SRC_COPY);
 
     l_mouse_srf->x = x;
