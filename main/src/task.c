@@ -260,7 +260,7 @@ int task_free(int pid, int exit_status)
 
     TSS *t = pid2tss(pid);
 
-    if (t == 0) {
+    if (t == 0 || t->flags == TASK_FLG_FREE) {
         return -2;
     }
 

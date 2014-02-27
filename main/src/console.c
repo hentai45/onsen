@@ -346,7 +346,11 @@ static void run_cmd(char *cmd_name)
     } else if (s_cmp(cmd_name, "mem") == 0) {
         cmd_mem();
     } else if (s_ncmp(cmd_name, "kill ", 5) == 0) {
-        cmd_kill(s_atoi(&cmd_name[5]));
+        if (cmd_name[5] < '0' || '9' < cmd_name[5]) {
+            putf("Usage: kill pid\n\n");
+        } else {
+            cmd_kill(s_atoi(&cmd_name[5]));
+        }
     } else if (s_ncmp(cmd_name, "run ", 4) == 0) {
         run_status = cmd_app(&cmd_name[4], 1);
     } else if (s_cmp(cmd_name, "dbg") == 0) {
