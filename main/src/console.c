@@ -456,6 +456,7 @@ static void cmd_kill(int pid)
 
     if (status == 0) {
         // そういうものだ
+        putf("so it goes.\n", pid);
     } else {
         putf("could not kill pid %d\n", pid);
     }

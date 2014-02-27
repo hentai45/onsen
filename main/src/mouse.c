@@ -1,8 +1,5 @@
 /**
  * マウス
- *
- * @file mouse.c
- * @author Ivan Ivanovich Ivanov
  */
 
 //=============================================================================
@@ -59,7 +56,6 @@ MOUSE_DECODE *mouse_decode(unsigned char data);
 
 
 static MOUSE_DECODE l_mdec;
-
 
 //=============================================================================
 // 公開関数

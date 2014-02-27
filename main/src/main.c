@@ -123,8 +123,7 @@ static void test_draw_bitmap(void)
         fat12_load_file(fi->clustno, fi->size, p);
 
         int bmp_sid = load_bmp(p, fi->size);
-        set_sprite_pos(bmp_sid, 250, 250);
-        draw_sprite(bmp_sid, g_dt_sid, OP_SRC_COPY);
+        draw_surface(bmp_sid, g_dt_sid, 250, 250, OP_SRC_COPY);
 
         mem_free(p);
     }
@@ -135,8 +134,7 @@ static void test_draw_textbox(void)
     int sid = new_surface(NO_PARENT_SID, g_w / 4, g_h / 4);
     fill_surface(sid, COL_BLACK);
     set_alpha(sid, 50);
-    set_sprite_pos(sid, 150, 30);
-    draw_sprite(sid, g_dt_sid, OP_SRC_COPY);
+    draw_surface(sid, g_dt_sid, 150, 30, OP_SRC_COPY);
 
     draw_text(g_dt_sid, 155, 35, COL_WHITE, "HELLO");
 }
@@ -192,6 +190,10 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 }
 
 
+static bool l_left_down   = false;
+static bool l_right_down  = false;
+static bool l_center_down = false;
+
 static void mouse_handler(unsigned long data)
 {
     if (active_win_pid <= 0)
@@ -207,6 +209,20 @@ static void mouse_handler(unsigned long data)
         set_mouse_pos(mdec->x, mdec->y);
     }
 
+    if (mdec->btn_left && ! l_left_down) {
+        // left button down
+        l_left_down = true;
+        graphic_left_down(mdec->x, mdec->y);
+    } else if ( ! mdec->btn_left && l_left_down) {
+        // left button up
+        l_left_down = false;
+        graphic_left_up(mdec->x, mdec->y);
+    } else {
+        // left button drag
+        graphic_left_drag(mdec->x, mdec->y);
+    }
+
+    /*
     if (active_win_pid == ERROR_PID)
         return;
 
@@ -230,6 +246,7 @@ static void mouse_handler(unsigned long data)
 
         msg_q_put(active_win_pid, &msg);
     }
+    */
 }
 
 

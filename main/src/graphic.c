@@ -64,8 +64,8 @@ void free_surface(int sid);
 void free_surface_task(int pid);
 int  get_screen(void);
 
-void set_sprite_pos(int sid, int x, int y);
-void move_sprite(int sid, int dx, int dy);
+void set_surface_pos(int sid, int x, int y);
+void move_surface(int sid, int x, int y);
 
 void update_surface(int sid);
 void update_window(int pid);
@@ -73,7 +73,8 @@ void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
 void update_text(int sid, int x, int y, int len);
 
-void draw_sprite(int src_sid, int dst_sid, int op);
+void draw_surface(int src_sid, int dst_sid, int x, int y, int op);
+void draw_surface2(int src_sid, int dst_sid, int op);
 void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
         int dst_sid, int dst_x, int dst_y, int op);
 
@@ -97,6 +98,10 @@ void set_alpha(int sid, unsigned char alpha);
 void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
+
+void graphic_left_down(int x, int y);
+void graphic_left_up(int x, int y);
+void graphic_left_drag(int x, int y);
 
 void switch_window(void);
 
@@ -129,6 +134,9 @@ int hrb_addr2sid(int addr);
 
 
 #define SURFACE_MAX 1024
+
+#define CLOSE_BTN_W  16
+#define CLOSE_BTN_H  14
 
 #define MOUSE_W  10
 #define MOUSE_H  16
@@ -293,7 +301,7 @@ int new_window(int x, int y, int cw, int ch, char *title)
 
     srf->name = mem_alloc_str(title);
     srf->flags |= SRF_FLG_WINDOW;
-    set_sprite_pos(sid, x, y);
+    set_surface_pos(sid, x, y);
 
     draw_window(sid);
 
@@ -363,7 +371,7 @@ static void draw_win_titlebar(SURFACE *srf)
 
     draw_text(srf->sid, 6, 4, RGB2(0xFFFFFF), srf->name);
 
-    blit_surface(l_close_button_sid, 0, 0, 16, 14, srf->sid, srf->w-21, 5, OP_SRC_COPY);
+    draw_surface(l_close_button_sid, srf->sid, srf->w  - 21, 5, OP_SRC_COPY);
 
     srf->flags = flags;
 }
@@ -466,7 +474,7 @@ void free_surface_task(int pid)
 }
 
 
-void set_sprite_pos(int sid, int x, int y)
+void set_surface_pos(int sid, int x, int y)
 {
     SURFACE *srf = sid2srf(sid);
 
@@ -479,7 +487,7 @@ void set_sprite_pos(int sid, int x, int y)
 }
 
 
-void move_sprite(int sid, int dx, int dy)
+void move_surface(int sid, int x, int y)
 {
     SURFACE *srf = sid2srf(sid);
 
@@ -493,8 +501,18 @@ void move_sprite(int sid, int dx, int dy)
         return;
     }
 
-    srf->x = MAXMIN(0, srf->x + dx, g_w);
-    srf->y = MAXMIN(0, srf->y + dy, g_h);
+    int old_x = 0;
+    int old_y = 0;
+    int w = srf->w;
+    int h = srf->h;
+
+    conv_screen_cord(srf, &old_x, &old_y, false);
+
+    srf->x = MIN(x, g_w);
+    srf->y = MIN(y, g_h);
+
+    update_rect(parent->sid, old_x, old_y, w, h);
+    update_surface(srf->sid);
 }
 
 
@@ -644,7 +662,19 @@ void update_char(int sid, int x, int y)
 }
 
 
-void draw_sprite(int src_sid, int dst_sid, int op)
+void draw_surface(int src_sid, int dst_sid, int x, int y, int op)
+{
+    SURFACE *srf = sid2srf(src_sid);
+
+    if (srf == 0) {
+        return;
+    }
+
+    blit_surface(src_sid, 0, 0, srf->w, srf->h, dst_sid, x, y, op);
+}
+
+
+void draw_surface2(int src_sid, int dst_sid, int op)
 {
     SURFACE *srf = sid2srf(src_sid);
 
@@ -1031,6 +1061,75 @@ void set_mouse_pos(int x, int y)
 }
 
 
+static SURFACE *l_moving_srf = 0;
+static int l_moving_click_x = 0;
+static int l_moving_click_y = 0;
+static int l_moving_srf_x = 0;
+static int l_moving_srf_y = 0;
+
+void graphic_left_down(int x, int y)
+{
+    l_moving_srf = 0;
+
+    if (l_dt_srf->num_children == 0)
+        return;
+
+    SURFACE *active_win = get_active_win();
+    SURFACE *p = active_win;
+    do {
+        int s_x = 0;
+        int s_y = 0;
+        conv_screen_cord(p, &s_x, &s_y, false);
+
+        if (s_x <= x && x < s_x + p->w && s_y <= y && y < s_y + p->h) {
+            if (p != active_win) {
+                remove_child(p);
+                add_child(p);
+            }
+
+            // title bar
+            if (y - s_y <= TITLE_BAR_HEIGHT + BORDER_WIDTH) {
+                // close button
+                if (x - s_x >= p->w - (CLOSE_BTN_W + BORDER_WIDTH)) {
+                    dbgf("close button\n");
+                    task_free(p->pid, 0);
+                    return;
+                }
+
+                dbgf("title bar\n");
+                l_moving_srf = p;
+                l_moving_click_x = x;
+                l_moving_click_y = y;
+                l_moving_srf_x = p->x;
+                l_moving_srf_y = p->y;
+            }
+
+            return;
+        }
+    } while ((p = p->prev_srf) != active_win);
+}
+
+
+void graphic_left_up(int x, int y)
+{
+    l_moving_srf = 0;
+}
+
+
+void graphic_left_drag(int x, int y)
+{
+    if (l_moving_srf == 0)
+        return;
+
+    int dx = x - l_moving_click_x;
+    int dy = y - l_moving_click_y;
+
+    if (dx != 0 || dy != 0) {
+        move_surface(l_moving_srf->sid, l_moving_srf_x + dx, l_moving_srf_y + dy);
+    }
+}
+
+
 SURFACE *get_active_win(void)
 {
     if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
@@ -1161,7 +1260,7 @@ static SURFACE *srf_alloc(void)
 
 static void create_close_button_surface(void)
 {
-    static char closebtn[14][16] = {
+    static char closebtn[CLOSE_BTN_H][CLOSE_BTN_W] = {
         "OOOOOOOOOOOOOOO@",
         "OQQQQQQQQQQQQQ$@",
         "OQQQQQQQQQQQQQ$@",
@@ -1182,12 +1281,12 @@ static void create_close_button_surface(void)
     COLOR color_dollar = RGB2(0x848484);
     COLOR color_q      = RGB2(0xFFFFFF);
 
-    l_close_button_sid = new_surface(NO_PARENT_SID, 16, 14);
+    l_close_button_sid = new_surface(NO_PARENT_SID, CLOSE_BTN_W, CLOSE_BTN_H);
     l_close_button_srf = sid2srf(l_close_button_sid);
     COLOR *buf = l_close_button_srf->buf;
 
-    for (int y = 0; y < 14; y++) {
-        for (int x = 0; x < 16; x++) {
+    for (int y = 0; y < CLOSE_BTN_H; y++) {
+        for (int x = 0; x < CLOSE_BTN_W; x++) {
             char c = closebtn[y][x];
 
             switch (c) {

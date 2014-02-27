@@ -59,8 +59,8 @@ void free_surface(int sid);
 void free_surface_task(int pid);
 int  get_screen(void);
 
-void set_sprite_pos(int sid, int x, int y);
-void move_sprite(int sid, int dx, int dy);
+void set_surface_pos(int sid, int x, int y);
+void move_surface(int sid, int x, int y);
 
 void update_surface(int sid);
 void update_window(int pid);
@@ -68,7 +68,8 @@ void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
 void update_text(int sid, int x, int y, int len);
 
-void draw_sprite(int src_sid, int dst_sid, int op);
+void draw_surface(int src_sid, int dst_sid, int x, int y, int op);
+void draw_surface2(int src_sid, int dst_sid, int op);
 void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
         int dst_sid, int dst_x, int dst_y, int op);
 
@@ -92,6 +93,10 @@ void set_alpha(int sid, unsigned char alpha);
 void clear_alpha(int sid);
 
 void set_mouse_pos(int x, int y);
+
+void graphic_left_down(int x, int y);
+void graphic_left_up(int x, int y);
+void graphic_left_drag(int x, int y);
 
 void switch_window(void);
 
