@@ -1,6 +1,7 @@
 include ../Makefile.inc
 
-MKHDR   = ../tools/mkhdr
+MKHDR    = ../tools/mkhdr
+MKFNAMES = ../tools/mkfuncnames
 
 CFLAGS += -I$(API_INC_DIR)
 
@@ -11,6 +12,7 @@ ONSEN_BIN = $(BIN_DIR)/onsen.sys
 ONSEN_ELF = $(BIN_DIR)/onsen.elf
 LDS = $(LDS_DIR)/os.lds
 MAP = onsen.map
+FNAMES = $(BIN_DIR)/fnames.bin
 
 AS_SRCS := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
 AS_SRCS += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/mem/*.S))
@@ -23,10 +25,15 @@ C_OBJS  := $(C_SRCS:.c=.o)
 all :
 	make mkhdr
 	make $(ONSEN_BIN)
+	make mkfnames
 
 
 mkhdr :
 	$(MKHDR) $(SRC_DIR) $(INC_DIR)
+
+
+mkfnames :
+	$(MKFNAMES) $(MAP) $(FNAMES)
 
 
 # objcopyで巨大なファイルができたなら.note.gnu.build-idなどの余計なセクションが

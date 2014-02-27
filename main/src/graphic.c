@@ -117,6 +117,7 @@ int hrb_addr2sid(int addr);
 #include "memory.h"
 #include "mouse.h"
 #include "msg_q.h"
+#include "stacktrace.h"
 #include "str.h"
 #include "task.h"
 
@@ -492,6 +493,7 @@ void move_sprite(int sid, int dx, int dy)
     srf->y = MAXMIN(0, srf->y + dy, g_h);
 }
 
+
 static void update_rect0(int sid, int x, int y, int w, int h);
 
 void update_surface(int sid)
@@ -517,6 +519,7 @@ void update_surface(int sid)
 
     sti();
 }
+
 
 void update_window(int pid)
 {
@@ -821,7 +824,6 @@ void draw_text_bg(int sid, int x, int y, COLOR color,
     for ( ; *s; s++) {
         x = draw_char_bg(srf, x, y, color, bg_color, *s);
     }
-    update_surface(sid);
 }
 
 

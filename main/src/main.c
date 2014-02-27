@@ -22,6 +22,7 @@
 #include "msg_q.h"
 #include "multiboot.h"
 #include "paging.h"
+#include "stacktrace.h"
 #include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
@@ -63,6 +64,7 @@ static void init_onsen(void)
     mem_init();     // メモリ初期化
     paging_init();
     fat12_init();
+    init_func_names();
     gdt_init();
     idt_init();
     intr_init();   // 割り込み初期化

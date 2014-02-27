@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+OUT_FILE_NAME = 'funcnames.bin'
+
+import os
+import re
+import struct
+from sys import argv
+
+dot_text_re = re.compile(' {16}0x(.{8}) {16}(.+)')
+
+def main(map_file_name):
+    if not os.path.exists(map_file_name):
+        return
+
+    f = open(map_file_name, 'rb')
+    print struct.unpack('I32s', f.read(36))
+    print struct.unpack('I32s', f.read(36))
+    print struct.unpack('I32s', f.read(36))
+    print struct.unpack('I32s', f.read(36))
+    print struct.unpack('I32s', f.read(36))
+
+
+if __name__ == '__main__':
+    #main(argv[1])
+    main(OUT_FILE_NAME)
+
