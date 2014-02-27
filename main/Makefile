@@ -32,7 +32,7 @@ mkhdr :
 	$(MKHDR) $(SRC_DIR) $(INC_DIR)
 
 
-mkfnames :
+mkfnames : $(MAP)
 	$(MKFNAMES) $(MAP) $(FNAMES)
 
 

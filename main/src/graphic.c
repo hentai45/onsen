@@ -494,7 +494,7 @@ void move_sprite(int sid, int dx, int dy)
 }
 
 
-static void update_rect0(int sid, int x, int y, int w, int h);
+static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord);
 
 void update_surface(int sid)
 {
@@ -513,7 +513,7 @@ void update_surface(int sid)
     unsigned int flags = srf->flags;
     srf->flags &= ~SRF_FLG_WINDOW;
 
-    update_rect0(sid, 0, 0, 0, 0);
+    update_rect0(sid, 0, 0, 0, 0, false);
 
     srf->flags = flags;
 
@@ -524,7 +524,7 @@ void update_surface(int sid)
 void update_window(int pid)
 {
     if (l_dt_srf->num_children == 0)
-        return 0;
+        return;
 
     SURFACE *srf = l_dt_srf->children;
 
@@ -535,18 +535,19 @@ void update_window(int pid)
     } while (srf != l_dt_srf->children);
 }
 
+
 void update_rect(int sid, int x, int y, int w, int h)
 {
     cli();
 
-    update_rect0(sid, x, y, w, h);
+    update_rect0(sid, x, y, w, h, true);
 
     sti();
 }
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h);
+static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool client_cord);
 
-static void update_rect0(int sid, int x, int y, int w, int h)
+static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 {
     SURFACE *srf = sid2srf(sid);
 
@@ -576,7 +577,7 @@ static void update_rect0(int sid, int x, int y, int w, int h)
     }
     */
 
-    update_rect_sub(srf, screen_x, screen_y, w, h);
+    update_rect_sub(srf, screen_x, screen_y, w, h, client_cord);
     blit_surface(l_buf_sid, screen_x, screen_y, w, h,
             g_vram_sid, screen_x, screen_y, OP_SRC_COPY);
 
@@ -591,11 +592,11 @@ static void update_rect0(int sid, int x, int y, int w, int h)
 }
 
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
+static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool client_cord)
 {
     int l_x = 0, l_y = 0;
     conv_screen_cord(srf, &l_x, &l_y);
-    if (srf->flags & SRF_FLG_WINDOW) {
+    if (client_cord && (srf->flags & SRF_FLG_WINDOW)) {
         // srfの左上の座標を得たいのでクライアント座標を引いておく
         l_x -= CLIENT_X;
         l_y -= CLIENT_Y;
@@ -626,15 +627,8 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
 
         SURFACE *p = srf->children;
         do {
-            unsigned int flags = p->flags;
-            p->flags &= ~SRF_FLG_WINDOW;
-
-            update_rect_sub(p, x, y, w, h);
-
-            p->flags = flags;
-
-            p = p->next_srf;
-        } while (p != srf->children);
+            update_rect_sub(p, x, y, w, h, false);
+        } while ((p = p->next_srf) != srf->children);
     }
 
 
@@ -647,12 +641,7 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
 
     SURFACE *p = srf;
     while ((p = p->next_srf) != first) {
-        unsigned int flags = p->flags;
-        p->flags &= ~SRF_FLG_WINDOW;
-
-        update_rect_sub(p, x, y, w, h);
-
-        p->flags = flags;
+        update_rect_sub(p, x, y, w, h, false);
     }
 }
 
