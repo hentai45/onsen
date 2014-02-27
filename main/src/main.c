@@ -78,6 +78,7 @@ static void init_onsen(void)
     graphic_init(vram);  // 画面初期化
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
+    haribote_init();
 
     init_gui();
 

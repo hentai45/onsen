@@ -6,16 +6,16 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-int  s_len(const char *s);
-void s_cpy(char *s, const char *t);
-void s_cat(char *s, const char *t);
+int  strlen(const char *s);
+void strcpy(char *s, const char *t);
+void strcat(char *s, const char *t);
 void s_reverse(char *s);
-int  s_cmp(const char *s, const char *t);
-int  s_ncmp(const char *s, const char *t, int n);
+int  strcmp(const char *s, const char *t);
+int  strncmp(const char *s, const char *t, int n);
 
 void s_to_upper(char *s);
 
-int  s_atoi(const char *s);
+int  atoi(const char *s);
 
 int  sprintf(char *s, const char *fmt, ...);
 int  snprintf(char *s, unsigned int n, const char *fmt, ...);
@@ -23,7 +23,7 @@ int  vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 
 
-int s_len(const char *s)
+int strlen(const char *s)
 {
     const char *p = s;
 
@@ -33,13 +33,13 @@ int s_len(const char *s)
     return p - s - 1;
 }
 
-void s_cpy(char *s, const char *t)
+void strcpy(char *s, const char *t)
 {
     while ((*s++ = *t++) != 0)
         ;
 }
 
-void s_cat(char *s, const char *t)
+void strcat(char *s, const char *t)
 {
     while (*s++)
         ;
@@ -52,7 +52,7 @@ void s_reverse(char *s)
 {
     int c, i, j;
 
-    for (i = 0, j = s_len(s) - 1; i < j; i++, j--) {
+    for (i = 0, j = strlen(s) - 1; i < j; i++, j--) {
         c = s[i];
         s[i] = s[j];
         s[j] = c;
@@ -60,7 +60,7 @@ void s_reverse(char *s)
 }
 
 // s<tなら<0, s==tなら0, s>tなら>0を返す
-int s_cmp(const char *s, const char *t)
+int strcmp(const char *s, const char *t)
 {
     for ( ; *s == *t; s++, t++) {
         if (*s == '\0' || *t == '\0') {
@@ -74,7 +74,7 @@ int s_cmp(const char *s, const char *t)
     return *s - *t;
 }
 
-int s_ncmp(const char *s, const char *t, int n)
+int strncmp(const char *s, const char *t, int n)
 {
     int i;
     for (i = 0; i < n && *s == *t; i++, s++, t++) {
@@ -232,7 +232,7 @@ int vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
         } else if (*p == 'd' || *p == 'i') {  // 整数
             s_itoa(va_arg(ap, int), l_tmp);
 
-            for (int k = width - s_len(l_tmp); k > 0; k--) {
+            for (int k = width - strlen(l_tmp); k > 0; k--) {
                 if (pad0) {
                     ADD_CHAR('0');
                 } else {
@@ -394,7 +394,7 @@ void s_itob(unsigned int n, char *s, bool space)
 }
 
 
-int s_atoi(const char *s)
+int atoi(const char *s)
 {
     int i;
 
@@ -429,19 +429,19 @@ void s_size(unsigned int size_B, char *s, int max)
 
     switch (d) {
     case 0:
-        s_cat(s, " B");
+        strcat(s, " B");
         break;
 
     case 1:
-        s_cat(s, " KB");
+        strcat(s, " KB");
         break;
 
     case 2:
-        s_cat(s, " MB");
+        strcat(s, " MB");
         break;
 
     case 3:
-        s_cat(s, " GB");
+        strcat(s, " GB");
         break;
     }
 }

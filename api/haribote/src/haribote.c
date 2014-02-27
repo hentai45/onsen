@@ -43,16 +43,17 @@ void api_freetimer(int timer);
 
 void api_putintx(int n);
 
-int  s_len(const char *s);
-void s_cpy(char *s, const char *t);
-void s_cat(char *s, const char *t);
+int  strlen(const char *s);
+void strcpy(char *s, const char *t);
+void strcat(char *s, const char *t);
 void s_reverse(char *s);
-int  s_cmp(const char *s, const char *t);
-int  s_ncmp(const char *s, const char *t, int n);
+int  strcmp(const char *s, const char *t);
+int  strncmp(const char *s, const char *t, int n);
 
 void s_to_upper(char *s);
 
-int  s_atoi(const char *s);
+int  atoi(const char *s);
+
 
 int  sprintf(char *s, const char *fmt, ...);
 int  snprintf(char *s, unsigned int n, const char *fmt, ...);
