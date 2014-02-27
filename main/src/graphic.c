@@ -190,7 +190,7 @@ static SURFACE *l_mouse_srf;
 
 static SURFACE *sid2srf(int sid);
 
-static void conv_screen_cord(SURFACE *srf, int *x, int *y);
+static void conv_screen_cord(SURFACE *srf, int *x, int *y, bool client_cord);
 
 static SURFACE *srf_alloc(void);
 
@@ -250,7 +250,7 @@ void graphic_init(COLOR *vram)
 
     // -------- デスクトップ画面の作成
 
-    sid = new_surface(0, g_w, g_h);
+    sid = new_surface(NO_PARENT_SID, g_w, g_h);
     g_dt_sid = sid;
     srf = sid2srf(sid);
     srf->pid = g_root_pid;
@@ -259,7 +259,7 @@ void graphic_init(COLOR *vram)
 
     // -------- バッファの作成
 
-    sid = new_surface(0, g_w, g_h);
+    sid = new_surface(NO_PARENT_SID, g_w, g_h);
     l_buf_sid = sid;
     srf = sid2srf(sid);
     srf->pid = g_root_pid;
@@ -283,7 +283,7 @@ int new_window(int x, int y, int cw, int ch, char *title)
     int w = cw + WINDOW_EXT_WIDTH;
     int h = ch + WINDOW_EXT_HEIGHT;
 
-    int sid = new_surface(0, w, h);
+    int sid = new_surface(NO_PARENT_SID, w, h);
 
     if (sid == ERROR_SID) {
         return sid;
@@ -400,12 +400,12 @@ int new_surface_from_buf(int parent_sid, int w, int h, COLOR *buf)
         return ERROR_SID;
     }
  
-    srf->pid = get_pid();
+    srf->pid  = get_pid();
     srf->x    = 0;
     srf->y    = 0;
     srf->w    = w;
     srf->h    = h;
-    srf->buf = buf;
+    srf->buf  = buf;
     srf->parent = parent;
 
     add_child(srf);
@@ -438,6 +438,8 @@ void free_surface(int sid)
     mem_free(srf->buf);
     srf->flags = SRF_FLG_FREE;
     srf->pid = ERROR_PID;
+
+    update_surface(g_dt_sid);
 }
 
 
@@ -459,6 +461,8 @@ void free_surface_task(int pid)
         srf->flags = SRF_FLG_FREE;
         srf->pid = ERROR_PID;
     }
+
+    update_surface(g_dt_sid);
 }
 
 
@@ -510,12 +514,7 @@ void update_surface(int sid)
         draw_win_titlebar(srf);
     }
 
-    unsigned int flags = srf->flags;
-    srf->flags &= ~SRF_FLG_WINDOW;
-
     update_rect0(sid, 0, 0, 0, 0, false);
-
-    srf->flags = flags;
 
     sti();
 }
@@ -532,7 +531,7 @@ void update_window(int pid)
         if (srf->pid == pid) {
             update_surface(srf->sid);
         }
-    } while (srf != l_dt_srf->children);
+    } while ((srf = srf->next_srf) != l_dt_srf->children);
 }
 
 
@@ -545,7 +544,7 @@ void update_rect(int sid, int x, int y, int w, int h)
     sti();
 }
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool client_cord);
+static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h);
 
 static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 {
@@ -563,7 +562,7 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
     int screen_x = x;
     int screen_y = y;
 
-    conv_screen_cord(srf, &screen_x, &screen_y);
+    conv_screen_cord(srf, &screen_x, &screen_y, client_cord);
 
     w = MAXMIN(0, w, g_w - screen_x - 1);
     h = MAXMIN(0, h, g_h - screen_y - 1);
@@ -571,13 +570,7 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
     if (w == 0 && h == 0)
         return;
 
-    /*
-    if (srf->pid == 3) {
-        s_fprintf(f_dbg_temp, "(%d, %d, %d, %d)\n", screen_x, screen_y, w, h);
-    }
-    */
-
-    update_rect_sub(srf, screen_x, screen_y, w, h, client_cord);
+    update_rect_sub(srf, screen_x, screen_y, w, h);
     blit_surface(l_buf_sid, screen_x, screen_y, w, h,
             g_vram_sid, screen_x, screen_y, OP_SRC_COPY);
 
@@ -592,15 +585,10 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 }
 
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool client_cord)
+static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
 {
     int l_x = 0, l_y = 0;
-    conv_screen_cord(srf, &l_x, &l_y);
-    if (client_cord && (srf->flags & SRF_FLG_WINDOW)) {
-        // srfの左上の座標を得たいのでクライアント座標を引いておく
-        l_x -= CLIENT_X;
-        l_y -= CLIENT_Y;
-    }
+    conv_screen_cord(srf, &l_x, &l_y, false);
 
     /* srf領域と更新領域の重なりを計算 */
     int u_x0 = MAX(l_x, x);
@@ -611,10 +599,9 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool clien
     int u_h = u_y1 - u_y0;
 
     if (u_w > 0 && u_h > 0) {
-        /*
-        s_fprintf(f_dbg_temp, "upd(%d, %d, %d, %d)\n",
-                ABS(l_x - u_x0), ABS(l_y - u_y0), u_w, u_h);
-        */
+        if (srf->pid == 3 && w == 8 && h == 16) {
+            temp_dbgf("update(%d, %d)\n", ABS(l_x-u_x0), ABS(l_y-u_y0));
+        }
 
         /* 自分を更新 */
         blit_surface(srf->sid, ABS(l_x - u_x0), ABS(l_y - u_y0), u_w, u_h,
@@ -622,27 +609,26 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h, bool clien
 
         /* 子どもたちを更新 */
 
-        if (srf->num_children == 0)
-            return;
-
-        SURFACE *p = srf->children;
-        do {
-            update_rect_sub(p, x, y, w, h, false);
-        } while ((p = p->next_srf) != srf->children);
+        if (srf->num_children != 0) {
+            SURFACE *p = srf->children;
+            do {
+                update_rect_sub(p, x, y, w, h);
+            } while ((p = p->next_srf) != srf->children);
+        }
     }
 
 
     /* 右の兄弟を更新 */
 
+    /*
     if (srf->parent == 0)
         return;
 
-    SURFACE *first = srf->parent->children;
-
     SURFACE *p = srf;
-    while ((p = p->next_srf) != first) {
-        update_rect_sub(p, x, y, w, h, false);
+    while ((p = p->next_srf) != srf->parent->children) {
+        update_rect_sub(p, x, y, w, h);
     }
+    */
 }
 
 
@@ -769,6 +755,13 @@ void fill_rect(int sid, int x, int y, int w, int h, COLOR color)
     y = MAXMIN(0, y, srf->h);
     w = MAXMIN(0, w, max_w);
     h = MAXMIN(0, h, max_h);
+
+    if (srf->pid == 3 && w == 8 && h == 16) {
+        int s_x = x;
+        int s_y = y;
+        conv_screen_cord(srf, &s_x, &s_y, true);
+        temp_dbgf("fill  (%d, %d)\n", s_x, s_y);
+    }
 
     COLOR *buf = srf->buf + (y * srf->w) + x;
     COLOR *buf1 = buf;
@@ -1043,6 +1036,12 @@ SURFACE *get_active_win(void)
     if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
         return 0;
 
+    int i = 0;
+    SURFACE *p = l_dt_srf->children;
+    do {
+        if (i++ > 3)
+            break;
+    } while ((p = p->next_srf) != l_dt_srf->children);
     return l_dt_srf->children->prev_srf;
 }
 
@@ -1054,16 +1053,9 @@ void switch_window(void)
     if (l_dt_srf == 0 || l_dt_srf->num_children <= 1)
         return;
 
-    SURFACE *old_active_win = get_active_win();
-
     SURFACE *old_head = l_dt_srf->children;
     remove_child(old_head);
     add_child(old_head);
-
-    update_surface(old_active_win->sid);
-
-    SURFACE *srf = get_active_win();
-    update_surface(srf->sid);
 }
 
 
@@ -1584,17 +1576,24 @@ static SURFACE *sid2srf(int sid)
 }
 
 
-static void conv_screen_cord(SURFACE *srf, int *x, int *y)
+static void conv_screen_cord(SURFACE *srf, int *x, int *y, bool client_cord)
 {
-    while (srf) {
-        *x += srf->x;
-        *y += srf->y;
+    SURFACE *p = srf;
 
-        if (srf->flags & SRF_FLG_WINDOW) {
+    while (p) {
+        *x += p->x;
+        *y += p->y;
+
+        if (p->flags & SRF_FLG_WINDOW) {
             *x += CLIENT_X;
             *y += CLIENT_Y;
         }
 
-        srf = srf->parent;
+        p = p->parent;
+    }
+
+    if (client_cord == false && (srf->flags & SRF_FLG_WINDOW)) {
+        *x -= CLIENT_X;
+        *y -= CLIENT_Y;
     }
 }

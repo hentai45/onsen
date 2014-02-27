@@ -29,6 +29,7 @@ typedef struct _REGISTERS {
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 
+void temp_dbgf(const char *fmt, ...);
 void dbgf(const char *fmt, ...);
 void dbg_clear(void);
 void dbg_reg(const REGISTERS *r);
@@ -39,6 +40,7 @@ void dbg_fault(const char *msg, int *esp);
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;
 
+extern int g_dbg_temp_flg;
 
 #endif
 
@@ -211,6 +213,16 @@ static void buf_str(char *s)
 //-----------------------------------------------------------------------------
 // 画面出力
 
+// 画面更新関数の中でも使える
+void temp_dbgf(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    s_vfprintf(f_dbg_temp, fmt, ap);
+    va_end(ap);
+}
+
+
 void dbgf(const char *fmt, ...)
 {
     va_list ap;
@@ -327,6 +339,7 @@ static int dbg_write(void *self, const void *buf, int cnt)
 
 static int l_temp_buf_i = 0;
 static char l_temp_buf[4096];
+int g_dbg_temp_flg = 0;
 
 static int dbg_temp_read(void *self, const void *buf, int cnt)
 {
@@ -349,6 +362,9 @@ static int dbg_temp_read(void *self, const void *buf, int cnt)
 
 static int dbg_temp_write(void *self, const void *buf, int cnt)
 {
+    if (g_dbg_temp_flg)
+        return;
+
     int num_write = s_snprintf(l_temp_buf + l_temp_buf_i, 4096 - l_temp_buf_i,
             "%.*s", cnt, (char *) buf);
     l_temp_buf_i += num_write;

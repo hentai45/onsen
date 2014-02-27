@@ -23,6 +23,7 @@ typedef struct _REGISTERS {
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
 
+void temp_dbgf(const char *fmt, ...);
 void dbgf(const char *fmt, ...);
 void dbg_clear(void);
 void dbg_reg(const REGISTERS *r);
@@ -33,5 +34,6 @@ void dbg_fault(const char *msg, int *esp);
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;
 
+extern int g_dbg_temp_flg;
 
 #endif

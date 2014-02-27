@@ -23,6 +23,7 @@ int  s_atoi(const char *s);
 int  s_printf(const char *fmt, ...);
 int  s_fprintf(FILE_T *f, const char *fmt, ...);
 int  s_snprintf(char *s, unsigned int n, const char *fmt, ...);
+int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap);
 int  s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 int   memcmp(const void *buf1, const void *buf2, unsigned int);
@@ -134,17 +135,11 @@ int s_printf(const char *fmt, ...)
 
 int s_fprintf(FILE_T *f, const char *fmt, ...)
 {
-    char l_printf_buf[4096];
-
-    if (f == 0 || f->write == 0)
-        f = &f_debug;
-
     va_list ap;
     va_start(ap, fmt);
-    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
+    int cnt = s_vfprintf(f, fmt, ap);
     va_end(ap);
-
-    f->write(f->self, l_printf_buf, cnt);
+    return cnt;
 }
 
 
@@ -157,6 +152,22 @@ int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
 
     return ret;
 }
+
+
+int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap)
+{
+    char l_printf_buf[4096];
+
+    if (f == 0 || f->write == 0)
+        f = &f_debug;
+
+    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
+
+    f->write(f->self, l_printf_buf, cnt);
+
+    return cnt;
+}
+
 
 #define FLG_HASH_SIGN (1)
 

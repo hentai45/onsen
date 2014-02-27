@@ -168,6 +168,7 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
         if (u_param != g_root_pid) {
             active_win_pid = u_param;
             send_window_active_msg(u_param, u_param);
+            update_window(u_param);
         }
         break;
 
@@ -176,6 +177,7 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 
         if (u_param != g_root_pid) {
             send_window_deactive_msg(u_param, u_param);
+            update_window(u_param);
         }
         break;
 

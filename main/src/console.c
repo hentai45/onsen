@@ -489,10 +489,12 @@ static void cmd_dbg(char *name)
     } else if (s_cmp(name, "graphic") == 0) {
         graphic_dbg();
     } else if (s_cmp(name, "temp") == 0) {
+        g_dbg_temp_flg = 1;
         int fd = f_open("/debug/temp", O_RDONLY);
         char buf[4096];
         int ret = f_read(fd, buf, 4096);
         dbgf("%.*s\n", 4096, buf);
+        g_dbg_temp_flg = 0;
     } else {
         putf("invalid dbg argment\n\n");
     }
