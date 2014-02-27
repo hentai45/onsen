@@ -3,11 +3,8 @@
  */
 
 
-#ifndef HEADER_STRING
-#define HEADER_STRING
-
 #include <stdarg.h>
-#include "file.h"
+#include <stdbool.h>
 
 int  s_len(const char *s);
 void s_cpy(char *s, const char *t);
@@ -20,22 +17,10 @@ void s_to_upper(char *s);
 
 int  s_atoi(const char *s);
 
-int  s_printf(const char *fmt, ...);
-int  s_fprintf(FILE_T *f, const char *fmt, ...);
-int  s_snprintf(char *s, unsigned int n, const char *fmt, ...);
-int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap);
-int  s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
+int  sprintf(char *s, const char *fmt, ...);
+int  snprintf(char *s, unsigned int n, const char *fmt, ...);
+int  vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
-int   memcmp(const void *buf1, const void *buf2, unsigned int);
-void *memcpy(void *dst, const void *src, unsigned int);
-void *memmove(void *dst, const void *src, unsigned int);
-void *memset(void *dst, int c, unsigned int count);
-
-#endif
-
-
-#include <stdbool.h>
-#include "debug.h"
 
 
 int s_len(const char *s)
@@ -115,57 +100,26 @@ static void s_itob(unsigned int n, char *s, bool space);
 static void s_size(unsigned int size_B, char *s, int max);
 
 
-int s_printf(const char *fmt, ...)
-{
-    char l_printf_buf[4096];
 
-    FILE_T *f = f_get_file(STDOUT_FILENO);
-
-    if (f == 0 || f->write == 0)
-        f = f_debug;
-
-    va_list ap;
-    va_start(ap, fmt);
-    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
-    va_end(ap);
-
-    f->write(f->self, l_printf_buf, cnt);
-}
-
-
-int s_fprintf(FILE_T *f, const char *fmt, ...)
+int sprintf(char *s, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    int cnt = s_vfprintf(f, fmt, ap);
-    va_end(ap);
-    return cnt;
-}
-
-
-int s_snprintf(char *s, unsigned int n, const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    int ret = s_vsnprintf(s, n, fmt, ap);
+    int ret = vsnprintf(s, 4096, fmt, ap);
     va_end(ap);
 
     return ret;
 }
 
 
-int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap)
+int snprintf(char *s, unsigned int n, const char *fmt, ...)
 {
-    char l_printf_buf[4096];
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vsnprintf(s, n, fmt, ap);
+    va_end(ap);
 
-    if (f == 0 || f->write == 0)
-        f = &f_debug;
-
-    int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
-
-    f->write(f->self, l_printf_buf, cnt);
-
-    return cnt;
+    return ret;
 }
 
 
@@ -183,7 +137,7 @@ int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap)
         goto end_loop;   \
 } while (0)
 
-int s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
+int vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
 {
     char l_tmp[256];
 

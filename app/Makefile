@@ -18,12 +18,12 @@ all :
 	make -C haribote
 
 
-$(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello/hello.c Makefile
-	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello/hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
+$(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello.c Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
 
 
-$(BIN_DIR)/test : $(ONSEN_LIB) $(LDS) test/test.c Makefile
-	$(CC) $(CFLAGS) test/test.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
+$(BIN_DIR)/test : $(ONSEN_LIB) $(LDS) test.c Makefile
+	$(CC) $(CFLAGS) test.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
 
 
 clean :

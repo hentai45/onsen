@@ -96,7 +96,7 @@ static void init_gui(void)
     fill_surface(g_dt_sid, RGB2(0x008484));
 
     test_draw_rainbow();
-    test_draw_bitmap();
+    //test_draw_bitmap();
     test_draw_textbox();
 
     update_surface(g_dt_sid);

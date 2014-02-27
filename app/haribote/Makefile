@@ -6,14 +6,17 @@ LDS     = lds/app.lds
 HRB_LIB = ../../api/haribote/bin/libhrb.a
 HRB_H   = ../../api/haribote/include
 
+SRCS := $(wildcard *.c)
+HRBS := $(foreach hrb, $(SRCS:.c=.hrb), $(BIN_DIR)/$(hrb))
+
 
 all :
-	make $(BIN_DIR)/hello.hrb
+	make $(HRBS)
 
 
-$(BIN_DIR)/hello.hrb : $(HRB_LIB) $(LDS) hello/hello.c Makefile
-	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello/hello.c -T $(LDS) -o $@ -I$(HRB_H) -L$(LIB_DIR) -lhrb
+$(BIN_DIR)/%.hrb : %.c
+	$(CC) $(CFLAGS) -Wl,-Map=$(<:.c=.map) $< -T $(LDS) -o $@ -I$(HRB_H) -L$(LIB_DIR) -lhrb
 
 
 clean :
-	rm -f $(BIN_DIR)/hello.hrb
+	rm -f $(HRBS)

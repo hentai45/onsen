@@ -395,6 +395,7 @@ void mem_dbg(void)
     DBGF("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
     dbgf("\n");
+    dbgf("%5d:%02d:%02d\n", 1, 2, 3);
 }
 
 static void dbg_mem_mng(MEM_MNG *mng)

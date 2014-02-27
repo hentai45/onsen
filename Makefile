@@ -17,6 +17,7 @@ HEAD = boot/head/bin/head.bin
 ONSEN = main/bin/onsen.sys
 ONSEN_SYS = $(BIN_DIR)/onsen.sys
 FNAMES = main/$(BIN_DIR)/fnames.bin
+HRBS = $(wildcard $(HRB_APP_BIN)/*.hrb)
 
 
 all : img
@@ -35,14 +36,11 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) $(HRB_APP_BIN)/hello.hrb $(APP_BIN)/test test.bmp
+$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) $(APP_BIN)/test test.bmp $(HRBS)
 	mformat -f 1440 -C -B $(IPL) -i $@ ::
 	mcopy $(ONSEN_SYS) -i $@ ::
 	mcopy $(FNAMES) -i $@ ::
-	mcopy $(HRB_APP_BIN)/hello.hrb -i $@ ::
-	mcopy app/hello/hello.c -i $@ ::
-	mcopy $(APP_BIN)/test -i $@ ::
-	mcopy test.bmp -i $@ ::
+	mcopy $(HRBS) -i $@ ::
 
 
 mount : $(IMG)
