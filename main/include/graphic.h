@@ -4,24 +4,11 @@
 #define HEADER_GRAPHIC
 
 #include <stdbool.h>
+#include "color.h"
+#include "gbuffer.h"
 
 #define ERROR_SID      (-1)
 #define NO_PARENT_SID  (-2)
-
-typedef unsigned short COLOR;
-
-#define RGB(R, G, B) ((COLOR) (((R) & 0xF8) << 8) | (((G) & 0xFC) << 3) | (((B) & 0xF8) >> 3))
-#define RGB2(rgb)    ((COLOR) (((rgb) & 0xF80000) >> 8) | (((rgb) & 0xFC00) >> 5) | (((rgb) & 0xF8) >> 3))
-
-#define GET_RED(RGB)   (((RGB) & 0xF800) >> 8)
-#define GET_GREEN(RGB) (((RGB) & 0x07E0) >> 3)
-#define GET_BLUE(RGB)  (((RGB) & 0x001F) << 3)
-
-#define COL_BLACK    RGB(  0,   0,   0)
-#define COL_RED      RGB(255,   0,   0)
-#define COL_GREEN    RGB(  0, 255,   0)
-#define COL_BLUE     RGB(  0,   0, 255)
-#define COL_WHITE    RGB(255, 255, 255)
 
 #define BORDER_WIDTH      (2)
 #define TITLE_BAR_HEIGHT  (18)
@@ -33,7 +20,6 @@ typedef unsigned short COLOR;
 
 #define HANKAKU_W 8   ///< 半角フォントの幅
 #define HANKAKU_H 16  ///< 半角フォントの高さ
-
 
 
 enum {
@@ -49,12 +35,13 @@ extern const int g_w;
 extern const int g_h;
 
 
-void graphic_init(COLOR *vram);
+void graphic_init(void *vram);
 
 int  new_window(int x, int y, int cw, int ch, char *title);
 
 int  new_surface(int parent_sid, int w, int h);
-int  new_surface_from_buf(int parent_sid, int w, int h, COLOR *buf);
+int  new_surface(int parent_sid, int w, int h);
+int  new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width);
 void free_surface(int sid);
 void free_surface_task(int pid);
 int  get_screen(void);
@@ -64,30 +51,29 @@ void move_surface(int sid, int x, int y);
 
 void update_surface(int sid);
 void update_window(int pid);
+void update_from_buf(void);
 void update_rect(int sid, int x, int y, int w, int h);
 void update_char(int sid, int x, int y);
 void update_text(int sid, int x, int y, int len);
 
 void draw_surface(int src_sid, int dst_sid, int x, int y, int op);
 void draw_surface2(int src_sid, int dst_sid, int op);
-void blit_surface(int src_sid, int src_x, int src_y, int w, int h,
-        int dst_sid, int dst_x, int dst_y, int op);
 
-void fill_surface(int sid, COLOR color);
-void fill_rect(int sid, int x, int y, int w, int h, COLOR color);
-void draw_text(int sid, int x, int y, COLOR color, const char *text);
-void draw_text_bg(int sid, int x, int y, COLOR color,
-        COLOR bg_color, const char *text);
+void fill_surface(int sid, COLOR32 color);
+void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color);
+void draw_text(int sid, int x, int y, COLOR32 color, const char *text);
+void draw_text_bg(int sid, int x, int y, COLOR32 color,
+        COLOR32 bg_color, const char *text);
 
-void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR color);
+void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR32 color);
 
-void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR color);
+void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR32 color);
 
-void erase_char(int sid, int x, int y, COLOR color, bool update);
+void erase_char(int sid, int x, int y, COLOR32 color, bool update);
 
 void scroll_surface(int sid, int cx, int cy);
 
-void set_colorkey(int sid, COLOR colorkey);
+void set_colorkey(int sid, COLOR32 colorkey);
 void clear_colorkey(int sid);
 void set_alpha(int sid, unsigned char alpha);
 void clear_alpha(int sid);

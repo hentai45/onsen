@@ -130,6 +130,8 @@ int s_printf(const char *fmt, ...)
     va_end(ap);
 
     f->write(f->self, l_printf_buf, cnt);
+
+    return cnt;
 }
 
 
@@ -159,7 +161,7 @@ int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap)
     char l_printf_buf[4096];
 
     if (f == 0 || f->write == 0)
-        f = &f_debug;
+        f = f_debug;
 
     int cnt = s_vsnprintf(l_printf_buf, 4096, fmt, ap);
 

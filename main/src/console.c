@@ -49,8 +49,8 @@ extern FILE_T *f_console;
 #define CURSOR_INTERVAL_MS 500
 
 
-static COLOR fg = COL_WHITE;
-static COLOR bg = COL_BLACK;
+static COLOR32 fg = COL_WHITE;
+static COLOR32 bg = COL_BLACK;
 
 static int cursor_tid;
 static int cursor_on = 0;
@@ -195,7 +195,7 @@ static void console_proc(unsigned int msg, unsigned long u_param, long l_param)
 static void cursor_timer_handler(int tid)
 {
     if (l_active) {
-        COLOR color = (cursor_on) ? bg : fg;
+        COLOR32 color = (cursor_on) ? bg : fg;
 
         erase_char(l_sid, x_ch * HANKAKU_W, y_ch * HANKAKU_H, color, true);
 

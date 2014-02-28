@@ -13,6 +13,7 @@
 #include "fat12.h"
 #include "gdt.h"
 #include "graphic.h"
+#include "hrbapi.h"
 #include "idt.h"
 #include "intr.h"
 #include "keyboard.h"
@@ -74,7 +75,7 @@ static void init_onsen(void)
     set_pic1_mask(0xEF);  // マウスの割り込みを許可
     task_init();
     // タスク初期化のあとでする必要がある
-    COLOR *vram = (COLOR *) VADDR_VRAM;
+    void *vram = (void *) VADDR_VRAM;
     graphic_init(vram);  // 画面初期化
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
@@ -94,7 +95,7 @@ static void test_draw_window(void);
 
 static void init_gui(void)
 {
-    fill_surface(g_dt_sid, RGB2(0x008484));
+    fill_surface(g_dt_sid, 0x008484);
 
     test_draw_rainbow();
     //test_draw_bitmap();
@@ -107,7 +108,7 @@ static void test_draw_rainbow(void)
 {
     for (int y = 0; y < g_h; y++) {
         for (int x = 0; x < g_w; x++) {
-            draw_pixel(g_dt_sid, x, y, RGB(x % 256, y % 256, 255 - (x % 256)));
+            draw_pixel(g_dt_sid, x, y, RGB32(x % 256, y % 256, 255 - (x % 256)));
         }
     }
 }
@@ -262,6 +263,10 @@ static void keydown_handler(unsigned long keycode)
     }
 
     switch (keycode) {
+    case KC_F5:
+        update_from_buf();
+        break;
+
     case KC_CTRL_ON:
         is_ctrl_on = true;
         break;

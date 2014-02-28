@@ -18,8 +18,6 @@
 #ifndef HEADER_BITMAP
 #define HEADER_BITMAP
 
-#include "graphic.h"
-
 int load_bmp(void *p, unsigned int size_B);
 
 #endif
@@ -161,13 +159,13 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
     // ・画像データは左下から右上に向かって記録されている
     // ・画像の横ラインのデータは4バイトの境界に揃えないといけない
 
-    COLOR *buf = mem_alloc(w * h * sizeof (COLOR));
+    COLOR16 *buf = mem_alloc(w * h * sizeof (COLOR16));
 
     if (buf == 0) {
         return ERROR_SID;
     }
 
-    int sid = new_surface_from_buf(NO_PARENT_SID, w, h, buf);
+    int sid = new_surface_from_buf(NO_PARENT_SID, w, h, buf, 16);
     if (sid == ERROR_SID) {
         return sid;
     }
@@ -181,7 +179,7 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
             g = *p++;
             r = *p++;
 
-            buf[y * w + x] = RGB(r, g, b);
+            buf[y * w + x] = RGB16(r, g, b);
         }
 
         p += pad_B;

@@ -2,6 +2,12 @@
  * OS 側 はりぼてAPI 処理
  */
 
+#ifndef HEADER_HRBAPI
+#define HEADER_HRBAPI
+
+void haribote_init(void);
+
+#endif
 
 //=============================================================================
 // 非公開ヘッダ
@@ -29,23 +35,23 @@ static int l_timer_map[TIMER_MAX];
 
 #define COLOR_MAX  (216)
 
-static COLOR l_color_tbl[COLOR_MAX] = {
-    RGB2(0x000000),
-    RGB2(0xFF0000),
-    RGB2(0x00FF00),
-    RGB2(0xFFFF00),
-    RGB2(0x0000FF),
-    RGB2(0xFF00FF),
-    RGB2(0x00FFFF),
-    RGB2(0xFFFFFF),
-    RGB2(0xC6C6C6),
-    RGB2(0x840000),
-    RGB2(0x008400),
-    RGB2(0x848400),
-    RGB2(0x000084),
-    RGB2(0x840084),
-    RGB2(0x008484),
-    RGB2(0x848484)
+static COLOR32 l_color_tbl[COLOR_MAX] = {
+    0x000000,
+    0xFF0000,
+    0x00FF00,
+    0xFFFF00,
+    0x0000FF,
+    0xFF00FF,
+    0x00FFFF,
+    0xFFFFFF,
+    0xC6C6C6,
+    0x840000,
+    0x008400,
+    0x848400,
+    0x000084,
+    0x840084,
+    0x008484,
+    0x848484
 };
 
 static void conv_window_cord(int *x, int *y);
@@ -65,7 +71,7 @@ void haribote_init(void)
         for (int g = 0; g < 6; g++) {
             for (int r = 0; r < 6; r++) {
                 int i = 16 + r + g * 6 + b * 36;
-                COLOR color = RGB(r * 51, g * 51, b * 51);
+                COLOR32 color = RGB32(r * 51, g * 51, b * 51);
 
                 l_color_tbl[i] = color;
             }

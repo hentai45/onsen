@@ -69,7 +69,7 @@ void stack_trace(unsigned int max_frames, FILE_T *f)
             break;
 
         ebp = (unsigned int *) ebp[0];
-        unsigned int *arguments = &ebp[2];
+        //unsigned int *arguments = &ebp[2];
         char *name = get_func_name(eip);
         s_fprintf(f, "  %#X: %.32s\n", eip, name);
     }

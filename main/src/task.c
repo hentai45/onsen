@@ -552,7 +552,7 @@ static void init_tss_seg(void)
 
 static void set_os_tss(int pid, void (*f)(void), void *esp)
 {
-    TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
+    set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
             EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
 }
 
@@ -578,7 +578,7 @@ static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         int ss, void *esp0, int ss0)
 {
     if (pid < 0 || TASK_MAX <= pid) {
-        return;
+        return 0;
     }
 
     TSS *tss = &l_mng.tss[pid];

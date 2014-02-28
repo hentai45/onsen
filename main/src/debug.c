@@ -53,8 +53,8 @@ extern int g_dbg_temp_flg;
 #include "str.h"
 #include "task.h"
 
-static COLOR fg = COL_WHITE;
-static COLOR bg = COL_BLACK;
+static COLOR32 fg = COL_WHITE;
+static COLOR32 bg = COL_BLACK;
 
 //-----------------------------------------------------------------------------
 // メイン
