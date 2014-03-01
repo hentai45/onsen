@@ -1,3 +1,7 @@
+/**
+ * API呼び出され処理
+ */
+
 /*
 #ifndef HEADER_ASMAPI
 #define HEADER_ASMAPI

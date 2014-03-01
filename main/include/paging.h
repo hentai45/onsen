@@ -7,7 +7,7 @@
 //-----------------------------------------------------------------------------
 // ページング
 
-#define PAGE_SIZE_B (4096)  ///< ページサイズ
+#define PAGE_SIZE_B (4096)  // ページサイズ
 #define CUR_PD      (VADDR_PD_SELF)
 
 #define PTE_PRESENT (0x001)  // 1ならページがメモリ上に存在する
@@ -22,9 +22,9 @@
 #define PTE_CONT    (0x400)  // 連続領域続く。カスタムフラグ
 #define PTE_END     (0x800)  // 連続領域終了。カスタムフラグ
 
-#define IS_4KB_ALIGN(byte) (((unsigned long) (byte) & 0xFFF) == 0)  ///< 4KB 境界であるか確認
-#define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) ///< 4KB 単位で切り上げ
-#define FLOOR_4KB(byte) ((byte) & ~0xFFF)           ///< 4KB 単位で切り捨て
+#define IS_4KB_ALIGN(byte) (((unsigned long) (byte) & 0xFFF) == 0)  // 4KB 境界であるか確認
+#define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) // 4KB 単位で切り上げ
+#define FLOOR_4KB(byte) ((byte) & ~0xFFF)           // 4KB 単位で切り捨て
 
 #define BYTE_TO_PAGE(byte) ((CEIL_4KB(byte)) >> 12)
 

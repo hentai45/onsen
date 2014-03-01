@@ -1,8 +1,5 @@
 /**
  * メッセージキュー
- *
- * @file msg_q.c
- * @author Ivan Ivanovich Ivanov
  */
 
 //=============================================================================
@@ -31,7 +28,7 @@ int  msg_q_size(int pid);
 #define MSG_Q_MAX 128  ///< メッセージキューの最大容量
 
 
-/// メッセージキュー
+// メッセージキュー
 typedef struct MSG_Q {
     int capacity;
     MSG *buf;

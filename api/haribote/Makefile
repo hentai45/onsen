@@ -19,9 +19,9 @@ C_OBJS  := $(C_SRCS:.c=.o)
 
 
 all :
-	make mkhdr
+	$(MAKE) mkhdr
 	cp $(INC_DIR)/apino.h ../../main/$(INC_DIR)/haribote
-	make $(LIB)
+	$(MAKE) $(LIB)
 
 
 mkhdr :

@@ -1,7 +1,7 @@
 all :
-	make -C ipl
-	make -C head
+	$(MAKE) -C ipl
+	$(MAKE) -C head
 
 clean :
-	make clean -C ipl
-	make clean -C head
+	$(MAKE) clean -C ipl
+	$(MAKE) clean -C head

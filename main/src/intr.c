@@ -1,19 +1,8 @@
 /**
  * 割り込み関連
  *
- * @note
  * 割り込みデータはメッセージキューに格納される
- *
- * @file intr.c
- * @author Ivan Ivanovich Ivanov
  */
-
-/*
- * ＜目次＞
- * ・割り込み
- * ・フォールト
- */
-
 
 //=============================================================================
 // 公開ヘッダ
@@ -105,8 +94,8 @@ void intr_init(void)
 }
 
 
-/// 割り込みマスクを設定する。
-/// mask = 0xFF でPIC0すべての割り込みを受け付けない
+// 割り込みマスクを設定する。
+// mask = 0xFF でPIC0すべての割り込みを受け付けない
 void set_pic0_mask(unsigned char mask)
 {
     outb(PIC0_IMR, mask);
@@ -139,31 +128,31 @@ void notify_intr_end(unsigned char irq)
 //-----------------------------------------------------------------------------
 // フォールト
 
-/// 除算エラー
+// 除算エラー
 INT_HANDLER(00, "divide error exception")
 
-/// 配列境界違反
+// 配列境界違反
 INT_HANDLER(05, "bounds exception")
 
-/// 無効命令
+// 無効命令
 INT_HANDLER(06, "invalid opcode exception")
 
-/// コプロセッサ無効
+// コプロセッサ無効
 INT_HANDLER(07, "coprocessor not available")
 
-/// 無効TSS
+// 無効TSS
 INT_HANDLER(0A, "invalid tss exception")
 
-/// セグメント不在
+// セグメント不在
 INT_HANDLER(0B, "segment not exsist exception")
 
-/// スタック例外
+// スタック例外
 INT_HANDLER(0C, "stack fault")
 
-/// 一般保護例外
+// 一般保護例外
 INT_HANDLER(0D, "general protection exception")
 
-/// ページフォルト
+// ページフォルト
 INT_HANDLER(0E, "page fault")
 
 

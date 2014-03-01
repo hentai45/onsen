@@ -1,14 +1,10 @@
 /**
  * ビットマップ（24ビットのみ対応）
  *
- * @file bitmap.c
- * @author Ivan Ivanovich Ivanov
- *
- * @note
- * @par BMP ファイルの構造
- * -# ファイルヘッダ(BMP_FILE_HDR)
- * -# 情報ヘッダ(BMP_INFO_HDR)
- * -# 画像データ
+ * ## BMP ファイルの構造
+ * * ファイルヘッダ(BMP_FILE_HDR)
+ * * 情報ヘッダ(BMP_INFO_HDR)
+ * * 画像データ
  */
 
 
@@ -42,34 +38,30 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
         int pad_B);
 
 
-//-----------------------------------------------------------------------------
-
-/// ファイルヘッダ
+// ファイルヘッダ
 typedef struct BMP_FILE_HDR {
-    unsigned short type;         ///< ファイルタイプ。'BM'
-    unsigned long size_B;        ///< ファイルサイズ
+    unsigned short type;         // ファイルタイプ。'BM'
+    unsigned long size_B;        // ファイルサイズ
     unsigned short reserved1;
     unsigned short reserved2;
-    unsigned long offbits;       ///< ファイル先頭から画像データまでのオフセット
+    unsigned long offbits;       // ファイル先頭から画像データまでのオフセット
 } __attribute__ ((__packed__)) BMP_FILE_HDR;
 
 
-//-----------------------------------------------------------------------------
-
-/// 情報ヘッダ
+// 情報ヘッダ
 typedef struct BMP_INFO_HDR {
-    unsigned long size_B;        ///< 情報ヘッダのサイズ
-    long width_px;               ///< 画像の幅
-    long height_px;              ///< 画像の高さ
-    unsigned short planes;       ///< プレーン数。常に１
-    unsigned short bits;         ///< １画素あたりのデータサイズ(1,4,8,24,32)
+    unsigned long size_B;        // 情報ヘッダのサイズ
+    long width_px;               // 画像の幅
+    long height_px;              // 画像の高さ
+    unsigned short planes;       // プレーン数。常に１
+    unsigned short bits;         // １画素あたりのデータサイズ(1,4,8,24,32)
     // 以下0ならデフォルト値が使用される
-    unsigned long compression;   ///< 圧縮形式。BMPなら0（無圧縮）
-    unsigned long size_img_B;    ///< 画像データ部のサイズ。BMPなら0
-    long x_px_per_meter;         ///< 横方向解像度
-    long y_px_per_meter;         ///< 縦方向解像度
-    unsigned long color_used;    ///< 格納されているパレット数（使用色数）
-    unsigned long clr_important; ///< 重要なパレットのインデックス
+    unsigned long compression;   // 圧縮形式。BMPなら0（無圧縮）
+    unsigned long size_img_B;    // 画像データ部のサイズ。BMPなら0
+    long x_px_per_meter;         // 横方向解像度
+    long y_px_per_meter;         // 縦方向解像度
+    unsigned long color_used;    // 格納されているパレット数（使用色数）
+    unsigned long clr_important; // 重要なパレットのインデックス
 } __attribute__ ((__packed__)) BMP_INFO_HDR;
 
 
@@ -156,8 +148,8 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
 static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
         int pad_B)
 {
-    // ・画像データは左下から右上に向かって記録されている
-    // ・画像の横ラインのデータは4バイトの境界に揃えないといけない
+    // * 画像データは左下から右上に向かって記録されている
+    // * 画像の横ラインのデータは4バイトの境界に揃えないといけない
 
     COLOR16 *buf = mem_alloc(w * h * sizeof (COLOR16));
 

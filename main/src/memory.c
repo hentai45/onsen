@@ -84,15 +84,15 @@ typedef struct _MEMORY {
 
 
 typedef struct _MEM_MNG {
-    /// 記憶領域の確保用。
-    /// free.addrの昇順でなければならない
+    // 記憶領域の確保用。
+    // free.addrの昇順でなければならない
     MEMORY *free;
 
-    int max_free;    ///< freeの最大数
-    int num_free;    ///< 空き情報の数
-    int total_free;  ///< free.sizeの合計
-    int unit;        ///< sizeの単位
-    int info_size;   ///< 管理情報のサイズ
+    int max_free;    // freeの最大数
+    int num_free;    // 空き情報の数
+    int total_free;  // free.sizeの合計
+    int unit;        // sizeの単位
+    int info_size;   // 管理情報のサイズ
 } MEM_MNG;
 
 
@@ -726,7 +726,7 @@ unsigned int mem_total_mfree_B(void)
     return l_mfree_B;
 }
 
-/// 空き容量を取得
+// 空き容量を取得
 unsigned int mem_total_vfree_B(void)
 {
     return l_mng_v->total_free * l_mng_v->unit;

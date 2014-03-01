@@ -25,9 +25,9 @@ CPP_SRCS  := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cpp))
 CPP_OBJS  := $(CPP_SRCS:.cpp=.o)
 
 all :
-	make mkhdr
-	make $(ONSEN_BIN)
-	make mkfnames
+	$(MAKE) mkhdr
+	$(MAKE) $(ONSEN_BIN)
+	$(MAKE) mkfnames
 
 
 mkhdr :

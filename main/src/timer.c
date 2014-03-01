@@ -38,15 +38,15 @@ void timer_dbg(void);
 #define PIT_CTRL 0x0043
 #define PIT_CNT0 0x0040
 
-#define TIMER_FLG_FREE   0   ///< 未使用
-#define TIMER_FLG_ALLOC  1   ///< 確保した状態
-#define TIMER_FLG_USING  2   ///< タイマ作動中
+#define TIMER_FLG_FREE   0   // 未使用
+#define TIMER_FLG_ALLOC  1   // 確保した状態
+#define TIMER_FLG_USING  2   // タイマ作動中
 
 
 typedef struct TIMER {
-    int tid;    ///< TIMER ID
+    int tid;    // TIMER ID
     int flags;
-    int pid;    ///< このタイマを持っているプロセス ID
+    int pid;    // このタイマを持っているプロセス ID
 
     unsigned int timeout_10ms;
 
@@ -55,11 +55,11 @@ typedef struct TIMER {
 
 
 typedef struct TIMER_MNG {
-    /// 記憶領域の確保用。
-    /// timers のインデックスと TID は同じ
+    // 記憶領域の確保用。
+    // timers のインデックスと TID は同じ
     TIMER timers[TIMER_MAX];
 
-    TIMER *head_use;  ///< 使用中のタイマを timeout_10ms の昇順に並べたリスト
+    TIMER *head_use;  // 使用中のタイマを timeout_10ms の昇順に並べたリスト
 
     unsigned int count_10ms;
     unsigned int next_timeout_10ms;
@@ -67,8 +67,8 @@ typedef struct TIMER_MNG {
 
 
 static TIMER_MNG l_mng;
-static TIMER *ts_timer;  ///< タスク切り替え用タイマ
-static int ts_tid;       ///< タスク切り替え用タイマの ID
+static TIMER *ts_timer;  // タスク切り替え用タイマ
+static int ts_tid;       // タスク切り替え用タイマの ID
 
 
 inline __attribute__ ((always_inline))
@@ -139,7 +139,7 @@ int timer_new(void)
 }
 
 
-/// タスク切り替え用タイマ取得
+// タスク切り替え用タイマ取得
 int timer_ts_tid(void)
 {
     return ts_tid;
@@ -175,9 +175,9 @@ void timer_task_free(int pid)
 }
 
 
-/// タイムアウトになるとタイマは自動で止まる。
-/// つまり、繰り返しタイマイベントは発生しない。
-/// 必要ならまた timer_start しないといけない。
+// タイムアウトになるとタイマは自動で止まる。
+// つまり、繰り返しタイマイベントは発生しない。
+// 必要ならまた timer_start しないといけない。
 void timer_start(int tid, unsigned int timeout_ms)
 {
     TIMER *t = tid2timer(tid);
@@ -269,7 +269,7 @@ unsigned int timer_get_count_10ms(void)
 }
 
 
-/// タイマ割り込み(IRQ-00)を処理
+// タイマ割り込み(IRQ-00)を処理
 void int20_handler(int *esp)
 {
     notify_intr_end(/* IRQ = */ 0);  // 受付完了をPICに通知

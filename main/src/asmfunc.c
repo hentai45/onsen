@@ -2,9 +2,6 @@
  * アセンブラ関数
  *
  * C 言語で書けない命令を、インラインアセンブラで記述
- *
- * @file asmfunc.c
- * @author Ivan Ivanovich Ivanov
  */
 
 #ifndef HEADER_ASMFUNC

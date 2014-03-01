@@ -1,7 +1,6 @@
 /**
  * タスク
  *
- * @note
  * タスクの優先度機能はない。タイムスライスは設定できる。
  */
 
@@ -67,16 +66,16 @@ int is_os_task(int pid);
 #include "timer.h"
 
 
-#define TASK_FLG_FREE     0   ///< 割り当てなし
-#define TASK_FLG_ALLOC    1   ///< 割り当て済み
-#define TASK_FLG_RUNNING  2   ///< 動作中
+#define TASK_FLG_FREE     0   // 割り当てなし
+#define TASK_FLG_ALLOC    1   // 割り当て済み
+#define TASK_FLG_RUNNING  2   // 動作中
 
-#define TSS_REG_SIZE 104  ///< TSS のレジスタ保存部のサイズ
+#define TSS_REG_SIZE 104  // TSS のレジスタ保存部のサイズ
 
-#define EFLAGS_INT_ENABLE   0x0202  ///< 割り込みが有効
-#define EFLAGS_INT_DISABLE  0x0002  ///< 割り込みが無効
+#define EFLAGS_INT_ENABLE   0x0202  // 割り込みが有効
+#define EFLAGS_INT_DISABLE  0x0002  // 割り込みが無効
 
-#define TASK_NAME_MAX  16   ///< タスク名の最大長 + '\0'
+#define TASK_NAME_MAX  16   // タスク名の最大長 + '\0'
 
 typedef struct TSS {
     // ---- レジスタ保存部
@@ -92,10 +91,10 @@ typedef struct TSS {
 
     // ---- OS 用タスク管理情報部
 
-    int pid;  ///< プロセス ID
+    int pid;  // プロセス ID
     int flags;
 
-    int ppid;  ///< 親 PID
+    int ppid;  // 親 PID
 
     /* ページディレクトリ。CR3に入っているのは
      * 物理アドレスなのでアクセスできない。こっちは論理アドレス */
@@ -114,12 +113,12 @@ typedef struct TSS {
 
 
 typedef struct TASK_MNG {
-    /// 記憶領域の確保用。
-    /// tss のインデックスと PID は同じ
+    // 記憶領域の確保用。
+    // tss のインデックスと PID は同じ
     TSS tss[TASK_MAX];
 
     int num_running;
-    int cur_run;  ///< 現在実行しているタスクの run でのインデックス
+    int cur_run;  // 現在実行しているタスクの run でのインデックス
     TSS *run[TASK_MAX];
 } TASK_MNG;
 
@@ -331,7 +330,7 @@ void task_switch(int ts_tid)
 }
 
 
-/// 実行中タスクリスト(run)からタスクをはずす
+// 実行中タスクリスト(run)からタスクをはずす
 void task_sleep(int pid)
 {
     TSS *t = pid2tss(pid);

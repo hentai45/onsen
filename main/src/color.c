@@ -1,5 +1,5 @@
 /**
- * color
+ * 色
  */
 
 #ifndef HEADER_COLOR

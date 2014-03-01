@@ -374,7 +374,7 @@ static void draw_win_titlebar(SURFACE *srf)
 }
 
 
-/// 新しい SURFACE を作成する
+// 新しい SURFACE を作成する
 int new_surface(int parent_sid, int w, int h)
 {
     int size = w * h * sizeof (COLOR16);
@@ -384,7 +384,7 @@ int new_surface(int parent_sid, int w, int h)
 }
 
 
-/// @attention buf は mem_alloc で取得したメモリを使用すること
+// buf は mem_alloc で取得したメモリを使用すること
 int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width)
 {
     SURFACE *parent = 0;
@@ -704,14 +704,14 @@ void draw_surface2(int src_sid, int dst_sid, int op)
 }
 
 
-/// 全体を塗りつぶす
+// 全体を塗りつぶす
 void fill_surface(int sid, COLOR32 color)
 {
     fill_rect(sid, 0, 0, 0, 0, color);
 }
 
 
-/// 矩形を塗りつぶす
+// 矩形を塗りつぶす
 void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
 {
     SURFACE *srf = sid2srf(sid);
@@ -736,7 +736,7 @@ void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
 }
 
 
-/// 文字列を画面に出力する
+// 文字列を画面に出力する
 void draw_text(int sid, int x, int y, COLOR32 color, const char *s)
 {
     SURFACE *srf = sid2srf(sid);
@@ -751,7 +751,7 @@ void draw_text(int sid, int x, int y, COLOR32 color, const char *s)
 }
 
 
-/// 文字列を画面に出力する（背景色を指定）
+// 文字列を画面に出力する（背景色を指定）
 void draw_text_bg(int sid, int x, int y, COLOR32 color,
         COLOR32 bg_color, const char *s)
 {

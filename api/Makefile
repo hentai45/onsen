@@ -19,10 +19,10 @@ C_OBJS  := $(C_SRCS:.c=.o)
 
 
 all :
-	make mkhdr
+	$(MAKE) mkhdr
 	cp $(INC_DIR)/apino.h ../main/$(INC_DIR)/onsen
-	make $(LIB)
-	make -C haribote
+	$(MAKE) $(LIB)
+	$(MAKE) -C haribote
 
 
 mkhdr :
@@ -35,4 +35,4 @@ $(LIB) : $(AS_OBJS) $(C_OBJS)
 
 clean :
 	rm -f $(LIB) $(AS_OBJS) $(C_OBJS)
-	make clean -C haribote
+	$(MAKE) clean -C haribote

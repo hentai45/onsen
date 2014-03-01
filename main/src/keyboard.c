@@ -41,7 +41,7 @@ char keycode2char(int keycode, bool is_shift_on);
 //=============================================================================
 // 公開関数
 
-/// キーボード割り込み(IRQ-01)を処理する
+// キーボード割り込み(IRQ-01)を処理する
 void int21_handler(int *esp)
 {
     notify_intr_end(/* IRQ = */ 1);  // 割り込み完了通知
@@ -58,7 +58,7 @@ void int21_handler(int *esp)
 }
 
 
-/// キーボードコントローラがデータ送信可能になるのを待つ
+// キーボードコントローラがデータ送信可能になるのを待つ
 void wait_kbc_sendready(void)
 {
     for (;;) {

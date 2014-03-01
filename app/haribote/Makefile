@@ -11,7 +11,7 @@ HRBS := $(foreach hrb, $(SRCS:.c=.hrb), $(BIN_DIR)/$(hrb))
 
 
 all :
-	make $(HRBS)
+	$(MAKE) $(HRBS)
 
 
 $(BIN_DIR)/%.hrb : %.c

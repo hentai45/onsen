@@ -85,7 +85,7 @@ void mouse_init(void)
 }
 
 
-/// マウス割り込み(IRQ-12)を処理する
+// マウス割り込み(IRQ-12)を処理する
 void int2C_handler(int *esp)
 {
     notify_intr_end(/* IRQ = */ 12);  // 割り込み完了通知

@@ -1,8 +1,5 @@
 /**
  * FAT12
- *
- * @file fat12.c
- * @author Ivan Ivanovich Ivanov
  */
 
 //=============================================================================
@@ -137,7 +134,7 @@ int fat12_search_file(FILEINFO *fi, char *fname)
 //=============================================================================
 // 非公開関数
 
-/// FAT12のFAT領域を読み込む
+// FAT12のFAT領域を読み込む
 static void fat12_read_fat(int *fat)
 {
     unsigned char *img = (unsigned char *) (VADDR_DISK_IMG + 0x0200);

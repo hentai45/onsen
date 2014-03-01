@@ -97,9 +97,9 @@ static int dbg_temp_write(void *self, const void *buf, int cnt);
 FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write};
 FILE_T *f_dbg_temp = &l_f_dbg_temp;
 
+
 //=============================================================================
 // 公開関数
-
 
 //-----------------------------------------------------------------------------
 // メイン
@@ -270,7 +270,7 @@ void dbg_seg(void)
 }
 
 
-/// 例外（フォールト）が発生したときにデバッグ表示する用の関数
+// 例外（フォールト）が発生したときにデバッグ表示する用の関数
 void dbg_fault(const char *msg, int *esp)
 {
     unsigned short bk_fg = fg;

@@ -24,12 +24,12 @@ all : img
 
 
 img :
-	make -C boot
-	make mkhdr -C api
-	make -C main
-	make -C api
-	make -C app
-	make $(IMG)
+	$(MAKE) -C boot
+	$(MAKE) mkhdr -C api
+	$(MAKE) -C main
+	$(MAKE) -C api
+	$(MAKE) -C app
+	$(MAKE) $(IMG)
 
 
 $(ONSEN_SYS) : $(HEAD) $(ONSEN)
@@ -51,50 +51,50 @@ umount:
 
 
 run :
-	make runq
+	$(MAKE) runq
 
 
 runb :
-	make img
+	$(MAKE) img
 	$(BOCHS)
 
 
 runq :
-	make img
+	$(MAKE) img
 	$(QEMU) $(QEMU_FLAGS) -fda $(IMG) &
 
 
 dipl :
-	make img
+	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
 	gdb -x gdbinit/ipl
 
 
 dhead16 :
-	make img
+	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
 	gdb -x gdbinit/head16
 
 
 dhead32 :
-	make img
+	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
 	gdb -x gdbinit/head32
 
 
 dos :
-	make img
+	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
 	gdb -x gdbinit/os
 
 
 clean :
-	make clean -C boot
-	make clean -C main
-	make clean -C api
-	make clean -C app
+	$(MAKE) clean -C boot
+	$(MAKE) clean -C main
+	$(MAKE) clean -C api
+	$(MAKE) clean -C app
 	rm -f $(IMG)

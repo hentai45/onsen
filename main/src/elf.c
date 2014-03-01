@@ -2,11 +2,6 @@
  * ELF ローダ
  *
  * ELF 形式のファイルを読み込んでタスクとして実行する
- *
- * License : GPL3
- *
- * @file elf.c
- * @author Ivan Ivanovich Ivanov
  */
 
 
@@ -28,22 +23,22 @@ typedef unsigned int    Elf32_Word;
 
 #define EI_NIDENT   16
 
-/// ELF ヘッダ
+// ELF ヘッダ
 typedef struct Elf_Ehdr {
-    unsigned char e_ident[EI_NIDENT];  ///< マジックナンバなど
-    Elf32_Half    e_type;              ///< ファイルタイプ
-    Elf32_Half    e_machine;           ///< マシンアーキテクチャ
-    Elf32_Word    e_version;           ///< ELF バージョン
-    Elf32_Addr    e_entry;             ///< エントリポイント
-    Elf32_Off     e_phoff;             ///< プログラムヘッダのオフセット
-    Elf32_Off     e_shoff;             ///< セクションヘッダのオフセット
-    Elf32_Word    e_flags;             ///< 未使用
-    Elf32_Half    e_ehsize;            ///< ELF ヘッダのサイズ（バイト）
-    Elf32_Half    e_phentsize;         ///< プログラムヘッダエントリのサイズ
-    Elf32_Half    e_phnum;             ///< プログラムヘッダエントリの数
-    Elf32_Half    e_shentsize;         ///< セクションヘッダエントリのサイズ
-    Elf32_Half    e_shnum;             ///< セクションヘッダエントリの数
-    Elf32_Half    e_shstrndx;          ///< セクション名格納用セクション
+    unsigned char e_ident[EI_NIDENT];  // マジックナンバなど
+    Elf32_Half    e_type;              // ファイルタイプ
+    Elf32_Half    e_machine;           // マシンアーキテクチャ
+    Elf32_Word    e_version;           // ELF バージョン
+    Elf32_Addr    e_entry;             // エントリポイント
+    Elf32_Off     e_phoff;             // プログラムヘッダのオフセット
+    Elf32_Off     e_shoff;             // セクションヘッダのオフセット
+    Elf32_Word    e_flags;             // 未使用
+    Elf32_Half    e_ehsize;            // ELF ヘッダのサイズ（バイト）
+    Elf32_Half    e_phentsize;         // プログラムヘッダエントリのサイズ
+    Elf32_Half    e_phnum;             // プログラムヘッダエントリの数
+    Elf32_Half    e_shentsize;         // セクションヘッダエントリのサイズ
+    Elf32_Half    e_shnum;             // セクションヘッダエントリの数
+    Elf32_Half    e_shstrndx;          // セクション名格納用セクション
 } Elf_Ehdr;
 
 
