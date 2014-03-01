@@ -15,16 +15,16 @@
 #define ERROR_SID      (-1)
 #define NO_PARENT_SID  (-2)
 
-#define BORDER_WIDTH      (2)
-#define TITLE_BAR_HEIGHT  (18)
+#define BORDER_WIDTH      (4)
+#define TITLE_BAR_HEIGHT  (20)
 #define WINDOW_EXT_WIDTH  (BORDER_WIDTH * 2)
 #define WINDOW_EXT_HEIGHT (TITLE_BAR_HEIGHT + (BORDER_WIDTH * 2))
 
 #define CLIENT_X  (BORDER_WIDTH)
 #define CLIENT_Y  (TITLE_BAR_HEIGHT + BORDER_WIDTH)
 
-#define HANKAKU_W 8   ///< 半角フォントの幅
-#define HANKAKU_H 16  ///< 半角フォントの高さ
+#define HANKAKU_W (8)   // 半角フォントの幅
+#define HANKAKU_H (16)  // 半角フォントの高さ
 
 
 enum {
@@ -42,13 +42,16 @@ extern const int g_h;
 
 void graphic_init(void *vram);
 
-int  new_window(int x, int y, int cw, int ch, char *title);
-
-int  new_surface(int parent_sid, int w, int h);
 int  new_surface(int parent_sid, int w, int h);
 int  new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width);
+
+int  new_window(int x, int y, int w, int h, char *title);
+int  new_window_from_buf(int x, int y, int w, int h, char *title,
+        void *buf, int color_width);
+
 void free_surface(int sid);
 void free_surface_task(int pid);
+
 int  get_screen(void);
 
 void set_surface_pos(int sid, int x, int y);
@@ -153,18 +156,18 @@ typedef struct SURFACE {
 
 
 typedef struct SURFACE_MNG {
-    /// 記憶領域の確保用。
-    /// surfaces のインデックスと SID は同じ
+    // 記憶領域の確保用。
+    // surfaces のインデックスと SID は同じ
     SURFACE surfaces[SURFACE_MAX];
 } SURFACE_MNG;
 
 
-int g_vram_sid;  ///< この SID を使うと更新しなくても画面に直接表示される
+int g_vram_sid;  // この SID を使うと更新しなくても画面に直接表示される
 int g_dt_sid;
 
-const int g_w = 640;  ///< 横の解像度
-const int g_h = 480;  ///< 縦の解像度
-const int g_d = 16;   // 色のビット数
+const int g_w = (640);  // 横の解像度
+const int g_h = (480);  // 縦の解像度
+const int g_d = (16);   // 色のビット数
 
 
 static SURFACE_MNG l_mng;
@@ -204,6 +207,8 @@ static SURFACE *l_buf_srf;
 
 void graphic_init(void *vram)
 {
+    color_init();
+
     // ---- SURFACE 初期化
 
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
@@ -262,12 +267,25 @@ void graphic_init(void *vram)
 
 static void draw_window(int sid);
 
-int new_window(int x, int y, int cw, int ch, char *title)
+int new_window(int x, int y, int w, int h, char *title)
+{
+    return new_window_from_buf(x, y, w, h, title, 0, 16);
+}
+
+
+int new_window_from_buf(int x, int y, int cw, int ch, char *title,
+        void *buf, int color_width)
 {
     int w = cw + WINDOW_EXT_WIDTH;
     int h = ch + WINDOW_EXT_HEIGHT;
 
-    int sid = new_surface(NO_PARENT_SID, w, h);
+    int sid;
+
+    if (buf == 0) {
+        sid = new_surface(NO_PARENT_SID, w, h);
+    } else {
+        sid = new_surface_from_buf(NO_PARENT_SID, w, h, buf, color_width);
+    }
 
     if (sid == ERROR_SID) {
         return sid;
@@ -290,7 +308,6 @@ int new_window(int x, int y, int cw, int ch, char *title)
     return sid;
 }
 
-
 static void draw_win_titlebar(SURFACE *srf);
 
 static void draw_window(int sid)
@@ -306,19 +323,23 @@ static void draw_window(int sid)
     srf->flags &= ~SRF_FLG_WINDOW;
 
     /* top border */
-    fill_rect(sid,   0,   0,   w,   1, 0xC6C6C6);
-    fill_rect(sid,   1,   1, w-2,   1, 0xFFFFFF);
+    fill_rect(sid,   0,   0,   w,   1, 0x969696);
+    fill_rect(sid,   1,   1, w-2,   1, 0xC6C6C6);
+    fill_rect(sid,   2,   2, w-4,   1, 0xFFFFFF);
 
     /* left border */
-    fill_rect(sid,   0,   0,   1,   h, 0xC6C6C6);
-    fill_rect(sid,   1,   1,   1, h-2, 0xFFFFFF);
+    fill_rect(sid,   0,   0,   1,   h, 0x969696);
+    fill_rect(sid,   1,   1,   1, h-2, 0xC6C6C6);
+    fill_rect(sid,   2,   2,   1, h-4, 0xFFFFFF);
 
     /* right border */
-    fill_rect(sid, w-2,   1,   1, h-2, 0x848484);
+    fill_rect(sid, w-3,   2,   1, h-4, 0x848484);
+    fill_rect(sid, w-2,   1,   1, h-2, 0x444444);
     fill_rect(sid, w-1,   0,   1,   h, 0x000000);
 
     /* bottom border */
-    fill_rect(sid,   1, h-2, w-2,   1, 0x848484);
+    fill_rect(sid,   2, h-3, w-4,   1, 0x848484);
+    fill_rect(sid,   1, h-2, w-2,   1, 0x444444);
     fill_rect(sid,   0, h-1,   w,   1, 0x000000);
 
     /* title bar */
@@ -343,11 +364,11 @@ static void draw_win_titlebar(SURFACE *srf)
         tbc = 0x848484;
     }
 
-    fill_rect(srf->sid, 2, 2, srf->g.w-6, TITLE_BAR_HEIGHT, tbc);
+    fill_rect(srf->sid, 3, 3, srf->g.w-6, TITLE_BAR_HEIGHT, tbc);
 
-    draw_text(srf->sid, 6, 4, 0xFFFFFF, srf->name);
+    draw_text(srf->sid, 7, 6, 0xFFFFFF, srf->name);
 
-    draw_surface(l_close_button_sid, srf->sid, srf->g.w  - 21, 5, OP_SRC_COPY);
+    draw_surface(l_close_button_sid, srf->sid, srf->g.w  - 21, 7, OP_SRC_COPY);
 
     srf->flags = flags;
 }
@@ -387,11 +408,18 @@ int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_widt
     srf->pid    = get_pid();
     srf->x      = 0;
     srf->y      = 0;
+
     srf->g.w    = w;
     srf->g.h    = h;
     srf->g.color_width = color_width;
     srf->g.buf  = buf;
-    srf->g.m    = g_gbuf_method16;
+
+    if (color_width == 8) {
+        srf->g.m = g_gbuf_method8;
+    } else {
+        srf->g.m = g_gbuf_method16;
+    }
+
     srf->parent = parent;
 
     add_child(srf);
@@ -624,7 +652,6 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
 
     /* 右の兄弟を更新 */
 
-    /*
     if (srf->parent == 0)
         return;
 
@@ -632,7 +659,6 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
     while ((p = p->next_srf) != srf->parent->children) {
         update_rect_sub(p, x, y, w, h);
     }
-    */
 }
 
 
@@ -834,6 +860,9 @@ void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR32 color)
 
 void erase_char(int sid, int x, int y, COLOR32 color, bool update)
 {
+    if (sid == 7)
+        temp_dbgf("%X\n", color);
+
     fill_rect(sid, x, y, HANKAKU_W, HANKAKU_H, color);
 
     if (update) {
@@ -1505,3 +1534,4 @@ static void conv_screen_cord(SURFACE *srf, int *x, int *y, bool client_cord)
         *y -= CLIENT_Y;
     }
 }
+

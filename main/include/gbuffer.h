@@ -35,6 +35,7 @@ typedef struct _GBUFFER_METHOD {
 } GBUFFER_METHOD;
 
 
+extern struct _GBUFFER_METHOD *g_gbuf_method8;
 extern struct _GBUFFER_METHOD *g_gbuf_method16;
 
 #endif

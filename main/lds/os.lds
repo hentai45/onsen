@@ -19,12 +19,12 @@ SECTIONS
     }
 
     .text : {
-        * (.text)
+        *(.text)
+        *(.rodata*)
     }
 
     .data : {
         *(.data)
-        *(.rodata*)
         *(.bss)
     }
 

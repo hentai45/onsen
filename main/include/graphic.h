@@ -10,16 +10,16 @@
 #define ERROR_SID      (-1)
 #define NO_PARENT_SID  (-2)
 
-#define BORDER_WIDTH      (2)
-#define TITLE_BAR_HEIGHT  (18)
+#define BORDER_WIDTH      (4)
+#define TITLE_BAR_HEIGHT  (20)
 #define WINDOW_EXT_WIDTH  (BORDER_WIDTH * 2)
 #define WINDOW_EXT_HEIGHT (TITLE_BAR_HEIGHT + (BORDER_WIDTH * 2))
 
 #define CLIENT_X  (BORDER_WIDTH)
 #define CLIENT_Y  (TITLE_BAR_HEIGHT + BORDER_WIDTH)
 
-#define HANKAKU_W 8   ///< 半角フォントの幅
-#define HANKAKU_H 16  ///< 半角フォントの高さ
+#define HANKAKU_W (8)   // 半角フォントの幅
+#define HANKAKU_H (16)  // 半角フォントの高さ
 
 
 enum {
@@ -37,13 +37,16 @@ extern const int g_h;
 
 void graphic_init(void *vram);
 
-int  new_window(int x, int y, int cw, int ch, char *title);
-
-int  new_surface(int parent_sid, int w, int h);
 int  new_surface(int parent_sid, int w, int h);
 int  new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width);
+
+int  new_window(int x, int y, int w, int h, char *title);
+int  new_window_from_buf(int x, int y, int w, int h, char *title,
+        void *buf, int color_width);
+
 void free_surface(int sid);
 void free_surface_task(int pid);
+
 int  get_screen(void);
 
 void set_surface_pos(int sid, int x, int y);

@@ -47,6 +47,7 @@ static void main_proc(unsigned int message, unsigned long u_param,
 static void mouse_handler(unsigned long data);
 static void keydown_handler(unsigned long keycode);
 
+void (*g_func)(void);
 
 void OnSenMain(void)
 {
@@ -79,7 +80,6 @@ static void init_onsen(void)
     graphic_init(vram);  // 画面初期化
     mouse_init();
     set_mouse_pos(g_w / 2, g_h / 2);
-    haribote_init();
 
     init_gui();
 
@@ -284,6 +284,14 @@ static void keydown_handler(unsigned long keycode)
     case KC_RIGHT_SHIFT_OFF:
         is_shift_on = false;
         break;
+    }
+
+    if (keycode == KC_F1 && is_shift_on) {
+        if ( ! is_os_task(active_win_pid)) {
+            task_free(active_win_pid, -1);
+        }
+
+        return;
     }
 
     // 押下時だけメッセージを送る（離したときは0x80がプラスされた値になる）

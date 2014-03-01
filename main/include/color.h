@@ -11,6 +11,12 @@ typedef unsigned long  COLOR32;
 #define RGB16(r, g, b) ((COLOR16) (((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | (((b) & 0xF8) >> 3))
 #define RGB32_TO_16(rgb32)  ((COLOR16) (((rgb32) & 0xF80000) >> 8) | (((rgb32) & 0xFC00) >> 5) | (((rgb32) & 0xF8) >> 3))
 #define RGB16_TO_32(rgb16)  ((COLOR32) (((rgb16) & 0xF800) << 8) | (((rgb16) & 0x07E0) << 5) | (((rgb16) & 0x001F) << 3))
+#define RGB32_TO_8(rgb32)  (conv_rgb32_to_8(rgb32))
+#define RGB8_TO_32(rgb8)  (conv_rgb8_to_32(rgb8))
+
+#define GET_RED32(rgb)   (((rgb) & 0xFF0000) >> 16)
+#define GET_GREEN32(rgb) (((rgb) & 0x00FF00) >> 8)
+#define GET_BLUE32(rgb)  ((rgb) & 0x0000FF)
 
 #define GET_RED16(rgb)   (((rgb) & 0xF800) >> 8)
 #define GET_GREEN16(rgb) (((rgb) & 0x07E0) >> 3)
@@ -22,5 +28,8 @@ typedef unsigned long  COLOR32;
 #define COL_BLUE     (0x0000FF)
 #define COL_WHITE    (0xFFFFFF)
 
+void color_init(void);
+COLOR8 conv_rgb32_to_8(COLOR32 color);
+COLOR32 conv_rgb8_to_32(unsigned char c);
 
 #endif

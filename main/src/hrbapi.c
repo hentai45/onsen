@@ -16,6 +16,7 @@ void haribote_init(void);
 #include "haribote/apino.h"
 
 #include <stdbool.h>
+#include "color.h"
 #include "debug.h"
 #include "graphic.h"
 #include "memory.h"
@@ -33,27 +34,6 @@ typedef struct _PUSHAL_REGISTERS {
 
 static int l_timer_map[TIMER_MAX];
 
-#define COLOR_MAX  (216)
-
-static COLOR32 l_color_tbl[COLOR_MAX] = {
-    0x000000,
-    0xFF0000,
-    0x00FF00,
-    0xFFFF00,
-    0x0000FF,
-    0xFF00FF,
-    0x00FFFF,
-    0xFFFFFF,
-    0xC6C6C6,
-    0x840000,
-    0x008400,
-    0x848400,
-    0x000084,
-    0x840084,
-    0x008484,
-    0x848484
-};
-
 static void conv_window_cord(int *x, int *y);
 
 #define HRB_CLIENT_X     (4)
@@ -63,22 +43,6 @@ static void conv_window_cord(int *x, int *y);
 
 //=============================================================================
 // 公開関数
-
-
-void haribote_init(void)
-{
-    for (int b = 0; b < 6; b++) {
-        for (int g = 0; g < 6; g++) {
-            for (int r = 0; r < 6; r++) {
-                int i = 16 + r + g * 6 + b * 36;
-                COLOR32 color = RGB32(r * 51, g * 51, b * 51);
-
-                l_color_tbl[i] = color;
-            }
-        }
-    }
-}
-
 
 
 int hrb_api(PUSHAL_REGISTERS reg)
@@ -96,14 +60,13 @@ int hrb_api(PUSHAL_REGISTERS reg)
     } else if (reg.edx == API_OPENWIN) {
         int w = reg.esi - HRB_WINDOW_EXT_WIDTH;
         int h = reg.edi - HRB_WINDOW_EXT_HEIGHT;
-        int sid = new_window(10, 20, w, h, (char *) reg.ecx);
+
+        /* ***** 注意：バッファはAPI_MALLOCで取得したものでないといけない。
+         *             ユーザ領域のバッファを使うとページフォルトになる ***** */
+        int sid = new_window_from_buf(10, 20, w, h, (char *) reg.ecx, (void *) reg.ebx, 8);
         ret = hrb_sid2addr(sid);
 
-        int color = reg.eax;
-        if (0 <= reg.eax && reg.eax < COLOR_MAX)
-            color = l_color_tbl[reg.eax];
-
-        set_colorkey(ret, color);
+        set_colorkey(ret, RGB8_TO_32(reg.eax));
     } else if (reg.edx == API_PUTSTRWIN) {
         bool update = reg.ebx & 1;
         reg.ebx &= ~1;
@@ -116,9 +79,7 @@ int hrb_api(PUSHAL_REGISTERS reg)
         int y = reg.edi;
         conv_window_cord(&x, &y);
 
-        int color = l_color_tbl[1];
-        if (reg.eax < COLOR_MAX)
-            color = l_color_tbl[reg.eax];
+        COLOR32 color = RGB8_TO_32(reg.eax);
 
         draw_text(sid, x, y, color, str);
 
@@ -139,11 +100,7 @@ int hrb_api(PUSHAL_REGISTERS reg)
         int w = reg.esi - reg.eax;
         int h = reg.edi - reg.ecx;
 
-        int color = l_color_tbl[1];
-        if (reg.ebp < COLOR_MAX)
-            color = l_color_tbl[reg.ebp];
-
-        fill_rect(sid, x, y, w, h, color);
+        fill_rect(sid, x, y, w, h, RGB8_TO_32(reg.ebp));
 
         update = 1;
         if (update)
@@ -162,11 +119,7 @@ int hrb_api(PUSHAL_REGISTERS reg)
         int y = reg.edi;
         conv_window_cord(&x, &y);
 
-        int color = l_color_tbl[1];
-        if (reg.eax < COLOR_MAX)
-            color = l_color_tbl[reg.eax];
-
-        draw_pixel(sid, x, y, color);
+        draw_pixel(sid, x, y, RGB8_TO_32(reg.eax));
 
         if (update)
             update_rect(sid, x, y, 1, 1);
@@ -193,11 +146,7 @@ int hrb_api(PUSHAL_REGISTERS reg)
         int y1 = reg.edi;
         conv_window_cord(&x1, &y1);
 
-        int color = l_color_tbl[1];
-        if (reg.ebp < COLOR_MAX)
-            color = l_color_tbl[reg.ebp];
-
-        draw_line(sid, x0, y0, x1, y1, color);
+        draw_line(sid, x0, y0, x1, y1, RGB8_TO_32(reg.ebp));
 
         update = 1;
         if (update)

@@ -21,6 +21,8 @@ AS_OBJS := $(AS_SRCS:.S=.o)
 C_SRCS  := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
 C_OBJS  := $(C_SRCS:.c=.o)
 
+CPP_SRCS  := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cpp))
+CPP_OBJS  := $(CPP_SRCS:.cpp=.o)
 
 all :
 	make mkhdr
@@ -40,11 +42,11 @@ mkfnames : $(MAP)
 # 残っている可能性がある。その場合はstripで余計なセクションを捨てる。
 # strip -R .note.gnu.build-id -o $(BIN_DIR)/temp.elf $(ONSEN_ELF)
 # $(OBJCOPY) -S -O binary $(BIN_DIR)/temp.elf $@
-$(ONSEN_BIN) : $(AS_OBJS) $(C_OBJS) $(LDS) Makefile
-	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) -T $(LDS) -o $(ONSEN_ELF)
+$(ONSEN_BIN) : $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) $(LDS) Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) -T $(LDS) -o $(ONSEN_ELF)
 	$(OBJCOPY) -S -O binary $(ONSEN_ELF) $@
 	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.ls
 
 
 clean :
-	rm -f $(ONSEN_BIN) $(ONSEN_ELF) $(AS_OBJS) $(C_OBJS)
+	rm -f $(ONSEN_BIN) $(ONSEN_ELF) $(AS_OBJS) $(C_OBJS) $(CPP_OBJS)
