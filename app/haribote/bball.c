@@ -3,7 +3,7 @@
 void HariMain(void)
 {
 	int win, i, j, dis;
-	char buf[216 * 237];
+	char *buf;
 	struct POINT {
 		int x, y;
 	};
@@ -14,6 +14,8 @@ void HariMain(void)
 		{ 204, 129 }
 	};
 
+    api_initmalloc();
+	buf = api_malloc(216 * 237);
 	win = api_openwin(buf, 216, 237, -1, "bball");
 	api_boxfilwin(win, 8, 29, 207, 228, 0);
 	for (i = 0; i <= 14; i++) {
