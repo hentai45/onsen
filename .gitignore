@@ -3,6 +3,7 @@ debug/
 *.bin
 *.map
 *.swp
+tags
 
 # Object files
 *.o

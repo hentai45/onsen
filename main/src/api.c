@@ -104,7 +104,7 @@ void api_exit_app(int exit_status)
 {
     MSG msg;
     msg.message = MSG_REQUEST_EXIT;
-    msg.u_param = get_pid();
+    msg.u_param = g_pid;
     msg.l_param = exit_status;
     msg_q_put(g_root_pid, &msg);
 

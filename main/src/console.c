@@ -130,6 +130,15 @@ void console_main(void)
 
     put_prompt();
 
+    int pid = chopsticks();
+    dbgf("chopsticks = %d\n", pid);
+
+    if (pid == 0) {
+        dbgf("I'm sleep.\n");
+        for (;;)
+            ;
+    }
+
     MSG msg;
 
     while (get_message(&msg)) {
@@ -533,15 +542,18 @@ static int cmd_app(char *cmd_name, int bgp)
 
     FILEINFO *fi = &finfo[i_fi];
 
-    char *p_code = (char *) mem_alloc(fi->size);
-    fat12_load_file(fi->clustno, fi->size, p_code);
+    char *p = (char *) mem_alloc(fi->size);
+    fat12_load_file(fi->clustno, fi->size, p);
 
-    if (fi->size < 36 || s_ncmp(p_code + 4, "Hari", 4) != 0 ||
-            *p_code != 0) {
+    if (is_elf((Elf_Ehdr *) p)) {
+        elf_load(p, fi->size);
+    } else if (s_ncmp(p + 4, "Hari", 4) == 0) {
+        child_pid = task_run_app(p, fi->size, fi->name);
+    } else {
+        dbgf("%.4s\n", p + 4);
         return -1;
     }
 
-    child_pid = task_run_app(p_code, fi->size, fi->name);
 
     if (bgp) {
         child_pid = 0;

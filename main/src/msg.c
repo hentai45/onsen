@@ -100,6 +100,7 @@ void send_window_deactive_msg(int pid_recieve, int pid);
 
 
 #include "asmfunc.h"
+#include "debug.h"
 #include "msg_q.h"
 #include "task.h"
 
@@ -109,7 +110,7 @@ void send_window_deactive_msg(int pid_recieve, int pid);
 
 int get_message(MSG *msg)
 {
-    int pid = get_pid();
+    int pid = g_pid;
 
     for (;;) {
         cli();
@@ -128,7 +129,7 @@ int get_message(MSG *msg)
 
 int peek_message(MSG *msg)
 {
-    int pid = get_pid();
+    int pid = g_pid;
 
     for (;;) {
         cli();

@@ -405,7 +405,7 @@ int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_widt
         return ERROR_SID;
     }
  
-    srf->pid    = get_pid();
+    srf->pid    = g_pid;
     srf->x      = 0;
     srf->y      = 0;
 
@@ -440,7 +440,7 @@ void free_surface(int sid)
         return;
     }
 
-    if (srf->pid != get_pid()) {
+    if (srf->pid != g_pid) {
         return;
     }
 
@@ -1174,7 +1174,7 @@ static SURFACE *srf_alloc(void)
 
         if (srf->flags == SRF_FLG_FREE) {
             srf->flags = SRF_FLG_ALLOC;
-            srf->pid = get_pid();
+            srf->pid = g_pid;
 
             srf->parent = 0;
             srf->num_children = 0;

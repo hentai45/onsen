@@ -161,7 +161,7 @@ INT_HANDLER(0E, "page fault")
 
 static void fault_handler(const char *message, int *esp)
 {
-    if (is_os_task(get_pid())) {
+    if (is_os_task(g_pid)) {
         dbg_fault(message, esp);
 
         for (;;) {
@@ -170,7 +170,7 @@ static void fault_handler(const char *message, int *esp)
     } else {
         MSG msg;
         msg.message = MSG_REQUEST_EXIT;
-        msg.u_param = get_pid();
+        msg.u_param = g_pid;
         msg.l_param = -666;
         msg_q_put(g_root_pid, &msg);
 

@@ -129,7 +129,7 @@ int timer_new(void)
     for (int tid = 0; tid < TIMER_MAX; tid++) {
         if (l_mng.timers[tid].flags == TIMER_FLG_FREE) {
             l_mng.timers[tid].flags = TIMER_FLG_ALLOC;
-            l_mng.timers[tid].pid = get_pid();
+            l_mng.timers[tid].pid = g_pid;
 
             return tid;
         }

@@ -13,7 +13,7 @@ typedef unsigned int    Elf32_Word;
 
 //-----------------------------------------------------------------------------
 
-#define EI_NIDENT   16
+#define EI_NIDENT   (16)
 
 // ELF ヘッダ
 typedef struct Elf_Ehdr {
@@ -52,11 +52,11 @@ bool is_elf(Elf_Ehdr *ehdr)
 /// プログラムヘッダ
 typedef struct Elf_Phdr {
     Elf32_Word    p_type;
-    Elf32_Off     p_offset;    ///< ファイル先頭からのセグメント位置
-    Elf32_Addr    p_vaddr;     ///< ロード先の仮想アドレス
-    Elf32_Addr    p_paddr;     ///< ロード先の物理アドレス
-    Elf32_Word    p_filesz;    ///< ファイル中でのセグメントのサイズ
-    Elf32_Word    p_memsz;     ///< メモリ上でのセグメントのサイズ
+    Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
+    Elf32_Addr    p_vaddr;     // ロード先の仮想アドレス
+    Elf32_Addr    p_paddr;     // ロード先の物理アドレス
+    Elf32_Word    p_filesz;    // ファイル中でのセグメントのサイズ
+    Elf32_Word    p_memsz;     // メモリ上でのセグメントのサイズ
     Elf32_Word    p_flags;
     Elf32_Word    p_align;
 } Elf_Phdr;
@@ -76,12 +76,12 @@ typedef struct Elf_Phdr {
 
 /// セクションヘッダ
 typedef struct Elf_Shdr {
-    Elf32_Word    sh_name;        ///< セクション名の格納位置
+    Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;
     Elf32_Word    sh_flags;
-    Elf32_Addr    sh_addr;        ///< ロード先仮想アドレス
-    Elf32_Off     sh_offset;      ///< ファイル先頭からのセクション位置
-    Elf32_Word    sh_size;        ///< セクションのサイズ（バイト）
+    Elf32_Addr    sh_addr;        // ロード先仮想アドレス
+    Elf32_Off     sh_offset;      // ファイル先頭からのセクション位置
+    Elf32_Word    sh_size;        // セクションのサイズ（バイト）
     Elf32_Word    sh_link;
     Elf32_Word    sh_info;
     Elf32_Word    sh_addralign;
@@ -96,8 +96,6 @@ bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
-typedef void (*ENTRY_FUNC)(void);
-
-ENTRY_FUNC elf_load(void *p);
+int elf_load(void *p, unsigned int size);
 
 #endif

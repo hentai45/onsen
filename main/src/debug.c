@@ -282,8 +282,7 @@ void dbg_fault(const char *msg, int *esp)
 
     // ---- PID とプロセス名を表示
 
-    int pid = get_pid();
-    dbgf("PID = %d, name = %s\n\n", pid, task_get_name(pid));
+    dbgf("PID = %d, name = %s\n\n", g_pid, g_cur->name);
 
     // ---- レジスタの内容を表示
 

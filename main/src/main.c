@@ -39,8 +39,6 @@ static bool is_ctrl_on  = false;
 
 static void init_onsen(void);
 static void init_gui(void);
-static void run_console(void);
-static void run_debug(void);
 static void main_proc(unsigned int message, unsigned long u_param,
         long l_param);
 
@@ -83,8 +81,8 @@ static void init_onsen(void)
 
     init_gui();
 
-    run_debug();
-    run_console();
+    run_os_task("debug", debug_main);
+    run_os_task("console", console_main);
 }
 
 
@@ -142,28 +140,16 @@ static void test_draw_textbox(void)
 }
 
 
-static void run_console(void)
-{
-    run_os_task("console", console_main, 20, true);
-}
-
-
-static void run_debug(void)
-{
-    run_os_task("debug", debug_main, 20, true);
-}
-
-
 static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 {
     switch (message) {
     case MSG_REQUEST_EXIT:
-        dbgf("request exit: %s\n", task_get_name(u_param));
+        //dbgf("request exit: %s\n", task_get_name(u_param));
         task_free(/* exit app pid =  */ u_param, /* exit status =  */ l_param);
         break;
 
     case MSG_WINDOW_ACTIVE:
-        dbgf("window active: %s\n", task_get_name(u_param));
+        //dbgf("window active: %s\n", task_get_name(u_param));
 
         if (u_param != g_root_pid) {
             active_win_pid = u_param;
@@ -173,7 +159,7 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
         break;
 
     case MSG_WINDOW_DEACTIVE:
-        dbgf("window deactive: %s\n", task_get_name(u_param));
+        //dbgf("window deactive: %s\n", task_get_name(u_param));
 
         if (u_param != g_root_pid) {
             send_window_deactive_msg(u_param, u_param);

@@ -21,7 +21,7 @@ typedef unsigned int    Elf32_Word;
 
 //-----------------------------------------------------------------------------
 
-#define EI_NIDENT   16
+#define EI_NIDENT   (16)
 
 // ELF ヘッダ
 typedef struct Elf_Ehdr {
@@ -60,11 +60,11 @@ bool is_elf(Elf_Ehdr *ehdr)
 /// プログラムヘッダ
 typedef struct Elf_Phdr {
     Elf32_Word    p_type;
-    Elf32_Off     p_offset;    ///< ファイル先頭からのセグメント位置
-    Elf32_Addr    p_vaddr;     ///< ロード先の仮想アドレス
-    Elf32_Addr    p_paddr;     ///< ロード先の物理アドレス
-    Elf32_Word    p_filesz;    ///< ファイル中でのセグメントのサイズ
-    Elf32_Word    p_memsz;     ///< メモリ上でのセグメントのサイズ
+    Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
+    Elf32_Addr    p_vaddr;     // ロード先の仮想アドレス
+    Elf32_Addr    p_paddr;     // ロード先の物理アドレス
+    Elf32_Word    p_filesz;    // ファイル中でのセグメントのサイズ
+    Elf32_Word    p_memsz;     // メモリ上でのセグメントのサイズ
     Elf32_Word    p_flags;
     Elf32_Word    p_align;
 } Elf_Phdr;
@@ -84,12 +84,12 @@ typedef struct Elf_Phdr {
 
 /// セクションヘッダ
 typedef struct Elf_Shdr {
-    Elf32_Word    sh_name;        ///< セクション名の格納位置
+    Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;
     Elf32_Word    sh_flags;
-    Elf32_Addr    sh_addr;        ///< ロード先仮想アドレス
-    Elf32_Off     sh_offset;      ///< ファイル先頭からのセクション位置
-    Elf32_Word    sh_size;        ///< セクションのサイズ（バイト）
+    Elf32_Addr    sh_addr;        // ロード先仮想アドレス
+    Elf32_Off     sh_offset;      // ファイル先頭からのセクション位置
+    Elf32_Word    sh_size;        // セクションのサイズ（バイト）
     Elf32_Word    sh_link;
     Elf32_Word    sh_info;
     Elf32_Word    sh_addralign;
@@ -104,9 +104,7 @@ bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
-typedef void (*ENTRY_FUNC)(void);
-
-ENTRY_FUNC elf_load(void *p);
+int elf_load(void *p, unsigned int size);
 
 #endif
 
@@ -115,7 +113,10 @@ ENTRY_FUNC elf_load(void *p);
 // 非公開ヘッダ
 
 #include "debug.h"
+#include "memory.h"
+#include "paging.h"
 #include "str.h"
+#include "task.h"
 
 static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name);
 
@@ -123,28 +124,33 @@ static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name);
 //=============================================================================
 // 公開関数
 
-ENTRY_FUNC elf_load(void *p)
+int elf_load(void *p, unsigned int size)
 {
     char *head = (char *) p;
     Elf_Ehdr *ehdr = (Elf_Ehdr *) head;
 
     // ---- 形式チェック
 
-    if (! is_elf(ehdr)) {
-        DBGF("This is not ELF file.");
+    /*
+    if ( ! is_elf(ehdr)) {
+        dbgf("This is not ELF file.\n");
         return 0;
     }
+    */
 
+    /*
     if (ehdr->e_type != ET_EXEC) {
-        DBGF("This is not executable file.");
+        dbgf("This is not executable file.\n");
         return 0;
     }
 
     // ---- ロード
 
     Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
-
     Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
+
+    char *p_code, *p_data, *p_stack;
+    int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
         if (phdr->p_type != PT_LOAD) {
@@ -153,11 +159,29 @@ ENTRY_FUNC elf_load(void *p)
 
         switch (phdr->p_flags) {
         case PF_R | PF_X:
-            DBGF(".text");
+            dbgf(".text: offset=%#X, vaddr=%#X, paddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr, phdr->p_paddr,
+                    phdr->p_filesz, phdr->p_memsz);
+
+            p_code = (char *) mem_alloc_user(phdr->p_vaddr, phdr->p_memsz);
+            memcpy(p_code, head + phdr->p_offset, phdr->p_filesz);
             break;
 
         case PF_R | PF_W:
-            DBGF(".data");
+            dbgf(".data: offset=%#X, vaddr=%#X, paddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr, phdr->p_paddr,
+                    phdr->p_filesz, phdr->p_memsz);
+
+            p_data = (char *) mem_alloc_user(phdr->p_vaddr, phdr->p_memsz + 0x1000);
+            memcpy(p_data, head + phdr->p_offset, phdr->p_filesz);
+
+            bss_size = phdr->p_memsz - phdr->p_filesz;
+            if (bss_size > 0) {
+                memset(p_data + phdr->p_filesz, 0, bss_size);
+            }
+
+            //p_stack = p_data + BYTES_TO_PAGES(phdr->p_memsz) * PAGE_SIZE + 0x1000;
+
             break;
         }
 
@@ -166,11 +190,18 @@ ENTRY_FUNC elf_load(void *p)
             //memset((void *) bss_shdr->sh_addr, 0, bss_shdr->sh_size);
         }
     }
+    */
 
     // ---- スタックの準備
 
 
-    return (ENTRY_FUNC) ehdr->e_entry;
+    // ---- 実行
+ 
+    unsigned char *stack0 = mem_alloc(64 * 1024);
+    unsigned char *esp0 = stack0 + (64 * 1024) - 4;
+
+
+    return 0;
 }
 
 
