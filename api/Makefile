@@ -2,11 +2,10 @@ include ../Makefile.inc
 
 MKHDR   = ../tools/mkhdr
 
-CFLAGS += -I$(MAIN_INC_DIR)
+KERNEL_INC_DIR = ../kernel/$(INC_DIR)
+
+CFLAGS += -I$(KERNEL_INC_DIR)
 ARFLAGS = rcsv
-
-
-MAIN_INC_DIR = ../main/$(INC_DIR)
 
 
 LIB = $(BIN_DIR)/libonsen.a
@@ -20,7 +19,7 @@ C_OBJS  := $(C_SRCS:.c=.o)
 
 all :
 	$(MAKE) mkhdr
-	cp $(INC_DIR)/apino.h ../main/$(INC_DIR)/onsen
+	cp $(INC_DIR)/apino.h $(KERNEL_INC_DIR)/onsen
 	$(MAKE) $(LIB)
 	$(MAKE) -C haribote
 

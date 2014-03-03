@@ -5,8 +5,8 @@ LIB_DIR = ../api/$(BIN_DIR)
 LDS       = lds/app.lds
 ONSEN_LIB = ../api/bin/libonsen.a
 ONSEN_H   = ../api/include/onsen.h
-MSG_H     = ../main/include/msg.h
-KEY_H     = ../main/include/keycode.h
+MSG_H     = ../kernel/include/msg.h
+KEY_H     = ../kernel/include/keycode.h
 
 
 all :

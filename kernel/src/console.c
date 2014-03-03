@@ -130,6 +130,7 @@ void console_main(void)
 
     put_prompt();
 
+    /*
     int pid = chopsticks();
     dbgf("chopsticks = %d\n", pid);
 
@@ -138,6 +139,7 @@ void console_main(void)
         for (;;)
             ;
     }
+    */
 
     MSG msg;
 

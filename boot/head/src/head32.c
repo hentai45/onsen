@@ -100,7 +100,7 @@ static void run_onsensys(void)
         "ljmpl $2*8, $0xC028001B\n"  /* 2つめの実行可能なセグメントへジャンプ */
  
         :
-        : "r"(hdr->dst_data)
+        : "r" (hdr->dst_data)
     );
 }
 

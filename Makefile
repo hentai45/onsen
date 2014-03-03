@@ -14,9 +14,9 @@ HRB_APP_BIN = app/haribote/bin
 IMG = $(BIN_DIR)/a.img
 IPL = boot/ipl/bin/ipl.bin
 HEAD = boot/head/bin/head.bin
-ONSEN = main/bin/onsen.sys
+ONSEN = kernel/bin/onsen.sys
 ONSEN_SYS = $(BIN_DIR)/onsen.sys
-FNAMES = main/$(BIN_DIR)/fnames.bin
+FNAMES = kernel/$(BIN_DIR)/fnames.bin
 HRBS = $(wildcard $(HRB_APP_BIN)/*.hrb)
 
 
@@ -26,7 +26,7 @@ all : img
 img :
 	$(MAKE) -C boot
 	$(MAKE) mkhdr -C api
-	$(MAKE) -C main
+	$(MAKE) -C kernel
 	$(MAKE) -C api
 	$(MAKE) -C app
 	$(MAKE) $(IMG)
@@ -94,7 +94,7 @@ dos :
 
 clean :
 	$(MAKE) clean -C boot
-	$(MAKE) clean -C main
+	$(MAKE) clean -C kernel
 	$(MAKE) clean -C api
 	$(MAKE) clean -C app
 	rm -f $(IMG)

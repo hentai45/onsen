@@ -49,6 +49,11 @@ int hrb_api(PUSHAL_REGISTERS reg)
 {
     int ret = 0;
 
+    short cs, ds;
+    __asm__ __volatile__ ("mov %%cs, %0" : "=r" (cs));
+    __asm__ __volatile__ ("mov %%ds, %0" : "=r" (ds));
+    dbgf("hrb_api: cs = %X, ds = %X\n", cs, ds);
+
     if (reg.edx == API_PUTCHAR) {
         s_printf("%c", reg.eax);
     } else if (reg.edx == API_PUTSTR0) {
