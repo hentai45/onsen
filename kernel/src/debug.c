@@ -21,10 +21,16 @@ void debug_main(void);
 //-----------------------------------------------------------------------------
 // 画面出力
 
-// pushal でスタックに格納されるレジスタ
-typedef struct _REGISTERS {
-    int edi, esi, ebp, ebx, edx, ecx, eax;
-} REGISTERS;
+typedef struct _INT_REGISTERS {
+    // asm_inthander.S で積まれたスタックの内容
+    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;  // pushal
+    unsigned int ds, es;
+
+    // 以下は、例外発生時にCPUが自動でpushしたもの
+    unsigned int err_code;
+    unsigned int eip, cs, eflags, app_esp, app_ss;
+} INT_REGISTERS;
+
 
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
@@ -32,10 +38,9 @@ typedef struct _REGISTERS {
 void temp_dbgf(const char *fmt, ...);
 void dbgf(const char *fmt, ...);
 void dbg_clear(void);
-void dbg_reg(const REGISTERS *r);
 void dbg_seg(void);
 
-void dbg_fault(const char *msg, int *esp);
+void dbg_fault(const char *msg, INT_REGISTERS regs);
 
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;
@@ -65,11 +70,6 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param);
 //-----------------------------------------------------------------------------
 // 画面出力
 
-// 例外発生時に CPU が自動で push するレジスタ
-typedef struct _REGISTERS_FAULT {
-    int err_code, eip, cs, eflags, app_esp, app_ss;
-} REGISTERS_FAULT;
-
 
 #define WIDTH_CH   (39)
 #define HEIGHT_CH  (28)
@@ -85,7 +85,6 @@ static int l_y = 0;
 #define TMP_SIZE  (4096)
 static char l_tmp[TMP_SIZE];
 
-static void dbg_fault_reg(const REGISTERS_FAULT *r);
 static int dbg_write(void *self, const void *buf, int cnt);
 
 FILE_T l_f_debug = { .write = dbg_write};
@@ -246,13 +245,6 @@ void dbg_clear(void)
 }
 
 
-void dbg_reg(const REGISTERS *r)
-{
-    dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n", r->eax, r->ebx, r->ecx, r->edx);
-    dbgf("EBP = %X, ESI = %X, EDI = %X\n", r->ebp, r->esi, r->edi);
-}
-
-
 void dbg_seg(void)
 {
     unsigned short cs, ds, ss;
@@ -271,7 +263,7 @@ void dbg_seg(void)
 
 
 // 例外（フォールト）が発生したときにデバッグ表示する用の関数
-void dbg_fault(const char *msg, int *esp)
+void dbg_fault(const char *msg, INT_REGISTERS regs)
 {
     unsigned short bk_fg = fg;
     unsigned short bk_bg = bg;
@@ -286,11 +278,24 @@ void dbg_fault(const char *msg, int *esp)
 
     // ---- レジスタの内容を表示
 
-    dbg_reg((REGISTERS *) esp);
-    dbg_fault_reg((REGISTERS_FAULT *) (esp + 9));
+    dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n",
+            regs.eax, regs.ebx, regs.ecx, regs.edx);
 
-    dbgf("DS = %d * 8 + %d", esp[8] >> 3, esp[8] & 0x07);
-    dbgf(", ES = %d * 8 + %d\n", esp[9] >> 3, esp[9] & 0x07);
+    dbgf("EBP = %X, ESI = %X, EDI = %X, ESP = %X\n",
+            regs.ebp, regs.esi, regs.edi, regs.esp);
+
+    dbgf("ERROR CODE = %X\n", regs.err_code);
+    dbgf("EIP = %X", regs.eip);
+    dbgf(", CS = %d * 8 + %d\n", regs.cs >> 3, regs.cs & 0x07);
+    dbgf("DS = %d * 8 + %d", regs.ds >> 3, regs.ds & 0x07);
+    dbgf(", ES = %d * 8 + %d\n", regs.es >> 3, regs.es & 0x07);
+
+    dbgf("EFLAGS = %X", regs.eflags);
+    int intr_flg = (regs.eflags & 0x0200) ? 1 : 0;
+    dbgf("  IF = %d\n", intr_flg);
+
+    dbgf("APP ESP = %X", regs.app_esp);
+    dbgf(", APP SS = %d * 8 + %d\n", regs.app_ss >> 3, regs.app_ss & 0x07);
 
     unsigned long cr2;
     __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
@@ -314,20 +319,6 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param)
 
 //-----------------------------------------------------------------------------
 // 画面出力
-
-static void dbg_fault_reg(const REGISTERS_FAULT *r)
-{
-    dbgf("ERROR CODE = %X\n", r->err_code);
-    dbgf("EIP = %X", r->eip);
-    dbgf(", CS = %d * 8 + %d\n", r->cs >> 3, r->cs & 0x07);
-
-    dbgf("EFLAGS = %X", r->eflags);
-    int intr_flg = (r->eflags & 0x0200) ? 1 : 0;
-    dbgf("  IF = %d\n", intr_flg);
-
-    dbgf("APP ESP = %X", r->app_esp);
-    dbgf(", APP SS = %d * 8 + %d\n", r->app_ss >> 3, r->app_ss & 0x07);
-}
 
 
 static int dbg_write(void *self, const void *buf, int cnt)

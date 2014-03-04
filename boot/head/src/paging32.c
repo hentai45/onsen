@@ -1,9 +1,9 @@
 /**
  * ページングの仮設定
  *
- * @par 各タスクでのメモリマップ（アドレスはリニアアドレス）
+ * ## 各タスクでのメモリマップ（アドレスはリニアアドレス）
  * - 0x00000000 - 0xBFFFFFFF : ユーザ空間
- * - 0xC0000000 - 0xFFFFFFFF : カーネル空間（特権レベル0）
+ * - 0xC0000000 - 0xFFFFFFFF : カーネル空間
  */
 
 #include "asmfunc.h"
@@ -65,7 +65,7 @@ static PDE *create_os_pd(void)
 }
 
 
-#define FLG_4MB (PTE_4MB | PTE_RW | PTE_US | PTE_PRESENT)
+#define FLG_4MB (PTE_4MB | PTE_RW | PTE_PRESENT)
 
 /**
  * 4MBページの物理アドレスをリニアアドレスに対応づける。
@@ -84,7 +84,7 @@ static void map_4MB_page(PDE *pd, void *vp_vaddr, void *vp_maddr)
 static void map_self(PDE *pd)
 {
     int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
-    pd[i_pd] = ((unsigned long) pd & ~0xFFF) | (PTE_RW | PTE_US | PTE_PRESENT);
+    pd[i_pd] = ((unsigned long) pd & ~0xFFF) | (PTE_RW | PTE_PRESENT);
 }
 
 

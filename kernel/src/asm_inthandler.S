@@ -68,19 +68,16 @@ void asm_int2C_handler(void);
 # 変わるけど、ds, es はそのままになっている。
 # なので、ss（OS のデータセグメントになっている）を ds, es に代入している。
 .macro asm_int_handler  c_int_handler
-    pushw %es
-    pushw %ds
+    pushl %es
+    pushl %ds
     pushal
-    movl  %esp, %eax
-    pushl %eax
     movw  %ss, %ax
     movw  %ax, %ds
     movw  %ax, %es
     call  \c_int_handler
-    popl  %eax
     popal
-    popw  %ds
-    popw  %es
+    popl  %ds
+    popl  %es
     iret
 .endm
 

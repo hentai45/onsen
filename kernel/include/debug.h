@@ -15,10 +15,16 @@ void debug_main(void);
 //-----------------------------------------------------------------------------
 // 画面出力
 
-// pushal でスタックに格納されるレジスタ
-typedef struct _REGISTERS {
-    int edi, esi, ebp, ebx, edx, ecx, eax;
-} REGISTERS;
+typedef struct _INT_REGISTERS {
+    // asm_inthander.S で積まれたスタックの内容
+    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;  // pushal
+    unsigned int ds, es;
+
+    // 以下は、例外発生時にCPUが自動でpushしたもの
+    unsigned int err_code;
+    unsigned int eip, cs, eflags, app_esp, app_ss;
+} INT_REGISTERS;
+
 
 #define DBGF(fmt, ...)  dbgf("%s %d %s : " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
@@ -26,10 +32,9 @@ typedef struct _REGISTERS {
 void temp_dbgf(const char *fmt, ...);
 void dbgf(const char *fmt, ...);
 void dbg_clear(void);
-void dbg_reg(const REGISTERS *r);
 void dbg_seg(void);
 
-void dbg_fault(const char *msg, int *esp);
+void dbg_fault(const char *msg, INT_REGISTERS regs);
 
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;

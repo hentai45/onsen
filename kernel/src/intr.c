@@ -59,11 +59,11 @@ void set_pic1_mask(unsigned char mask);
 //-----------------------------------------------------------------------------
 // フォールト
 
-static void fault_handler(const char *msg, int *esp);
+static void fault_handler(const char *msg, INT_REGISTERS regs);
 
-#define INT_HANDLER(NO, MESSAGE) void int ## NO ## _handler(int *esp) \
-{                                                                     \
-    fault_handler("INT 0x" #NO " : " MESSAGE, esp);                   \
+#define INT_HANDLER(NO, MESSAGE) void int ## NO ## _handler(INT_REGISTERS regs) \
+{                                                                               \
+    fault_handler("INT 0x" #NO " : " MESSAGE, regs);                            \
 }
 
 //=============================================================================
@@ -159,22 +159,22 @@ INT_HANDLER(0E, "page fault")
 //=============================================================================
 // 非公開関数
 
-static void fault_handler(const char *message, int *esp)
+static void fault_handler(const char *message, INT_REGISTERS regs)
 {
     if (is_os_task(g_pid)) {
-        dbg_fault(message, esp);
+        dbg_fault(message, regs);
 
         for (;;) {
             hlt();
         }
     } else {
+        dbg_fault(message, regs);
+
         MSG msg;
         msg.message = MSG_REQUEST_EXIT;
         msg.u_param = g_pid;
         msg.l_param = -666;
         msg_q_put(g_root_pid, &msg);
-
-        dbg_fault(message, esp);
 
         sti();
 

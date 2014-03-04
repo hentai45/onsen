@@ -26,7 +26,7 @@
 
 // ---- セグメントの32ビット属性を表す数値
 // SEG32_BIG_SEGはset_gate_descで自動で設定する
-#define SEG32_BIG_SEG       0x80 ///< リミットの数値をページ単位(4KB)ととらえる
+#define SEG32_BIG_SEG       0x80 // リミットの数値をページ単位(4KB)ととらえる
 // #define SEG32_SMALL_SEG     0x00
 
 #define SEG32_CODE386       0x40
@@ -34,10 +34,10 @@
 // #define SEG32_CODE286       0x00
 
 
-#define KERNEL_DS  (1 << 3)  // カーネルのデータセグメントのセレクタ値
-#define KERNEL_CS  (2 << 3)  // カーネルのコードセグメントのセレクタ値
-#define USER_DS    (3 << 3)  // アプリケーションのデータセグメントのセレクタ値
-#define USER_CS    (4 << 3)  // アプリケーションのコードセグメントのセレクタ値
+#define KERNEL_DS  (1 << 3)  // 0x08 カーネルのデータセグメントのセレクタ値
+#define KERNEL_CS  (2 << 3)  // 0x10 カーネルのコードセグメントのセレクタ値
+#define USER_DS    (3 << 3)  // 0x18 アプリケーションのデータセグメントのセレクタ値
+#define USER_CS    (4 << 3)  // 0x20 アプリケーションのコードセグメントのセレクタ値
 #define SEG_TSS    5         // TSSをGDTの何番から割当てるのか
 
 
