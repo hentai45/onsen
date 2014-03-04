@@ -36,9 +36,6 @@ enum {
 extern int g_vram_sid;
 extern int g_dt_sid;
 
-extern const int g_w;
-extern const int g_h;
-
 
 void graphic_init(void *vram);
 
@@ -52,7 +49,8 @@ int  new_window_from_buf(int x, int y, int w, int h, char *title,
 void free_surface(int sid);
 void free_surface_task(int pid);
 
-int  get_screen(void);
+int  get_screen_w(void);
+int  get_screen_h(void);
 
 void set_surface_pos(int sid, int x, int y);
 void move_surface(int sid, int x, int y);
@@ -165,11 +163,6 @@ typedef struct SURFACE_MNG {
 int g_vram_sid;  // この SID を使うと更新しなくても画面に直接表示される
 int g_dt_sid;
 
-const int g_w = (640);  // 横の解像度
-const int g_h = (480);  // 縦の解像度
-const int g_d = (16);   // 色のビット数
-
-
 static SURFACE_MNG l_mng;
 
 static int l_close_button_sid;
@@ -202,12 +195,18 @@ static SURFACE *l_dt_srf;
 static int l_buf_sid;
 static SURFACE *l_buf_srf;
 
+static unsigned int l_w;
+static unsigned int l_h;
+
 //=============================================================================
 // 公開関数
 
 void graphic_init(void *vram)
 {
     color_init();
+
+    l_w = g_sys_info->w;
+    l_h = g_sys_info->h;
 
     // ---- SURFACE 初期化
 
@@ -229,8 +228,8 @@ void graphic_init(void *vram)
 
     g_vram_sid = sid;
 
-    srf->g.w   = g_w;
-    srf->g.h   = g_h;
+    srf->g.w   = l_w;
+    srf->g.h   = l_h;
     srf->g.color_width = 16;
     srf->g.buf = vram;
     srf->g.m   = g_gbuf_method16;
@@ -239,7 +238,7 @@ void graphic_init(void *vram)
 
     // -------- デスクトップ画面の作成
 
-    sid = new_surface(NO_PARENT_SID, g_w, g_h);
+    sid = new_surface(NO_PARENT_SID, l_w, l_h);
     g_dt_sid = sid;
     srf = sid2srf(sid);
     srf->pid = g_root_pid;
@@ -248,7 +247,7 @@ void graphic_init(void *vram)
 
     // -------- バッファの作成
 
-    sid = new_surface(NO_PARENT_SID, g_w, g_h);
+    sid = new_surface(NO_PARENT_SID, l_w, l_h);
     l_buf_sid = sid;
     srf = sid2srf(sid);
     srf->pid = g_root_pid;
@@ -480,6 +479,18 @@ void free_surface_task(int pid)
 }
 
 
+int  get_screen_w(void)
+{
+    return g_sys_info->w;
+}
+
+
+int  get_screen_h(void)
+{
+    return g_sys_info->h;
+}
+
+
 void set_surface_pos(int sid, int x, int y)
 {
     SURFACE *srf = sid2srf(sid);
@@ -514,8 +525,8 @@ void move_surface(int sid, int x, int y)
 
     conv_screen_cord(srf, &old_x, &old_y, false);
 
-    srf->x = MIN(x, g_w);
-    srf->y = MIN(y, g_h);
+    srf->x = MIN(x, l_w);
+    srf->y = MIN(y, l_h);
 
     update_rect(parent->sid, old_x, old_y, w, h);
     update_surface(srf->sid);
@@ -562,7 +573,7 @@ void update_window(int pid)
 void update_from_buf(void)
 {
     GBUFFER *g = &l_buf_srf->g;
-    g->m->blit(g, 0, 0, g_w, g_h, &l_vram_srf->g, 0, 0, OP_SRC_COPY);
+    g->m->blit(g, 0, 0, l_w, l_h, &l_vram_srf->g, 0, 0, OP_SRC_COPY);
 }
 
 
@@ -595,8 +606,8 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 
     conv_screen_cord(srf, &screen_x, &screen_y, client_cord);
 
-    w = MAXMIN(0, w, g_w - screen_x);
-    h = MAXMIN(0, h, g_h - screen_y);
+    w = MAXMIN(0, w, l_w - screen_x);
+    h = MAXMIN(0, h, l_h - screen_y);
 
     if (w == 0 && h == 0)
         return;

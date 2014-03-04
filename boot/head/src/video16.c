@@ -8,11 +8,12 @@ __asm__ (".code16gcc\n");
 #include "sysinfo.h"
 
 #define VBE_640x480_16bit   (0x0111)
+#define VBE_1024x768_16bit   (0x0117)
 
 /***** モード *****/
-#define VBE_MODE VBE_640x480_16bit
+#define VBE_MODE VBE_1024x768_16bit
 
-#if VBE_MODE == VBE_640x480_16bit
+#if VBE_MODE == VBE_640x480_16bit || VBE_MODE == VBE_1024x768_16bit
 #define COLOR_WIDTH    (16)
 #define MEMORY_PLANES  (6)
 #endif

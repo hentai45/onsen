@@ -57,13 +57,19 @@ MOUSE_DECODE *mouse_decode(unsigned char data);
 
 static MOUSE_DECODE l_mdec;
 
+static unsigned int l_w;
+static unsigned int l_h;
+
 //=============================================================================
 // 公開関数
 
 void mouse_init(void)
 {
-    l_mdec.x = g_w / 2;
-    l_mdec.y = g_h / 2;
+    l_w = get_screen_w();
+    l_h = get_screen_h();
+
+    l_mdec.x = l_w / 2;
+    l_mdec.y = l_h / 2;
 
     l_mdec.phase = 0;
 
@@ -150,12 +156,12 @@ MOUSE_DECODE *mouse_decode(unsigned char data)
         bool change_pos = false;
 
         if (l_mdec.dx != 0) {
-            l_mdec.x = MAXMIN(0, l_mdec.x + l_mdec.dx, g_w);
+            l_mdec.x = MAXMIN(0, l_mdec.x + l_mdec.dx, l_w);
             change_pos = true;
         }
 
         if (l_mdec.dy != 0) {
-            l_mdec.y = MAXMIN(0, l_mdec.y + l_mdec.dy, g_h);
+            l_mdec.y = MAXMIN(0, l_mdec.y + l_mdec.dy, l_h);
             change_pos = true;
         }
 

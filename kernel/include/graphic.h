@@ -31,9 +31,6 @@ enum {
 extern int g_vram_sid;
 extern int g_dt_sid;
 
-extern const int g_w;
-extern const int g_h;
-
 
 void graphic_init(void *vram);
 
@@ -47,7 +44,8 @@ int  new_window_from_buf(int x, int y, int w, int h, char *title,
 void free_surface(int sid);
 void free_surface_task(int pid);
 
-int  get_screen(void);
+int  get_screen_w(void);
+int  get_screen_h(void);
 
 void set_surface_pos(int sid, int x, int y);
 void move_surface(int sid, int x, int y);

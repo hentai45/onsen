@@ -40,7 +40,7 @@ void dbgf(const char *fmt, ...);
 void dbg_clear(void);
 void dbg_seg(void);
 
-void dbg_fault(const char *msg, INT_REGISTERS regs);
+void dbg_fault(const char *msg, int no, INT_REGISTERS regs);
 
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;
@@ -71,7 +71,7 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param);
 // 画面出力
 
 
-#define WIDTH_CH   (39)
+#define WIDTH_CH   (80)
 #define HEIGHT_CH  (28)
 
 static int l_sid = ERROR_SID;
@@ -109,7 +109,7 @@ void debug_main(void)
 {
     int w = WIDTH_CH * HANKAKU_W;
     int h = HEIGHT_CH * HANKAKU_H;
-    l_sid = new_window(0, 0, w, h, "debug");
+    l_sid = new_window(20, 280, w, h, "debug");
 
     is_initialized = 1;
 
@@ -263,7 +263,7 @@ void dbg_seg(void)
 
 
 // 例外（フォールト）が発生したときにデバッグ表示する用の関数
-void dbg_fault(const char *msg, INT_REGISTERS regs)
+void dbg_fault(const char *msg, int no, INT_REGISTERS regs)
 {
     unsigned short bk_fg = fg;
     unsigned short bk_bg = bg;
@@ -281,13 +281,36 @@ void dbg_fault(const char *msg, INT_REGISTERS regs)
     dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n",
             regs.eax, regs.ebx, regs.ecx, regs.edx);
 
-    dbgf("EBP = %X, ESI = %X, EDI = %X, ESP = %X\n",
+    dbgf("EBP = %X, ESI = %X, EDI = %X, ESP = %X\n\n",
             regs.ebp, regs.esi, regs.edi, regs.esp);
 
-    dbgf("ERROR CODE = %X\n", regs.err_code);
+    dbgf("ERROR CODE = %X", regs.err_code);
+    if (no == /* page fault */ 0x0E) {
+        if (regs.err_code & 16)
+            dbgf(" [Present]");
+
+        if (regs.err_code & 8)
+            dbgf(" [Write]");
+
+        if (regs.err_code & 4)
+            dbgf(" [User]");
+
+        if (regs.err_code & 2)
+            dbgf(" [Reserved write]");
+
+        if (regs.err_code & 1)
+            dbgf(" [Instruction Fetch]");
+
+        unsigned long cr2;
+        __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
+        dbgf("\nCR2 = %X\n", cr2);
+    } else {
+        dbgf("\n");
+    }
+
     dbgf("EIP = %X", regs.eip);
-    dbgf(", CS = %d * 8 + %d\n", regs.cs >> 3, regs.cs & 0x07);
-    dbgf("DS = %d * 8 + %d", regs.ds >> 3, regs.ds & 0x07);
+    dbgf(", CS = %d * 8 + %d", regs.cs >> 3, regs.cs & 0x07);
+    dbgf(", DS = %d * 8 + %d", regs.ds >> 3, regs.ds & 0x07);
     dbgf(", ES = %d * 8 + %d\n", regs.es >> 3, regs.es & 0x07);
 
     dbgf("EFLAGS = %X", regs.eflags);
@@ -296,10 +319,6 @@ void dbg_fault(const char *msg, INT_REGISTERS regs)
 
     dbgf("APP ESP = %X", regs.app_esp);
     dbgf(", APP SS = %d * 8 + %d\n", regs.app_ss >> 3, regs.app_ss & 0x07);
-
-    unsigned long cr2;
-    __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
-    dbgf("CR2 = %X", cr2);
 
     fg = bk_fg;
     bg = bk_bg;

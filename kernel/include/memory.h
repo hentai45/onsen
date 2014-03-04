@@ -3,6 +3,8 @@
 #ifndef HEADER_MEMORY
 #define HEADER_MEMORY
 
+#include "sysinfo.h"
+
 //-----------------------------------------------------------------------------
 // メモリマップ
 
@@ -35,6 +37,8 @@
 #define MADDR_FREE_START    (0x00400000)
 
 
+extern SYSTEM_INFO *g_sys_info;
+
 
 //-----------------------------------------------------------------------------
 // メモリ管理
@@ -42,7 +46,7 @@
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user(void *vp_vaddr, int size_B);
+void *mem_alloc_user_page(void *vp_vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);

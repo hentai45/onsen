@@ -23,7 +23,7 @@
 
 #define TASK_NAME_MAX  (16)   // タスク名の最大長 + '\0'
 
-#define DEFAULT_STACK_SIZE  (64 * 1024)
+#define DEFAULT_STACK0_SIZE  (8 * 1024)
 #define DEFAULT_TIMESLICE_MS  (20)
 
 

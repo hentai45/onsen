@@ -9,6 +9,8 @@
 #ifndef HEADER_MEMORY
 #define HEADER_MEMORY
 
+#include "sysinfo.h"
+
 //-----------------------------------------------------------------------------
 // メモリマップ
 
@@ -41,6 +43,8 @@
 #define MADDR_FREE_START    (0x00400000)
 
 
+extern SYSTEM_INFO *g_sys_info;
+
 
 //-----------------------------------------------------------------------------
 // メモリ管理
@@ -48,7 +52,7 @@
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user(void *vp_vaddr, int size_B);
+void *mem_alloc_user_page(void *vp_vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);
@@ -73,6 +77,9 @@ unsigned int mem_total_vfree_B(void);
 #include "stdbool.h"
 #include "str.h"
 #include "sysinfo.h"
+
+
+SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
 
 //-----------------------------------------------------------------------------
 // メモリ管理
@@ -125,8 +132,8 @@ static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
 #define PAGE_MEM_MNG_MAX   (4096)
 
-#define SET_FLG  (true)
-#define NO_FLG   (false)
+#define SET_MNG_FLG  (true)
+#define NO_MNG_FLG   (false)
 
 /**
  * 物理アドレスからビットマップのインデックスに変換
@@ -166,7 +173,7 @@ static int l_bitmap_end;
 static unsigned long l_mfree_B;
 
 
-static void *mem_alloc_page(unsigned int num_pages, bool set_flg);
+static void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg);
 static int page_free(void *maddr);
 
 //=============================================================================
@@ -228,7 +235,7 @@ static void init_byte_mem(void)
 
     unsigned long size_B = BYTE_MEM_BYTES;
     int num_pages = BYTE_TO_PAGE(size_B);
-    void *addr = mem_alloc_page(num_pages, NO_FLG);
+    void *addr = mem_alloc_kernel_page(num_pages, NO_MNG_FLG);
     mem_set_free(l_mng_b, addr, BYTES_TO_8BYTES(size_B));
 }
 
@@ -258,13 +265,13 @@ void *mem_alloc(unsigned int size_B)
     }
 
     if (size_B >= PAGE_SIZE_B - (l_mng_b->info_size * l_mng_b->unit)) {
-        return mem_alloc_page(BYTE_TO_PAGE(size_B), SET_FLG);
+        return mem_alloc_kernel_page(BYTE_TO_PAGE(size_B), SET_MNG_FLG);
     }
 
     void *p = get_free_addr(l_mng_b, BYTES_TO_8BYTES(size_B));
 
     if (p == 0) {
-        return mem_alloc_page(BYTE_TO_PAGE(size_B), SET_FLG);
+        return mem_alloc_kernel_page(BYTE_TO_PAGE(size_B), SET_MNG_FLG);
     }
 
     return p;
@@ -423,13 +430,13 @@ void *mem_alloc_str(const char *s)
 // ページ単位メモリ管理
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg);
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, int flags, bool set_mng_flg);
 
-void *mem_alloc_user(void *vp_vaddr, int size_B)
+void *mem_alloc_user_page(void *vp_vaddr, int size_B, int flags)
 {
     int num_pages = BYTE_TO_PAGE(size_B);
 
-    if (mem_alloc_page_sub(vp_vaddr, num_pages, SET_FLG) < 0) {
+    if (mem_alloc_page_sub(vp_vaddr, num_pages, flags | PTE_US, SET_MNG_FLG) < 0) {
         return 0;
     } else {
         return vp_vaddr;
@@ -440,7 +447,7 @@ void *mem_alloc_user(void *vp_vaddr, int size_B)
 /**
  * @return リニアアドレス。空き容量が足りなければ 0 が返ってくる
  */
-void *mem_alloc_page(unsigned int num_pages, bool set_flg)
+void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg)
 {
     if (num_pages == 0) {
         return 0;
@@ -453,7 +460,7 @@ void *mem_alloc_page(unsigned int num_pages, bool set_flg)
         return 0;
     }
 
-    if (mem_alloc_page_sub(vaddr, num_pages, set_flg) < 0) {
+    if (mem_alloc_page_sub(vaddr, num_pages, PTE_RW, set_mng_flg) < 0) {
         return 0;
     } else {
         return vaddr;
@@ -461,7 +468,7 @@ void *mem_alloc_page(unsigned int num_pages, bool set_flg)
 }
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg)
+static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, int flags, bool set_mng_flg)
 {
     unsigned long vaddr = (unsigned long) vp_vaddr;
     void *vp_maddr;
@@ -475,9 +482,9 @@ static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, bool set_flg)
                     SET_USED_MADDR(vp_maddr);
                     l_mfree_B -= PAGE_SIZE_B;
 
-                    int flg = PTE_RW | PTE_US | PTE_PRESENT;
+                    int flg = flags | PTE_PRESENT;
 
-                    if (set_flg) {
+                    if (set_mng_flg) {
                         if (first == false && num_pages != 1) {
                             flg |= PTE_CONT;
                         }

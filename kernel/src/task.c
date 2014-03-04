@@ -30,7 +30,7 @@
 
 #define TASK_NAME_MAX  (16)   // タスク名の最大長 + '\0'
 
-#define DEFAULT_STACK_SIZE  (64 * 1024)
+#define DEFAULT_STACK0_SIZE  (8 * 1024)
 #define DEFAULT_TIMESLICE_MS  (20)
 
 
@@ -293,13 +293,13 @@ int chopsticks(void)
     __asm__ __volatile__ ("movl %%esp, %0" : "=r" (cur_esp));
     __asm__ __volatile__ ("movl %%ebp, %0" : "=r" (cur_ebp));
 
-    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK_SIZE);
+    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
     unsigned long esp = stack + (cur_esp - g_cur->stack);
 
-    memcpy(stack, g_cur->stack, DEFAULT_STACK_SIZE);
+    memcpy(stack, g_cur->stack, DEFAULT_STACK0_SIZE);
 
     tss->stack = stack;
-    tss->stack_size = DEFAULT_STACK_SIZE;
+    tss->stack_size = DEFAULT_STACK0_SIZE;
     tss->ebp = stack + (cur_ebp - g_cur->stack);
 
     task_run(pid, DEFAULT_TIMESLICE_MS);
@@ -346,19 +346,19 @@ int task_run_app(void *p, unsigned int size, const char *name)
     int pid = task_new(app_name);
 
     /* .text */
-    char *p_code = mem_alloc_user(0, size);
+    char *p_code = (char *) mem_alloc_user_page(0, size, /* flags = */ 0);
     memcpy(p_code, p, size);
 
     /* .data */
-    char *p_data = (char *) mem_alloc_user((void *) esp, stack_and_data_size);
+    char *p_data = (char *) mem_alloc_user_page((void *) esp, stack_and_data_size, PTE_RW);
     memcpy(p_data, p + data_addr, data_size);
 
     /* .bss */
     memset(p_data + data_size, 0, bss_size);
 
     /* stack */
-    unsigned char *stack0 = mem_alloc(DEFAULT_STACK_SIZE);
-    unsigned char *esp0 = stack0 + DEFAULT_STACK_SIZE - 4;
+    unsigned char *stack0 = mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned char *esp0 = stack0 + DEFAULT_STACK0_SIZE;
 
     PDE *pd = create_user_pd();
     set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) 0x1B, (void *) esp + stack_and_data_size, (void *) esp0);
@@ -367,7 +367,7 @@ int task_run_app(void *p, unsigned int size, const char *name)
     t->code   = p_code;
     t->data   = p_data;
     t->stack  = stack0;
-    t->stack_size = DEFAULT_STACK_SIZE;
+    t->stack_size = DEFAULT_STACK0_SIZE;
 
     task_run(pid, DEFAULT_TIMESLICE_MS);
 
@@ -560,14 +560,14 @@ int run_os_task(char *name, void (*main)(void))
 {
     int pid = task_new(name);
 
-    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK_SIZE);
-    unsigned long esp = stack + DEFAULT_STACK_SIZE - 4;
+    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned long esp = stack + DEFAULT_STACK0_SIZE;
 
     set_os_tss(pid, main, esp);
 
     TSS *tss = &l_mng.tss[pid];
     tss->stack = stack;
-    tss->stack_size = DEFAULT_STACK_SIZE;
+    tss->stack_size = DEFAULT_STACK0_SIZE;
 
     task_run(pid, DEFAULT_TIMESLICE_MS);
 
@@ -606,7 +606,7 @@ static void set_os_tss(int pid, void (*f)(void), void *esp)
 static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
 {
     // | 3 は要求者特権レベルを3にするため
-    TSS *tss = set_tss(pid, USER_CS | 3, USER_DS, maddr_pd, vaddr_pd, f,
+    TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
             EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
 
     tss->file_table[0].flags = FILE_FLG_USED;

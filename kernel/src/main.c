@@ -29,8 +29,6 @@
 #include "timer.h"
 
 
-SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
-
 static int active_win_pid = ERROR_PID;
 
 static bool is_shift_on = false;
@@ -77,7 +75,7 @@ static void init_onsen(void)
     void *vram = (void *) VADDR_VRAM;
     graphic_init(vram);  // 画面初期化
     mouse_init();
-    set_mouse_pos(g_w / 2, g_h / 2);
+    set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
 
     init_gui();
 
@@ -95,17 +93,17 @@ static void init_gui(void)
 {
     fill_surface(g_dt_sid, 0x008484);
 
-    test_draw_rainbow();
+    //test_draw_rainbow();
     //test_draw_bitmap();
-    test_draw_textbox();
+    //test_draw_textbox();
 
     update_surface(g_dt_sid);
 }
 
 static void test_draw_rainbow(void)
 {
-    for (int y = 0; y < g_h; y++) {
-        for (int x = 0; x < g_w; x++) {
+    for (int y = 0; y < get_screen_h(); y++) {
+        for (int x = 0; x < get_screen_w(); x++) {
             draw_pixel(g_dt_sid, x, y, RGB32(x % 256, y % 256, 255 - (x % 256)));
         }
     }
@@ -131,7 +129,7 @@ static void test_draw_bitmap(void)
 
 static void test_draw_textbox(void)
 {
-    int sid = new_surface(NO_PARENT_SID, g_w / 4, g_h / 4);
+    int sid = new_surface(NO_PARENT_SID, get_screen_w() / 4, get_screen_h() / 4);
     fill_surface(sid, COL_BLACK);
     set_alpha(sid, 50);
     draw_surface(sid, g_dt_sid, 150, 30, OP_SRC_COPY);

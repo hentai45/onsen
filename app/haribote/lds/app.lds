@@ -1,5 +1,4 @@
-OUTPUT_FORMAT("binary");
-ENTRY(HariMain)
+/* OUTPUT_FORMAT("binary"); */
 
 SECTIONS
 {

@@ -124,7 +124,7 @@ void console_main(void)
 
     int w = WIDTH_CH * HANKAKU_W;
     int h = HEIGHT_CH * HANKAKU_H;
-    l_sid = new_window(320, 0, w, h, "console");
+    l_sid = new_window(700, 280, w, h, "console");
     fill_surface(l_sid, bg);
     update_surface(l_sid);
 

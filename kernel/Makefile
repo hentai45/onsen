@@ -45,7 +45,7 @@ mkfnames : $(MAP)
 $(ONSEN_BIN) : $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) $(LDS) Makefile
 	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) -T $(LDS) -o $(ONSEN_ELF)
 	$(OBJCOPY) -S -O binary $(ONSEN_ELF) $@
-	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.ls
+	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.lst
 
 
 clean :

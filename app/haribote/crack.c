@@ -12,15 +12,21 @@ void HariMain(void)
     api_putintx(ds);
     api_putstr0("\n\n");
 
-    unsigned int *p = (unsigned int *) 0xC0280000;
+    /*
+    // コード領域への書き込み
+    unsigned int *code_p = (unsigned int *) 0;
+    *code_p = 1;
 
+    // OS領域の読み込み
+    unsigned int *os_p = (unsigned int *) 0xC0280000;
     for (int i = 0; i < 12; i++) {
-        api_putintx(p[i]);
+        api_putintx(os_p[i]);
         if (i % 4 == 3)
             api_putstr0("\n");
         else
             api_putstr0(" ");
     }
+    */
 
     api_end();
 }

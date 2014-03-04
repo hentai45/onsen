@@ -2,26 +2,26 @@
  * ページング
  *
  * ## 用語定義
- * * ページ : 4KB 単位のメモリ
- * * 論理アドレス : セグメントアドレスとオフセットアドレスの組
- * * リニアアドレス : セグメント機構により論理アドレスから変換されたアドレス。
+ * - ページ : 4KB 単位のメモリ
+ * - 論理アドレス : セグメントアドレスとオフセットアドレスの組
+ * - リニアアドレス : セグメント機構により論理アドレスから変換されたアドレス。
  *                    プログラム中では名前に vaddr を使用する。
- * * 物理アドレス : 物理的なメモリのアドレス。
+ * - 物理アドレス : 物理的なメモリのアドレス。
  *                  プログラム中では名前に maddr を使用する。
- * * PD : ページディレクトリ。
+ * - PD : ページディレクトリ。
  *        ページテーブルのアドレスを取得するためのテーブル。
- * * PDE : PD のエントリ。上位20ビットは１つのページテーブルのアドレスを表す。
- * * PT : ページテーブル。
+ * - PDE : PD のエントリ。上位20ビットは１つのページテーブルのアドレスを表す。
+ * - PT : ページテーブル。
  *        ページのアドレスを取得するためのテーブル。
- * * PTE : PT のエントリ。上位20ビットは１つのページのアドレスを表す。
+ * - PTE : PT のエントリ。上位20ビットは１つのページのアドレスを表す。
  *
  * ## ページングとは
  * ページ単位を管理する仕組み。
  * 仮想記憶などで使われる。
  *
  * ## 論理アドレスが物理アドレスに変換されるまでの流れ
- * * セグメント機構によって論理アドレスからリニアアドレスに変換される。
- * * ページング機構によってリニアアドレスから物理アドレスに変換される。
+ * - セグメント機構によって論理アドレスからリニアアドレスに変換される。
+ * - ページング機構によってリニアアドレスから物理アドレスに変換される。
  *
  * ## OnSen OS でのセグメント
  * OnSen OS では 「論理アドレス = リニアアドレス」 になるようにセグメントを
@@ -29,19 +29,19 @@
  * セグメントはオフにできない。だから、最低限の設定をしている(gdt.c 参照)。
  *
  * ## リニアアドレス（32ビット）の構成
- * * PD インデックス（上位 10 ビット）
- * * PT インデックス（10 ビット）
- * * ページ内オフセット（下位 12 ビット）
+ * - PD インデックス（上位 10 ビット）
+ * - PT インデックス（10 ビット）
+ * - ページ内オフセット（下位 12 ビット）
  *
  * ## リニアアドレスを物理アドレスに変換する仕組み
- * * CR3 レジスタから PD アドレスを取得する。
- * * PD アドレス + (PD インデックス * 4) = PT アドレス
- * * PT アドレス + (PT インデックス * 4) = ページアドレス
- * * ページアドレス + ページ内オフセット = 物理アドレス
+ * - CR3 レジスタから PD アドレスを取得する。
+ * - PD アドレス + (PD インデックス * 4) = PT アドレス
+ * - PT アドレス + (PT インデックス * 4) = ページアドレス
+ * - ページアドレス + ページ内オフセット = 物理アドレス
  *
  * ## 各タスクでのメモリマップ（アドレスはリニアアドレス）
- * * 0x00000000 - 0xBFFFFFFF : ユーザ空間
- * * 0xC0000000 - 0xFFFFFFFF : カーネル空間（特権レベル0）
+ * - 0x00000000 - 0xBFFFFFFF : ユーザ空間
+ * - 0xC0000000 - 0xFFFFFFFF : カーネル空間（特権レベル0）
  */
 
 
@@ -115,6 +115,7 @@ void paging_dbg(void);
 
 #define MAKE_PTE(maddr, flg)  (((unsigned long) (maddr) & ~0xFFF) | (flg & 0xFFF))
 
+#define BASE_PD_I  VADDR_TO_PD_INDEX(VADDR_BASE)
 
 static PDE *get_pt(int i_pd);
 static PTE *get_pte(void *vp_vaddr);
@@ -149,13 +150,16 @@ void paging_map(void *vp_vaddr, void *vp_maddr, int flg)
         PTE *pt_maddr = (PTE *) mem_alloc_maddr();
 
         int i_pd = VADDR_TO_PD_INDEX(vp_vaddr);
-        int i_os_pd = VADDR_TO_PD_INDEX(VADDR_BASE);
 
-        PDE pt = MAKE_PTE(pt_maddr, flg | PTE_PRESENT);
+        int flags = PTE_RW | PTE_PRESENT;
+        if (i_pd < BASE_PD_I)
+            flags |= PTE_US;
+
+        PDE pt = MAKE_PTE(pt_maddr, flags);
         l_pd[i_pd] = pt;
 
         /* OS領域なら全プロセスのPDに作成したPTを設定する */
-        if (i_pd >= i_os_pd) {
+        if (i_pd >= BASE_PD_I) {
             task_set_pt(i_pd, pt);
         }
 
@@ -203,7 +207,7 @@ PDE *create_user_pd(void)
 
     int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
     void *p = paging_get_maddr(pd);
-    pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_US | PTE_PRESENT);
+    pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_PRESENT);
 
     return pd;
 }
@@ -238,15 +242,13 @@ static PTE *get_pte(void *vp_vaddr)
 
 void app_area_copy(PDE *pd)
 {
-    int i = VADDR_TO_PD_INDEX(VADDR_BASE);
-    memcpy(l_pd, pd, i * 4);
+    memcpy(l_pd, pd, BASE_PD_I * 4);
 }
 
 
 void app_area_clear(void)
 {
-    int i = VADDR_TO_PD_INDEX(VADDR_BASE);
-    memset(l_pd, 0, i * 4);
+    memset(l_pd, 0, BASE_PD_I * 4);
 }
 
 
