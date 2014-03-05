@@ -12,6 +12,8 @@ void entry(void)
     int x = 0, y = 0;
     int step_x = 4, step_y = 0;
 
+    printf("printf: %d %s\n", 32, "test");
+
     draw_text(sid, x, y, 0, TEXT);
     update_screen(sid);
 

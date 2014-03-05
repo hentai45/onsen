@@ -4,6 +4,7 @@
 #define API_EXIT_APP      1
 #define API_GET_MESSAGE   9
 
+#define API_WRITE       10
 
 //-----------------------------------------------------------------------------
 // タイマ

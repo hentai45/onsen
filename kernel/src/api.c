@@ -55,6 +55,8 @@ typedef struct _API_REGISTERS {
  */
 int onsen_api(API_REGISTERS regs)
 {
+    int ret = 0;
+
     int api_no = regs.eax;
     int arg1 = regs.ebx;
     int arg2 = regs.ecx;
@@ -68,10 +70,16 @@ int onsen_api(API_REGISTERS regs)
         break;
 
     case API_GET_MESSAGE:
-        return get_message((MSG *) arg1);
+        ret = get_message((MSG *) arg1);
+        break;
+
+    case API_WRITE:
+        ret = f_write(arg1, (const void *) arg2, arg3);
+        break;
 
     case API_TIMER_NEW:
-        return timer_new();
+        ret = timer_new();
+        break;
 
     case API_TIMER_FREE:
         timer_free(arg1);
@@ -98,7 +106,8 @@ int onsen_api(API_REGISTERS regs)
         break;
 
     case API_CREATE_WINDOW:
-        return new_window(0, 0, arg1, arg2, (char *) arg3);
+        ret = new_window(0, 0, arg1, arg2, (char *) arg3);
+        break;
 
     case API_UPDATE_SCREEN:
         update_surface(arg1);
@@ -113,7 +122,7 @@ int onsen_api(API_REGISTERS regs)
         break;
     }
 
-    return 0;
+    return ret;
 }
 
 

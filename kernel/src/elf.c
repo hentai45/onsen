@@ -181,7 +181,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr, phdr->p_paddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            p_data = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x1000, PTE_RW);
+            p_data = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
             memcpy(p_data, head + phdr->p_offset, phdr->p_filesz);
 
             // BSS 領域を0クリア
@@ -206,7 +206,7 @@ int elf_load(void *p, unsigned int size, const char *name)
 
             // スタックの準備
 
-            p_esp = p_data + BYTE_TO_PAGE(phdr->p_memsz) * PAGE_SIZE_B + 0x1000;
+            p_esp = p_data + BYTE_TO_PAGE(phdr->p_memsz) * PAGE_SIZE_B + 0x8000;
 
             break;
         }
@@ -218,8 +218,8 @@ int elf_load(void *p, unsigned int size, const char *name)
     }
 
     if (p_data == 0) {
-        p_data = (char *) mem_alloc_user_page(0x30000, 0x1000, PTE_RW);
-        p_esp = p_data + 0x1000;
+        p_data = (char *) mem_alloc_user_page(0x30000, 0x8000, PTE_RW);
+        p_esp = p_data + 0x8000;
     }
 
     unsigned char *stack0 = mem_alloc(8 * 1024);
