@@ -23,18 +23,42 @@ void asm_api(void);
 
 
 # API(システムコール)を処理するトラップゲートから呼ばれる
-# C の hrb_api 関数を呼び出す
-asm_hrb_api:
+# C の onsen_api 関数を呼び出す
+asm_api:
+    pushl %es
+    pushl %ds
     pushal
-    pushal
-    call   hrb_api
-    movl   %eax, 60(%esp)  # 戻り値をこの関数の入り口の pushal で積んだ
+    movw  %ss, %ax
+    movw  %ax, %ds         # OS用のセグメントをdsとesに設定する
+    movw  %ax, %es
+    call   onsen_api
+    movl   %eax, 28(%esp)  # 戻り値をこの関数の入り口の pushal で積んだ
                            # eax レジスタに格納する。
-    addl   $32, %esp
     popal
+    popl  %ds
+    popl  %es
     iret
 
 
+# API(システムコール)を処理するトラップゲートから呼ばれる
+# C の hrb_api 関数を呼び出す
+asm_hrb_api:
+    pushl %es
+    pushl %ds
+    pushal
+    movw  %ss, %ax
+    movw  %ax, %ds         # OS用のセグメントをdsとesに設定する
+    movw  %ax, %es
+    call   hrb_api
+    movl   %eax, 28(%esp)  # 戻り値をこの関数の入り口の pushal で積んだ
+                           # eax レジスタに格納する。
+    popal
+    popl  %ds
+    popl  %es
+    iret
+
+
+/*
 # API(システムコール)を処理するトラップゲートから呼ばれる
 # C の onsen_api 関数を呼び出す
 asm_api:
@@ -51,4 +75,4 @@ asm_api:
     addl   $24, %esp
     popal
     iret
-
+*/

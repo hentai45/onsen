@@ -67,13 +67,13 @@ int f_open(const char *name, int flags)
     if (fd == -1)
         return -1;
 
-    if (s_cmp(name, "/dev/tty") == 0 && flags == O_WRONLY){
+    if (strcmp(name, "/dev/tty") == 0 && flags == O_WRONLY){
         task_set_file(fd, f_console);
         return fd;
-    } else if (s_cmp(name, "/dev/keyboard") == 0 && flags == O_RDONLY) {
+    } else if (strcmp(name, "/dev/keyboard") == 0 && flags == O_RDONLY) {
         task_set_file(fd, f_keyboard);
         return fd;
-    } else if (s_cmp(name, "/debug/temp") == 0) {
+    } else if (strcmp(name, "/debug/temp") == 0) {
         task_set_file(fd, f_dbg_temp);
         return fd;
     }

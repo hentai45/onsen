@@ -6,22 +6,19 @@
 #include <stdarg.h>
 #include "file.h"
 
-int  s_len(const char *s);
-void s_cpy(char *s, const char *t);
-void s_cat(char *s, const char *t);
-void s_reverse(char *s);
-int  s_cmp(const char *s, const char *t);
-int  s_ncmp(const char *s, const char *t, int n);
+int  strlen(const char *s);
+char *strcpy(char *s, const char *t);
+char *strcat(char *s, const char *t);
+int  strcmp(const char *s, const char *t);
+int  strncmp(const char *s, const char *t, int n);
 
-void s_to_upper(char *s);
+int  atoi(const char *s);
 
-int  s_atoi(const char *s);
-
-int  s_printf(const char *fmt, ...);
-int  s_fprintf(FILE_T *f, const char *fmt, ...);
-int  s_snprintf(char *s, unsigned int n, const char *fmt, ...);
-int  s_vfprintf(FILE_T *f, const char *fmt, va_list ap);
-int  s_vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
+int  printf(const char *fmt, ...);
+int  fprintf(FILE_T *f, const char *fmt, ...);
+int  snprintf(char *s, unsigned int n, const char *fmt, ...);
+int  vfprintf(FILE_T *f, const char *fmt, va_list ap);
+int  vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 int   memcmp(const void *buf1, const void *buf2, unsigned int);
 void *memcpy(void *dst, const void *src, unsigned int);

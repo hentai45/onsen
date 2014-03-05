@@ -1,5 +1,5 @@
 target remote localhost:1234
 set architecture i386
-symbol-file main/bin/onsen.elf
+symbol-file kernel/bin/onsen.elf
 break *0xC028001B
 c

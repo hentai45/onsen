@@ -18,7 +18,7 @@
 // グラフィック
 //-----------------------------------------------------------------------------
 
-#define API_GET_SCREEN  1000
+#define API_CREATE_WINDOW  1000
 #define API_UPDATE_SCREEN  1001
 #define API_FILL_SURFACE  1002
 #define API_DRAW_TEXT     1005

@@ -106,6 +106,9 @@ int task_set_file(int fd, FILE_T *f);
 
 int is_os_task(int pid);
 
+// TODO: 一時的にstaticをはずしてグローバルにしている
+void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
+TSS *pid2tss(int pid);
 
 extern TSS *g_cur;
 extern int g_pid;
@@ -133,7 +136,6 @@ extern int g_idle_pid;
 #include "timer.h"
 
 
-static TSS *pid2tss(int pid);
 static int pid2tss_sel(int pid);
 
 
@@ -143,7 +145,6 @@ static void idle_main(void);
 
 static void init_tss_seg(void);
 static void set_os_tss(int pid, void (*f)(void), void *esp);
-static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
 static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, void *esp,
         int ss, void *esp0, int ss0);
@@ -603,7 +604,7 @@ static void set_os_tss(int pid, void (*f)(void), void *esp)
 }
 
 
-static void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
+void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
 {
     // | 3 は要求者特権レベルを3にするため
     TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
@@ -649,7 +650,7 @@ static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
 }
 
 
-static TSS *pid2tss(int pid)
+TSS *pid2tss(int pid)
 {
     if (pid < 0 || TASK_MAX <= pid) {
         return 0;

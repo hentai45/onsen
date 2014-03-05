@@ -5,4 +5,13 @@
 
 void api_exit_app(int exit_status);
 
+typedef struct _API_REGISTERS {
+    // asmapi.S で積まれたスタックの内容
+    unsigned int edi, esi, ebp, esp0, ebx, edx, ecx, eax;  // pushal
+    unsigned int ds, es;
+
+    // 以下は、ソフトウェア読み込み時にCPUが自動でpushしたもの
+    unsigned int eip, cs, eflags, esp, ss;
+} API_REGISTERS;
+
 #endif

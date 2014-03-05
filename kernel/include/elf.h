@@ -96,6 +96,6 @@ bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
-int elf_load(void *p, unsigned int size);
+int elf_load(void *p, unsigned int size, const char *name);
 
 #endif

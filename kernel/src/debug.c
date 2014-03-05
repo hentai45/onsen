@@ -87,13 +87,13 @@ static char l_tmp[TMP_SIZE];
 
 static int dbg_write(void *self, const void *buf, int cnt);
 
-FILE_T l_f_debug = { .write = dbg_write};
+FILE_T l_f_debug = { .write = dbg_write };
 FILE_T *f_debug = &l_f_debug;
 
-static int dbg_temp_read(void *self, const void *buf, int cnt);
+static int dbg_temp_read(void *self, void *buf, int cnt);
 static int dbg_temp_write(void *self, const void *buf, int cnt);
 
-FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write};
+FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write };
 FILE_T *f_dbg_temp = &l_f_dbg_temp;
 
 
@@ -203,7 +203,7 @@ static void buf_ch(char ch)
 
 static void buf_str(char *s)
 {
-    for (int i = 0; i < s_len(s); i++) {
+    for (int i = 0; i < strlen(s); i++) {
         buf_ch(s[i]);
     }
 }
@@ -217,7 +217,7 @@ void temp_dbgf(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    s_vfprintf(f_dbg_temp, fmt, ap);
+    vfprintf(f_dbg_temp, fmt, ap);
     va_end(ap);
 }
 
@@ -226,7 +226,7 @@ void dbgf(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    s_vsnprintf(l_tmp, TMP_SIZE, fmt, ap);
+    vsnprintf(l_tmp, TMP_SIZE, fmt, ap);
     va_end(ap);
 
     buf_str(l_tmp);
@@ -308,6 +308,15 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS regs)
         dbgf("\n");
     }
 
+    /*
+    int ds, es, ss, esp;
+    __asm__ __volatile__ ("mov %%ds, %0" : "=r" (ds));
+    __asm__ __volatile__ ("mov %%es, %0" : "=r" (es));
+    __asm__ __volatile__ ("mov %%ss, %0" : "=r" (ss));
+    __asm__ __volatile__ ("mov %%esp, %0" : "=r" (esp));
+    dbgf("%X %X %X %X\n", ds, es, ss, esp);
+    */
+
     dbgf("EIP = %X", regs.eip);
     dbgf(", CS = %d * 8 + %d", regs.cs >> 3, regs.cs & 0x07);
     dbgf(", DS = %d * 8 + %d", regs.ds >> 3, regs.ds & 0x07);
@@ -350,11 +359,11 @@ static int l_temp_buf_i = 0;
 static char l_temp_buf[4096];
 int g_dbg_temp_flg = 0;
 
-static int dbg_temp_read(void *self, const void *buf, int cnt)
+static int dbg_temp_read(void *self, void *buf, int cnt)
 {
     int num_read = (l_temp_buf_i < cnt) ? l_temp_buf_i : cnt;
 
-    num_read = s_snprintf((char *) buf, cnt, "%.*s", num_read, l_temp_buf);
+    num_read = snprintf((char *) buf, cnt, "%.*s", num_read, l_temp_buf);
 
     int from = num_read;
     int to   = 0;
@@ -372,9 +381,9 @@ static int dbg_temp_read(void *self, const void *buf, int cnt)
 static int dbg_temp_write(void *self, const void *buf, int cnt)
 {
     if (g_dbg_temp_flg)
-        return;
+        return 0;
 
-    int num_write = s_snprintf(l_temp_buf + l_temp_buf_i, 4096 - l_temp_buf_i,
+    int num_write = snprintf(l_temp_buf + l_temp_buf_i, 4096 - l_temp_buf_i,
             "%.*s", cnt, (char *) buf);
     l_temp_buf_i += num_write;
     return num_write;

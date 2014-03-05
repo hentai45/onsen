@@ -420,8 +420,8 @@ static void dbg_mem_mng(MEM_MNG *mng)
 
 void *mem_alloc_str(const char *s)
 {
-    void *p = mem_alloc(s_len(s));
-    s_cpy(p, s);
+    void *p = mem_alloc(strlen(s));
+    strcpy(p, s);
     return p;
 }
 

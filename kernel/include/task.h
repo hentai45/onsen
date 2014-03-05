@@ -99,6 +99,9 @@ int task_set_file(int fd, FILE_T *f);
 
 int is_os_task(int pid);
 
+// TODO: 一時的にstaticをはずしてグローバルにしている
+void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
+TSS *pid2tss(int pid);
 
 extern TSS *g_cur;
 extern int g_pid;

@@ -1,5 +1,4 @@
-OUTPUT_FORMAT("binary");
-ENTRY(OnSenMain)
+/* OUTPUT_FORMAT("binary"); */
 
 SECTIONS
 {

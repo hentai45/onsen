@@ -12,7 +12,6 @@ void HariMain(void)
     api_putintx(ds);
     api_putstr0("\n\n");
 
-    /*
     // コード領域への書き込み
     unsigned int *code_p = (unsigned int *) 0;
     *code_p = 1;
@@ -26,7 +25,6 @@ void HariMain(void)
         else
             api_putstr0(" ");
     }
-    */
 
     api_end();
 }

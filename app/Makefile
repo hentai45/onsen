@@ -13,19 +13,15 @@ all :
 	cp $(ONSEN_H) $(INC_DIR)
 	cp $(MSG_H) $(INC_DIR)
 	cp $(KEY_H) $(INC_DIR)
-	$(MAKE) $(BIN_DIR)/hello
-	$(MAKE) $(BIN_DIR)/test
+	$(MAKE) $(BIN_DIR)/a
 	$(MAKE) -C haribote
 
 
-$(BIN_DIR)/hello : $(ONSEN_LIB) $(LDS) hello.c Makefile
-	$(CC) $(CFLAGS) -Wl,-Map=hello.map hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
-
-
-$(BIN_DIR)/test : $(ONSEN_LIB) $(LDS) test.c Makefile
-	$(CC) $(CFLAGS) test.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
+#$(CC) $(CFLAGS) -Wl,-Map=hello.map hello.c -T $(LDS) -o $@ -L$(LIB_DIR) -lonsen
+$(BIN_DIR)/a : $(ONSEN_LIB) $(LDS) a.c Makefile
+	$(CC) $(CFLAGS) -Wl,-Map=hello.map,-eentry a.c -o $@ -L$(LIB_DIR) -lonsen
 
 
 clean :
-	rm -f $(BIN_DIR)/hello $(BIN_DIR)/test
+	rm -f $(BIN_DIR)/a
 	$(MAKE) clean -C haribote

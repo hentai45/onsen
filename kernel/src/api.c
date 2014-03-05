@@ -18,6 +18,15 @@
 
 void api_exit_app(int exit_status);
 
+typedef struct _API_REGISTERS {
+    // asmapi.S で積まれたスタックの内容
+    unsigned int edi, esi, ebp, esp0, ebx, edx, ecx, eax;  // pushal
+    unsigned int ds, es;
+
+    // 以下は、ソフトウェア読み込み時にCPUが自動でpushしたもの
+    unsigned int eip, cs, eflags, esp, ss;
+} API_REGISTERS;
+
 #endif
 
 
@@ -30,6 +39,7 @@ void api_exit_app(int exit_status);
 #include "graphic.h"
 #include "msg.h"
 #include "msg_q.h"
+#include "str.h"
 #include "task.h"
 #include "timer.h"
 
@@ -43,8 +53,15 @@ void api_exit_app(int exit_status);
  *
  * asmapi.S から呼ばれる
  */
-int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
+int onsen_api(API_REGISTERS regs)
 {
+    int api_no = regs.eax;
+    int arg1 = regs.ebx;
+    int arg2 = regs.ecx;
+    int arg3 = regs.edx;
+    int arg4 = regs.esi;
+    int arg5 = regs.edi;
+
     switch (api_no) {
     case API_EXIT_APP:
         api_exit_app(arg1);
@@ -65,23 +82,23 @@ int onsen_api(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
         break;
 
     case API_DBG_STR:
-        dbgf((char *) arg1);
+        printf((char *) arg1);
         break;
 
     case API_DBG_INT:
-        dbgf("%d", arg1);
+        printf("%d", arg1);
         break;
 
     case API_DBG_INTX:
-        dbgf("%X", arg1);
+        printf("%X", arg1);
         break;
 
     case API_DBG_NEWLINE:
-        dbgf("\n");
+        printf("\n");
         break;
 
-    case API_GET_SCREEN:
-        return 0;
+    case API_CREATE_WINDOW:
+        return new_window(0, 0, arg1, arg2, (char *) arg3);
 
     case API_UPDATE_SCREEN:
         update_surface(arg1);

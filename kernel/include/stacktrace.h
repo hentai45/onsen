@@ -7,7 +7,7 @@
 
 
 void init_func_names(void);
-void stack_trace(unsigned int max_frames, FILE_T *f);
+void stacktrace(unsigned int max_frames, FILE_T *f);
 
 
 #endif

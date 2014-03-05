@@ -10,9 +10,10 @@ API_INC_DIR = ../api/$(INC_DIR)
 
 ONSEN_BIN = $(BIN_DIR)/onsen.sys
 ONSEN_ELF = $(BIN_DIR)/onsen.elf
-LDS = $(LDS_DIR)/os.lds
-MAP = onsen.map
-FNAMES = $(BIN_DIR)/fnames.bin
+LDS       = $(LDS_DIR)/os.lds
+SYMBOLS   = $(BIN_DIR)/symbols.txt
+MAP       = $(BIN_DIR)/onsen.map
+FNAMES    = $(BIN_DIR)/fnames.bin
 
 AS_SRCS := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.S))
 AS_SRCS += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/mem/*.S))
@@ -35,7 +36,7 @@ mkhdr :
 
 
 mkfnames : $(MAP)
-	$(MKFNAMES) $(MAP) $(FNAMES)
+	$(MKFNAMES) $(SYMBOLS) $(FNAMES)
 
 
 # objcopyで巨大なファイルができたなら.note.gnu.build-idなどの余計なセクションが
@@ -44,6 +45,7 @@ mkfnames : $(MAP)
 # $(OBJCOPY) -S -O binary $(BIN_DIR)/temp.elf $@
 $(ONSEN_BIN) : $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) $(LDS) Makefile
 	$(CC) $(CFLAGS) -Wl,-Map=$(MAP) $(AS_OBJS) $(C_OBJS) $(CPP_OBJS) -T $(LDS) -o $(ONSEN_ELF)
+	nm $(ONSEN_ELF) > $(SYMBOLS)
 	$(OBJCOPY) -S -O binary $(ONSEN_ELF) $@
 	$(OBJDUMP) -d $(AS_OBJS) $(C_OBJS) >$(BIN_DIR)/onsen.lst
 

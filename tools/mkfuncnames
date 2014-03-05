@@ -8,37 +8,27 @@ import re
 import struct
 from sys import argv
 
-dot_text_re = re.compile(' {16}0x(.{8}) {16}(.+)')
-dot_text_re2 = re.compile('.{16}0x(.{8}).*')
+dot_text_re = re.compile('(.{8}) [tT] (.+)')
 
-def main(map_file_name, out_file_name):
-    if not os.path.exists(map_file_name):
+def main(symbols_file_name, out_file_name):
+    if not os.path.exists(symbols_file_name):
         return
 
-    in_dot_text = False
-    for line in open(map_file_name, 'r'):
-        if in_dot_text is False and line.startswith('.text'):
-            in_dot_text = True
-            f = open(out_file_name, 'wb')
+    funcs = []
 
-        if in_dot_text:
-            if line.startswith('.text') == False and line.startswith('.'):
-                m = dot_text_re2.match(line)
-                if m:
-                    addr = int(m.group(1), 16)
-                    name = 'unknown func'
-                    f.write(struct.pack('I32s', addr, name))
-                f.close()
-                return
+    for line in open(symbols_file_name, 'r'):
+        m = dot_text_re.match(line)
 
-            m = dot_text_re.match(line)
-            if m:
-                addr = int(m.group(1), 16)
-                name = m.group(2)
-                f.write(struct.pack('I32s', addr, name))
+        if m:
+            funcs.append([int(m.group(1), 16), m.group(2)])
 
+    funcs.sort(key=lambda x: x[0])
+
+    f = open(out_file_name, 'wb')
+    for i in range(len(funcs)):
+        f.write(struct.pack('I32s', funcs[i][0], funcs[i][1]))
+    f.close()
 
 if __name__ == '__main__':
     main(argv[1], argv[2])
-    #main('../main/onsen.map', OUT_FILE_NAME)
 

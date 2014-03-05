@@ -36,11 +36,12 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) $(APP_BIN)/test test.bmp $(HRBS)
+$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) test.bmp $(HRBS) $(APP_BIN)/a
 	mformat -f 1440 -C -B $(IPL) -i $@ ::
 	mcopy $(ONSEN_SYS) -i $@ ::
 	mcopy $(FNAMES) -i $@ ::
 	mcopy $(HRBS) -i $@ ::
+	mcopy $(APP_BIN)/a -i $@ ::
 
 
 mount : $(IMG)

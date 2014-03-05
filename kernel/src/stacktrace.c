@@ -13,7 +13,7 @@
 
 
 void init_func_names(void);
-void stack_trace(unsigned int max_frames, FILE_T *f);
+void stacktrace(unsigned int max_frames, FILE_T *f);
 
 
 #endif
@@ -58,10 +58,10 @@ void init_func_names(void)
 
 
 // http://wiki.osdev.org/Stack_Trace
-void stack_trace(unsigned int max_frames, FILE_T *f)
+void stacktrace(unsigned int max_frames, FILE_T *f)
 {
     unsigned int *ebp = &max_frames - 2;
-    s_fprintf(f, "stack trace:\n");
+    fprintf(f, "stack trace:\n");
     for(unsigned int frame = 0; frame < max_frames; ++frame)
     {
         unsigned int eip = ebp[1];
@@ -71,7 +71,7 @@ void stack_trace(unsigned int max_frames, FILE_T *f)
         ebp = (unsigned int *) ebp[0];
         //unsigned int *arguments = &ebp[2];
         char *name = get_func_name(eip);
-        s_fprintf(f, "  %#X: %.32s\n", eip, name);
+        fprintf(f, "  %#X: %.32s\n", eip, name);
     }
 }
 
@@ -84,10 +84,10 @@ static char *get_func_name(unsigned int addr)
         return name;
 
     for (int i = 0; i < l_num_fnames; i++) {
-        name = l_func_names[i].name;
-
         if (l_func_names[i].addr >= addr)
             break;
+
+        name = l_func_names[i].name;
     }
 
     return name;

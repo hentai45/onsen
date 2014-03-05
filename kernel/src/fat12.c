@@ -122,7 +122,7 @@ int fat12_search_file(FILEINFO *fi, char *fname)
         if ((fi[i].type & 0x18) != 0)
             continue;
 
-        if (s_ncmp((char *) fi[i].name, s, 11) == 0)
+        if (strncmp((char *) fi[i].name, s, 11) == 0)
             // 見つかった
             return i;
     }
