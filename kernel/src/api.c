@@ -30,10 +30,8 @@ typedef struct _API_REGISTERS {
 #endif
 
 
-// API 番号と機能の対応などが書かれたヘッダ。/api/include
-#include "onsen/apino.h"
-
 #include "asmfunc.h"
+#include "apino.h"
 #include "debug.h"
 #include "gdt.h"
 #include "graphic.h"
@@ -65,7 +63,7 @@ int onsen_api(API_REGISTERS regs)
     int arg5 = regs.edi;
 
     switch (api_no) {
-    case API_EXIT_APP:
+    case API_EXIT:
         api_exit_app(arg1);
         break;
 
@@ -89,27 +87,11 @@ int onsen_api(API_REGISTERS regs)
         timer_start(arg1, arg2);
         break;
 
-    case API_DBG_STR:
-        printf((char *) arg1);
-        break;
-
-    case API_DBG_INT:
-        printf("%d", arg1);
-        break;
-
-    case API_DBG_INTX:
-        printf("%X", arg1);
-        break;
-
-    case API_DBG_NEWLINE:
-        printf("\n");
-        break;
-
     case API_CREATE_WINDOW:
         ret = new_window(0, 0, arg1, arg2, (char *) arg3);
         break;
 
-    case API_UPDATE_SCREEN:
+    case API_UPDATE_SURFACE:
         update_surface(arg1);
         break;
 
@@ -117,8 +99,47 @@ int onsen_api(API_REGISTERS regs)
         fill_surface(arg1, arg2);
         break;
 
+    case API_DRAW_PIXEL:
+        draw_pixel(arg1, arg2, arg3, arg4);
+        break;
+
+    case API_DRAW_LINE:
+        {
+            POINT *pt0 = (POINT *) arg2;
+            POINT *pt1 = (POINT *) arg3;
+            draw_line(arg1, pt0->x, pt0->y, pt1->x, pt1->y, arg4);
+        }
+        break;
+
     case API_DRAW_TEXT:
         draw_text(arg1, arg2, arg3, arg4, (char *) arg5);
+        break;
+
+    case API_GETKEY:
+        if (arg1 == 0) {
+            MSG msg;
+            while (peek_message(&msg)) {
+                if (msg.message == MSG_KEYDOWN && msg.u_param == 0x1C) {
+                    ret = '\n';
+                    break;
+                } else if (msg.message == MSG_CHAR) {
+                    ret = msg.u_param;
+                    break;
+                }
+            }
+        } else {
+            MSG msg;
+            while (get_message(&msg)) {
+                if (msg.message == MSG_KEYDOWN && msg.u_param == 0x1C) {
+                    ret = '\n';
+                    break;
+                } else if (msg.message == MSG_CHAR) {
+                    ret = msg.u_param;
+                    break;
+                }
+            }
+        }
+
         break;
     }
 

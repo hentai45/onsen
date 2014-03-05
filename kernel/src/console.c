@@ -500,7 +500,7 @@ static void cmd_dbg(char *name)
         g_dbg_temp_flg = 1;
         int fd = f_open("/debug/temp", O_RDONLY);
         char buf[4096];
-        int ret = f_read(fd, buf, 4096);
+        f_read(fd, buf, 4096);
         dbgf("%.*s\n", 4096, buf);
         g_dbg_temp_flg = 0;
     } else {
@@ -549,8 +549,6 @@ static int cmd_app(char *cmd_name, int bgp)
 
     if (is_elf((Elf_Ehdr *) p)) {
         child_pid = elf_load(p, fi->size, fi->name);
-    } else if (strncmp(p + 4, "Hari", 4) == 0) {
-        child_pid = task_run_app(p, fi->size, fi->name);
     } else {
         dbgf("%.4s\n", p + 4);
         return -1;

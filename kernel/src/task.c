@@ -107,7 +107,7 @@ int task_set_file(int fd, FILE_T *f);
 int is_os_task(int pid);
 
 // TODO: 一時的にstaticをはずしてグローバルにしている
-void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0);
+void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
 TSS *pid2tss(int pid);
 
 extern TSS *g_cur;
@@ -144,10 +144,10 @@ extern int timer_ts_tid(void);
 static void idle_main(void);
 
 static void init_tss_seg(void);
-static void set_os_tss(int pid, void (*f)(void), void *esp);
+static void set_os_tss(int pid, void (*f)(void), unsigned long esp);
 static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
-        void (*f)(void), unsigned long eflags, void *esp,
-        int ss, void *esp0, int ss0);
+        void (*f)(void), unsigned long eflags, unsigned long esp,
+        int ss, unsigned long esp0, int ss0);
 
 
 TSS *g_cur;
@@ -288,7 +288,7 @@ int chopsticks(void)
     tss->flags = TASK_FLG_ALLOC;
     tss->pid   = pid;
     tss->ppid  = g_cur->pid;
-    tss->eip   = &&new_task_start;
+    tss->eip   = (unsigned long) &&new_task_start;
 
     unsigned long cur_esp, cur_ebp;
     __asm__ __volatile__ ("movl %%esp, %0" : "=r" (cur_esp));
@@ -297,7 +297,7 @@ int chopsticks(void)
     unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
     unsigned long esp = stack + (cur_esp - g_cur->stack);
 
-    memcpy(stack, g_cur->stack, DEFAULT_STACK0_SIZE);
+    memcpy((void *) stack, (void *) g_cur->stack, DEFAULT_STACK0_SIZE);
 
     tss->stack = stack;
     tss->stack_size = DEFAULT_STACK0_SIZE;
@@ -327,52 +327,6 @@ void task_run(int pid, int timeslice_ms)
     t->timeslice_ms = timeslice_ms;
     l_mng.run[l_mng.num_running] = t;
     l_mng.num_running++;
-}
-
-
-int task_run_app(void *p, unsigned int size, const char *name)
-{
-    HRB_HEADER *hdr = (HRB_HEADER *) p;
-
-    int stack_and_data_size  = hdr->stack_and_data_size;
-    int esp                  = hdr->dst_data;
-    int bss_size             = hdr->bss_size;
-    int data_size            = hdr->data_size;
-    int data_addr            = hdr->src_data;
-
-    char app_name[9];
-    memcpy(app_name, name, 8);
-    app_name[8] = 0;
-
-    int pid = task_new(app_name);
-
-    /* .text */
-    char *p_code = (char *) mem_alloc_user_page(0, size, /* flags = */ 0);
-    memcpy(p_code, p, size);
-
-    /* .data */
-    char *p_data = (char *) mem_alloc_user_page((void *) esp, stack_and_data_size, PTE_RW);
-    memcpy(p_data, p + data_addr, data_size);
-
-    /* .bss */
-    memset(p_data + data_size, 0, bss_size);
-
-    /* stack */
-    unsigned char *stack0 = mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned char *esp0 = stack0 + DEFAULT_STACK0_SIZE;
-
-    PDE *pd = create_user_pd();
-    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) 0x1B, (void *) esp + stack_and_data_size, (void *) esp0);
-
-    TSS *t = pid2tss(pid);
-    t->code   = p_code;
-    t->data   = p_data;
-    t->stack  = stack0;
-    t->stack_size = DEFAULT_STACK0_SIZE;
-
-    task_run(pid, DEFAULT_TIMESLICE_MS);
-
-    return pid;
 }
 
 
@@ -595,7 +549,7 @@ static void init_tss_seg(void)
 }
 
 
-static void set_os_tss(int pid, void (*f)(void), void *esp)
+static void set_os_tss(int pid, void (*f)(void), unsigned long esp)
 {
     TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
             EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
@@ -604,7 +558,7 @@ static void set_os_tss(int pid, void (*f)(void), void *esp)
 }
 
 
-void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp, void *esp0)
+void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0)
 {
     // | 3 は要求者特権レベルを3にするため
     TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
@@ -621,8 +575,8 @@ void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), void *esp
 
 
 static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
-        void (*f)(void), unsigned long eflags, void *esp,
-        int ss, void *esp0, int ss0)
+        void (*f)(void), unsigned long eflags, unsigned long esp,
+        int ss, unsigned long esp0, int ss0)
 {
     if (pid < 0 || TASK_MAX <= pid) {
         return 0;
@@ -638,12 +592,12 @@ static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
     tss->cs = cs;
     tss->eip = (unsigned long) f;
     tss->eflags = eflags;
-    tss->esp = (unsigned long) esp;
+    tss->esp = esp;
     tss->ds = tss->es = tss->fs = tss->gs = ds;
     tss->ss = ss;
 
     // 特権レベル0に移行したときのスタック領域を設定する
-    tss->esp0 = (unsigned long) esp0;
+    tss->esp0 = esp0;
     tss->ss0 = ss0;
 
     return tss;

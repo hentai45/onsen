@@ -13,6 +13,8 @@
 SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) ADDR_SYS_INFO;
 
 
+unsigned int memtest(unsigned int start, unsigned int end);
+
 static void move_disk_data(void);
 static void move_onsensys(void);
 void paging_init(void);

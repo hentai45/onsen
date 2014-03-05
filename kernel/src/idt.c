@@ -8,9 +8,6 @@
 #ifndef HEADER_IDT
 #define HEADER_IDT
 
-// はりぼて互換のAPIを呼び出す時の割り込み番号
-#define IDT_HRB_API_NO  (0x40)
-
 // API(システムコール)を呼び出すときの割り込み番号。44は大分県の都道府県コード
 #define IDT_API_NO  (0x44)
 
@@ -29,10 +26,6 @@ void set_gate_desc(int no, unsigned short sel, void (*f)(void),
 #include "asmapi.h"
 #include "memory.h"
 #include "gdt.h"
-
-
-#define SEG_TYPE_INTR_GATE  (0x8E)
-#define SEG_TYPE_TRAP_GATE  (0x8F)
 
 
 // SET_INTR_GATE(0A) での展開なら以下のようになる。
@@ -102,7 +95,6 @@ void idt_init(void)
     // ２つの違いはこれのみ
 
     // システムコールのためのゲートを設定
-    set_gate_desc(IDT_HRB_API_NO, KERNEL_CS, asm_hrb_api, 0, SEG_TYPE_TRAP_GATE, 3);
     set_gate_desc(IDT_API_NO, KERNEL_CS, asm_api, 0, SEG_TYPE_TRAP_GATE, 3);
 }
 

@@ -52,7 +52,7 @@ extern SYSTEM_INFO *g_sys_info;
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user_page(void *vp_vaddr, int flags, int size_B);
+void *mem_alloc_user_page(unsigned long vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);
@@ -161,8 +161,6 @@ static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 #define BITMAP_ST MADDR2IDX(MADDR_FREE_START)
 
 static MEM_MNG *l_mng_v = (MEM_MNG *) VADDR_VMEM_MNG;
-
-static void *get_free_maddr(unsigned int num_pages);
 
 // 物理アドレスを管理するためのビットマップ。使用中なら0、空きなら1
 static unsigned long *l_bitmap = (unsigned long *) VADDR_BITMAP_START;
@@ -430,16 +428,19 @@ void *mem_alloc_str(const char *s)
 // ページ単位メモリ管理
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, int flags, bool set_mng_flg);
+static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, bool set_mng_flg);
 
-void *mem_alloc_user_page(void *vp_vaddr, int size_B, int flags)
+void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
 {
-    int num_pages = BYTE_TO_PAGE(size_B);
+    int fraction = vaddr & 0xFFF;
+    vaddr &= ~0xFFF;
 
-    if (mem_alloc_page_sub(vp_vaddr, num_pages, flags | PTE_US, SET_MNG_FLG) < 0) {
+    int num_pages = BYTE_TO_PAGE(size_B + fraction);
+
+    if (mem_alloc_page_sub(vaddr, num_pages, flags | PTE_US, SET_MNG_FLG) < 0) {
         return 0;
     } else {
-        return vp_vaddr;
+        return (void *) vaddr;
     }
 }
 
@@ -460,7 +461,7 @@ void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg)
         return 0;
     }
 
-    if (mem_alloc_page_sub(vaddr, num_pages, PTE_RW, set_mng_flg) < 0) {
+    if (mem_alloc_page_sub((unsigned long) vaddr, num_pages, PTE_RW, set_mng_flg) < 0) {
         return 0;
     } else {
         return vaddr;
@@ -468,9 +469,8 @@ void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg)
 }
 
 
-static int mem_alloc_page_sub(void *vp_vaddr, int num_pages, int flags, bool set_mng_flg)
+static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, bool set_mng_flg)
 {
-    unsigned long vaddr = (unsigned long) vp_vaddr;
     void *vp_maddr;
     bool first = true;
 

@@ -65,35 +65,30 @@ void send_window_deactive_msg(int pid_recieve, int pid);
 #define MSG_RAW_MOUSE  5
 
 
-// ---- 左クリックメッセージ
+// ---- クリックメッセージ
 // l_param : 下位16ビット：x, 上位16ビット：y
-#define MSG_LEFT_CLICK  6
-
-
-// ---- 右クリックメッセージ
-// l_param : 下位16ビット：x, 上位16ビット：y
-#define MSG_RIGHT_CLICK  7
-
-
-// ---- 中央クリックメッセージ
-// l_param : 下位16ビット：x, 上位16ビット：y
-#define MSG_CENTER_CLICK  8
+#define MSG_LEFT_DOWN     6
+#define MSG_LEFT_UP       7
+#define MSG_RIGHT_DOWN    8
+#define MSG_RIGHT_UP      9
+#define MSG_CENTER_DOWN  10
+#define MSG_CENTER_UP    11
 
 
 // ---- 子タスクの終了通知メッセージ
 // u_param : 子タスクの PID
 // l_param : 終了ステータス
-#define MSG_NOTIFY_CHILD_EXIT   9
+#define MSG_NOTIFY_CHILD_EXIT   12
 
 
 // ---- ウィンドウアクティブメッセージ
 // u_param : アクティブになったウィンドウの PID
-#define MSG_WINDOW_ACTIVE    10
+#define MSG_WINDOW_ACTIVE    13
 
 
 // ---- ウィンドウ非アクティブメッセージ
 // u_param : 非アクティブウィンドウの PID
-#define MSG_WINDOW_DEACTIVE    11
+#define MSG_WINDOW_DEACTIVE    14
 
 
 #endif

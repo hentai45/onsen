@@ -84,57 +84,11 @@ static void init_onsen(void)
 }
 
 
-static void test_draw_rainbow(void);
-static void test_draw_bitmap(void);
-static void test_draw_textbox(void);
-static void test_draw_window(void);
-
 static void init_gui(void)
 {
     fill_surface(g_dt_sid, 0x008484);
 
-    //test_draw_rainbow();
-    //test_draw_bitmap();
-    //test_draw_textbox();
-
     update_surface(g_dt_sid);
-}
-
-static void test_draw_rainbow(void)
-{
-    for (int y = 0; y < get_screen_h(); y++) {
-        for (int x = 0; x < get_screen_w(); x++) {
-            draw_pixel(g_dt_sid, x, y, RGB32(x % 256, y % 256, 255 - (x % 256)));
-        }
-    }
-}
-
-static void test_draw_bitmap(void)
-{
-    FILEINFO *finfo = fat12_get_file_info();
-    int i_fi = fat12_search_file(finfo, "test.bmp");
-
-    if (i_fi >= 0) {
-        FILEINFO *fi = &finfo[i_fi];
-
-        char *p = (char *) mem_alloc(fi->size);
-        fat12_load_file(fi->clustno, fi->size, p);
-
-        int bmp_sid = load_bmp(p, fi->size);
-        draw_surface(bmp_sid, g_dt_sid, 250, 250, OP_SRC_COPY);
-
-        mem_free(p);
-    }
-}
-
-static void test_draw_textbox(void)
-{
-    int sid = new_surface(NO_PARENT_SID, get_screen_w() / 4, get_screen_h() / 4);
-    fill_surface(sid, COL_BLACK);
-    set_alpha(sid, 50);
-    draw_surface(sid, g_dt_sid, 150, 30, OP_SRC_COPY);
-
-    draw_text(g_dt_sid, 155, 35, COL_WHITE, "HELLO");
 }
 
 
@@ -191,6 +145,9 @@ static void mouse_handler(unsigned long data)
         return;
     }
 
+    MSG msg;
+    msg.l_param = mdec->y << 16 | mdec->x;
+
     if (mdec->change_pos) {
         set_mouse_pos(mdec->x, mdec->y);
     }
@@ -199,40 +156,52 @@ static void mouse_handler(unsigned long data)
         // left button down
         l_left_down = true;
         graphic_left_down(mdec->x, mdec->y);
+
+        msg.message = MSG_LEFT_DOWN;
+        msg_q_put(active_win_pid, &msg);
     } else if ( ! mdec->btn_left && l_left_down) {
         // left button up
         l_left_down = false;
         graphic_left_up(mdec->x, mdec->y);
+
+        msg.message = MSG_LEFT_UP;
+        msg_q_put(active_win_pid, &msg);
     } else {
         // left button drag
         graphic_left_drag(mdec->x, mdec->y);
     }
 
-    /*
-    if (active_win_pid == ERROR_PID)
-        return;
+    if (mdec->btn_right && ! l_right_down) {
+        // right button down
+        l_right_down = true;
 
-    MSG msg;
-    msg.l_param = mdec->y << 16 | mdec->x;
-
-    if (mdec->btn_left) {
-        msg.message = MSG_LEFT_CLICK;
-
+        msg.message = MSG_RIGHT_DOWN;
         msg_q_put(active_win_pid, &msg);
+    } else if ( ! mdec->btn_right && l_right_down) {
+        // right button up
+        l_right_down = false;
+
+        msg.message = MSG_RIGHT_UP;
+        msg_q_put(active_win_pid, &msg);
+    } else {
+        // right button drag
     }
 
-    if (mdec->btn_right) {
-        msg.message = MSG_RIGHT_CLICK;
+    if (mdec->btn_center && ! l_center_down) {
+        // middle button down
+        l_center_down = true;
 
+        msg.message = MSG_CENTER_DOWN;
         msg_q_put(active_win_pid, &msg);
-    }
+    } else if ( ! mdec->btn_center && l_center_down) {
+        // middle button up
+        l_center_down = false;
 
-    if (mdec->btn_center) {
-        msg.message = MSG_CENTER_CLICK;
-
+        msg.message = MSG_CENTER_UP;
         msg_q_put(active_win_pid, &msg);
+    } else {
+        // middle button drag
     }
-    */
 }
 
 

@@ -163,8 +163,8 @@ int elf_load(void *p, unsigned int size, const char *name)
                 return -1;
             }
 
-            dbgf(".text: offset=%#X, vaddr=%#X, paddr=%#X, size=%Z, msize=%Z\n",
-                    phdr->p_offset, phdr->p_vaddr, phdr->p_paddr,
+            dbgf(".text: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
             p_code = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
@@ -177,12 +177,12 @@ int elf_load(void *p, unsigned int size, const char *name)
                 return -1;
             }
 
-            dbgf(".data: offset=%#X, vaddr=%#X, paddr=%#X, size=%Z, msize=%Z\n",
-                    phdr->p_offset, phdr->p_vaddr, phdr->p_paddr,
+            dbgf(".data: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
             p_data = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
-            memcpy(p_data, head + phdr->p_offset, phdr->p_filesz);
+            memcpy(p_data + (phdr->p_vaddr & 0xFFF), head + phdr->p_offset, phdr->p_filesz);
 
             // BSS 領域を0クリア
 
@@ -190,14 +190,15 @@ int elf_load(void *p, unsigned int size, const char *name)
             if (bss_size > 0) {
                 // .bss セクションと同じか確認
                 if (bss_shdr && has_section(phdr, bss_shdr)) {
-                    if (bss_shdr->sh_addr == head + phdr->p_offset + phdr->p_filesz) {
+                    if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
                         if (bss_shdr->sh_size == bss_size) {
                             memset(p_data + phdr->p_filesz, 0, bss_size);
                         } else {
                             dbgf("bss size is different");
                         }
                     } else {
-                        dbgf("bss->addr != head + offset + filesz\n");
+                        dbgf("bss->addr != data->addr + data->filesz\n");
+                        dbgf("%#X != %#X + %X (%p)\n", bss_shdr->sh_addr, phdr->p_vaddr, phdr->p_filesz, phdr->p_vaddr + phdr->p_filesz);
                     }
                 } else {
                     dbgf("p_filesz != p_memsz, but file doesn't have .bss section\n");
@@ -206,7 +207,9 @@ int elf_load(void *p, unsigned int size, const char *name)
 
             // スタックの準備
 
-            p_esp = p_data + BYTE_TO_PAGE(phdr->p_memsz) * PAGE_SIZE_B + 0x8000;
+            p_esp = p_data + BYTE_TO_PAGE(phdr->p_memsz + (phdr->p_vaddr & 0xFFF)) * PAGE_SIZE_B + 0x8000;
+
+            dbgf("start stack: %#X\n", p_esp);
 
             break;
         }
@@ -224,7 +227,6 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     unsigned char *stack0 = mem_alloc(8 * 1024);
     unsigned char *esp0 = stack0 + (8 * 1024);
-
  
 
     char app_name[9];
@@ -234,12 +236,12 @@ int elf_load(void *p, unsigned int size, const char *name)
     int pid = task_new(app_name);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) ehdr->e_entry, (void *) p_esp, (void *) esp0);
+    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) ehdr->e_entry, (unsigned long) p_esp, (unsigned long) esp0);
 
     TSS *t = pid2tss(pid);
-    t->code   = p_code;
-    t->data   = p_data;
-    t->stack  = stack0;
+    t->code   = (unsigned long) p_code;
+    t->data   = (unsigned long) p_data;
+    t->stack  = (unsigned long) stack0;
     t->stack_size = 8 * 1024;
 
     task_run(pid, 20);

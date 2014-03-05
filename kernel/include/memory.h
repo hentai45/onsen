@@ -46,7 +46,7 @@ extern SYSTEM_INFO *g_sys_info;
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user_page(void *vp_vaddr, int flags, int size_B);
+void *mem_alloc_user_page(unsigned long vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);

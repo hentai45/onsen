@@ -27,6 +27,9 @@ enum {
     OP_SRC_INVERT
 };
 
+typedef struct _POINT {
+    int x, y;
+} POINT;
 
 extern int g_vram_sid;
 extern int g_dt_sid;
@@ -88,8 +91,5 @@ void graphic_left_drag(int x, int y);
 void switch_window(void);
 
 void graphic_dbg(void);
-
-int hrb_sid2addr(int sid);
-int hrb_addr2sid(int addr);
 
 #endif

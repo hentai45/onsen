@@ -102,6 +102,7 @@ void paging_dbg(void);
 #include "graphic.h"
 #include "memory.h"
 #include "str.h"
+#include "task.h"
 
 
 //-----------------------------------------------------------------------------
@@ -171,7 +172,7 @@ void paging_map(void *vp_vaddr, void *vp_maddr, int flg)
         pte = &pt_vaddr[i_pt];
     }
 
-    *pte = MAKE_PTE(vp_maddr, flg | PTE_PRESENT);
+    *pte = MAKE_PTE(vp_maddr, (flg | PTE_PRESENT));
 }
 
 

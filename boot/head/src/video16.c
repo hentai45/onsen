@@ -116,7 +116,7 @@ static int get_svga_info(SVGA_INFO *svga)
         : "r"(svga_segment),
           "0"(0x4F00),
           "D"(svga_offset)
-        : "%bx"
+        : "%bx", "memory"
     );
 
     if (status & 0x004F) {
@@ -160,7 +160,7 @@ static int get_svga_mode_info(SVGA_MODE_INFO *svga_mode)
           "0"(0x4F01),
           "c"(VBE_MODE),
           "D"(svga_offset)
-        : "%bx"
+        : "%bx", "memory"
     );
 
     status &= 0x004F;

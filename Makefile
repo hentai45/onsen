@@ -1,3 +1,5 @@
+include Makefile.inc
+
 # ソフトウェア
 QEMU = qemu-system-i386
 QEMU_FLAGS = -m 32 -localtime -vga std
@@ -5,19 +7,17 @@ BOCHS = bochs
 
 
 # ディレクトリ
-BIN_DIR = bin
-APP_BIN = app/bin
-HRB_APP_BIN = app/haribote/bin
+GDBINIT_DIR = etc/gdbinit
 
 
 # ファイル
-IMG = $(BIN_DIR)/a.img
-IPL = boot/ipl/bin/ipl.bin
-HEAD = boot/head/bin/head.bin
-ONSEN = kernel/bin/onsen.sys
+IMG    = $(BIN_DIR)/a.img
+IPL    = boot/ipl/$(BIN_DIR)/ipl.bin
+HEAD   = boot/head/$(BIN_DIR)/head.bin
+ONSEN  = kernel/$(BIN_DIR)/onsen.sys
 ONSEN_SYS = $(BIN_DIR)/onsen.sys
 FNAMES = kernel/$(BIN_DIR)/fnames.bin
-HRBS = $(wildcard $(HRB_APP_BIN)/*.hrb)
+APPS   = $(wildcard app/$(BIN_DIR)/*)
 
 
 all : img
@@ -25,9 +25,7 @@ all : img
 
 img :
 	$(MAKE) -C boot
-	$(MAKE) mkhdr -C api
 	$(MAKE) -C kernel
-	$(MAKE) -C api
 	$(MAKE) -C app
 	$(MAKE) $(IMG)
 
@@ -36,12 +34,11 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) test.bmp $(HRBS) $(APP_BIN)/a
+$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) $(APPS)
 	mformat -f 1440 -C -B $(IPL) -i $@ ::
 	mcopy $(ONSEN_SYS) -i $@ ::
 	mcopy $(FNAMES) -i $@ ::
-	mcopy $(HRBS) -i $@ ::
-	mcopy $(APP_BIN)/a -i $@ ::
+	mcopy $(APPS) -i $@ ::
 
 
 mount : $(IMG)
@@ -57,7 +54,7 @@ run :
 
 runb :
 	$(MAKE) img
-	$(BOCHS)
+	$(BOCHS) -f etc/bochsrc
 
 
 runq :
@@ -69,33 +66,32 @@ dipl :
 	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x gdbinit/ipl
+	gdb -x $(GDBINIT_DIR)/ipl
 
 
 dhead16 :
 	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x gdbinit/head16
+	gdb -x $(GDBINIT_DIR)/head16
 
 
 dhead32 :
 	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x gdbinit/head32
+	gdb -x $(GDBINIT_DIR)/head32
 
 
 dos :
 	$(MAKE) img
 	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
 	sleep 1
-	gdb -x gdbinit/os
+	gdb -x $(GDBINIT_DIR)/os
 
 
 clean :
 	$(MAKE) clean -C boot
 	$(MAKE) clean -C kernel
-	$(MAKE) clean -C api
 	$(MAKE) clean -C app
 	rm -f $(IMG)

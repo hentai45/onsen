@@ -32,6 +32,9 @@ enum {
     OP_SRC_INVERT
 };
 
+typedef struct _POINT {
+    int x, y;
+} POINT;
 
 extern int g_vram_sid;
 extern int g_dt_sid;
@@ -93,9 +96,6 @@ void graphic_left_drag(int x, int y);
 void switch_window(void);
 
 void graphic_dbg(void);
-
-int hrb_sid2addr(int sid);
-int hrb_addr2sid(int addr);
 
 #endif
 
@@ -185,7 +185,7 @@ static int draw_char_bg(SURFACE *srf, int x, int y, COLOR32 color,
         COLOR32 bg_color, char ch);
 
 static void add_child(SURFACE *srf);
-static void add_child_head(SURFACE *srf);
+//static void add_child_head(SURFACE *srf);
 static void remove_child(SURFACE *srf);
 
 static SURFACE *get_active_win(void);
@@ -413,11 +413,7 @@ int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_widt
     srf->g.color_width = color_width;
     srf->g.buf  = buf;
 
-    if (color_width == 8) {
-        srf->g.m = g_gbuf_method8;
-    } else {
-        srf->g.m = g_gbuf_method16;
-    }
+    srf->g.m = g_gbuf_method16;
 
     srf->parent = parent;
 
@@ -736,10 +732,18 @@ void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
         h = srf->g.h;
     }
 
+    int max_w = srf->g.w - x;
+    int max_h = srf->g.h - y;
+
     if (srf->flags & SRF_FLG_WINDOW) {
         x += CLIENT_X;
         y += CLIENT_Y;
+        max_w -= WINDOW_EXT_WIDTH;
+        max_h -= WINDOW_EXT_HEIGHT;
     }
+
+    w = MAXMIN(0, w, max_w);
+    h = MAXMIN(0, h, max_h);
 
     GBUFFER *g = &srf->g;
 
@@ -1153,26 +1157,6 @@ void graphic_dbg(void)
 }
 
 
-/**
- * はりぼて互換のため
- */
-int hrb_sid2addr(int sid)
-{
-    return (int) sid2srf(sid);
-}
-
-
-/**
- * はりぼて互換のため
- */
-int hrb_addr2sid(int addr)
-{
-    SURFACE *srf = (SURFACE *) addr;
-
-    return srf->sid;
-}
-
-
 //=============================================================================
 // 非公開関数
 
@@ -1425,6 +1409,7 @@ static void add_child(SURFACE *srf)
 }
 
 
+/*
 static void add_child_head(SURFACE *srf)
 {
     SURFACE *parent = srf->parent;
@@ -1454,6 +1439,7 @@ static void add_child_head(SURFACE *srf)
 
     parent->num_children++;
 }
+*/
 
 
 static void remove_child(SURFACE *srf)

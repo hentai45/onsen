@@ -6,7 +6,7 @@
 #define MAX_X 300
 #define MAX_Y 200
 
-void entry(void)
+void main(void)
 {
     int sid = create_window(MAX_X, MAX_Y, TEXT);
     int x = 0, y = 0;
@@ -15,7 +15,7 @@ void entry(void)
     printf("printf: %d %s\n", 32, "test");
 
     draw_text(sid, x, y, 0, TEXT);
-    update_screen(sid);
+    update_surface(sid);
 
     int tid = timer_new();
     timer_start(tid, TIME_MS);
@@ -28,7 +28,7 @@ void entry(void)
 
             if (keycode == KC_ESC) {
                 timer_free(tid);
-                exit_app(0);
+                exit(0);
             }
         }
 
@@ -50,12 +50,12 @@ void entry(void)
             }
 
             draw_text(sid, x, y, 0, TEXT);
-            update_screen(sid);
+            update_surface(sid);
             timer_start(tid, TIME_MS);
         }
     }
 
     timer_free(tid);
-    exit_app(0);
+    exit(0);
 }
 
