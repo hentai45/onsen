@@ -8,12 +8,11 @@ OBJCOPY = ${ARCH}-objcopy
 OBJDUMP = ${ARCH}-objdump
 
 SRC_DIR = src
-LDS_DIR = lds
+LDS_DIR = ldscript
 INC_DIR = include
 BIN_DIR = bin
 
 CFLAGS  = -Wall -nostdlib -I$(INC_DIR) -g -std=gnu99 -ffreestanding
-CXXFLAGS  = -Wall -nostdlib -I$(INC_DIR) -g
 ASFLAGS = -Wall -nostdlib
 LDFLAGS = -nostdlib -g
 

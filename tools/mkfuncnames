@@ -1,14 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-OUT_FILE_NAME = 'funcnames.bin'
+'''
+
+機能
+----
+スタックトレースで呼び出し関数の一覧を出力するときに
+アドレスから関数名に変換したいので、そのための対応表をつくる。
+入力ファイルはnmから出力されたシンボル一覧で、
+出力ファイルはアドレスと関数名の対応が書かれたバイナリ。
+
+
+使用方法
+--------
+./mkfuncnames symbols_file output_file
+
+
+メモ
+----
+最初はnmの出力でなくmapファイルから対応表をつくっていたが
+static宣言されたローカルな関数は表示されなかった。
+
+'''
 
 import os
-import re
 import struct
 from sys import argv
 
-dot_text_re = re.compile('(.{8}) [tT] (.+)')
 
 def main(symbols_file_name, out_file_name):
     if not os.path.exists(symbols_file_name):
@@ -17,11 +35,12 @@ def main(symbols_file_name, out_file_name):
     funcs = []
 
     for line in open(symbols_file_name, 'r'):
-        m = dot_text_re.match(line)
+        addr, typ, name = line.split()
 
-        if m:
-            funcs.append([int(m.group(1), 16), m.group(2)])
+        if typ == 't' or typ == 'T':
+            funcs.append([int(addr, 16), name])
 
+    # アドレスでソート
     funcs.sort(key=lambda x: x[0])
 
     f = open(out_file_name, 'wb')
