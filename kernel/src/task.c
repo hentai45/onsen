@@ -129,7 +129,6 @@ extern int g_idle_pid;
 #include "debug.h"
 #include "gdt.h"
 #include "graphic.h"
-#include "hrbbin.h"
 #include "memory.h"
 #include "msg_q.h"
 #include "str.h"

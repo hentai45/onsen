@@ -4,7 +4,7 @@
 #define HEADER_GBUFFER
 
 #include <stdbool.h>
-#include "color.h"
+#include "graphic.h"
 
 #define GBF_FLG_HAS_COLORKEY    (1 << 0)
 #define GBF_FLG_HAS_ALPHA       (1 << 1)

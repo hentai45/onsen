@@ -7,13 +7,11 @@
 #include <stdbool.h>
 
 #include "asmfunc.h"
-#include "bitmap.h"
 #include "console.h"
 #include "debug.h"
 #include "fat12.h"
 #include "gdt.h"
 #include "graphic.h"
-#include "hrbapi.h"
 #include "idt.h"
 #include "intr.h"
 #include "keyboard.h"
@@ -21,7 +19,6 @@
 #include "mouse.h"
 #include "memory.h"
 #include "msg_q.h"
-#include "multiboot.h"
 #include "paging.h"
 #include "stacktrace.h"
 #include "sysinfo.h"

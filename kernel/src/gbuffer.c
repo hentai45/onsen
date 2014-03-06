@@ -9,7 +9,7 @@
 #define HEADER_GBUFFER
 
 #include <stdbool.h>
-#include "color.h"
+#include "graphic.h"
 
 #define GBF_FLG_HAS_COLORKEY    (1 << 0)
 #define GBF_FLG_HAS_ALPHA       (1 << 1)
@@ -49,7 +49,6 @@ extern struct _GBUFFER_METHOD *g_gbuf_method16;
 // 非公開ヘッダ
 
 #include "debug.h"
-#include "graphic.h"
 #include "stacktrace.h"
 #include "str.h"
 
