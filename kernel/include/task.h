@@ -56,9 +56,9 @@ typedef struct TSS {
     // メモリ
     unsigned long code;
     unsigned long data;
-    // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack;
-    unsigned long stack_size;
+    // OSタスクなら普通のスタック。アプリならOS権限時のスタック
+    unsigned long stack0;
 
     // ファイルテーブル
     FTE file_table[FILE_TABLE_SIZE];

@@ -12,6 +12,8 @@
 
 #define VADDR_BASE          (0xC0000000)  // 論理アドレスのベースアドレス
 
+#define VADDR_USER_ESP      (0xBFFFF000)
+
 #define VADDR_SYS_INFO      (0xC0000A00)  // システム情報が格納されているアドレス
 /* FREE START               (0x00001000) */
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
@@ -50,6 +52,7 @@ void *mem_alloc_user_page(unsigned long vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);
+int   mem_free_maddr(void *vp_maddr);
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------

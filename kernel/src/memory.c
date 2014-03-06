@@ -18,6 +18,8 @@
 
 #define VADDR_BASE          (0xC0000000)  // 論理アドレスのベースアドレス
 
+#define VADDR_USER_ESP      (0xBFFFF000)
+
 #define VADDR_SYS_INFO      (0xC0000A00)  // システム情報が格納されているアドレス
 /* FREE START               (0x00001000) */
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
@@ -56,6 +58,7 @@ void *mem_alloc_user_page(unsigned long vaddr, int flags, int size_B);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);
+int   mem_free_maddr(void *vp_maddr);
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
@@ -360,7 +363,7 @@ int mem_free_user(void *vp_vaddr)
         flg = paging_get_flags((void *) vaddr);
     }
 
-    return 0;
+    return page_free_maddr((void *) vaddr);
 }
 
 
@@ -386,6 +389,15 @@ void *mem_alloc_maddr(void)
 
     /* 物理アドレスが足りない */
     return 0;
+}
+
+
+/**
+ * mem_alloc_maddrで取得した物理アドレスを解放する
+ */
+int mem_free_maddr(void *vp_maddr)
+{
+    SET_FREE_MADDR(vp_maddr & ~0xFFF);
 }
 
 
@@ -554,6 +566,10 @@ static int page_free(void *vp_vaddr)
         vaddr += PAGE_SIZE_B;
         num_pages++;
         flg = paging_get_flags((void *) vaddr);
+    }
+
+    if (page_free_maddr((void *) vaddr) < 0) {
+        return -1;
     }
 
     return mem_set_free(l_mng_v, vp_vaddr, num_pages);

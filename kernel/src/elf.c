@@ -57,7 +57,7 @@ bool is_elf(Elf_Ehdr *ehdr)
 
 //-----------------------------------------------------------------------------
 
-/// プログラムヘッダ
+// プログラムヘッダ
 typedef struct Elf_Phdr {
     Elf32_Word    p_type;
     Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
@@ -82,7 +82,7 @@ typedef struct Elf_Phdr {
 
 //-----------------------------------------------------------------------------
 
-/// セクションヘッダ
+// セクションヘッダ
 typedef struct Elf_Shdr {
     Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;
@@ -148,7 +148,7 @@ int elf_load(void *p, unsigned int size, const char *name)
     Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
     Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
-    char *p_code = 0, *p_data = 0, *p_esp = 0;
+    unsigned long code = 0, data = 0;
     int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
@@ -157,8 +157,9 @@ int elf_load(void *p, unsigned int size, const char *name)
         }
 
         switch (phdr->p_flags) {
+        // ---- .text
         case PF_R | PF_X:
-            if (p_code) {
+            if (code) {
                 dbgf("file has two text sections.\n");
                 return -1;
             }
@@ -167,12 +168,13 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            p_code = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
-            memcpy(p_code, head + phdr->p_offset, phdr->p_filesz);
+            code = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
+            memcpy((void *) (code + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
             break;
 
+        // ---- .data
         case PF_R | PF_W:
-            if (p_data) {
+            if (data) {
                 dbgf("file has two data sections.\n");
                 return -1;
             }
@@ -181,10 +183,10 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            p_data = (char *) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
-            memcpy(p_data + (phdr->p_vaddr & 0xFFF), head + phdr->p_offset, phdr->p_filesz);
+            data = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            memcpy((void *) (data + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
 
-            // BSS 領域を0クリア
+            // ---- .bss 領域を0クリア
 
             bss_size = phdr->p_memsz - phdr->p_filesz;
             if (bss_size > 0) {
@@ -192,7 +194,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                 if (bss_shdr && has_section(phdr, bss_shdr)) {
                     if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
                         if (bss_shdr->sh_size == bss_size) {
-                            memset(p_data + phdr->p_filesz, 0, bss_size);
+                            memset((void *) (data + phdr->p_filesz), 0, bss_size);
                         } else {
                             dbgf("bss size is different");
                         }
@@ -205,28 +207,22 @@ int elf_load(void *p, unsigned int size, const char *name)
                 }
             }
 
-            // スタックの準備
-
-            p_esp = p_data + BYTE_TO_PAGE(phdr->p_memsz + (phdr->p_vaddr & 0xFFF)) * PAGE_SIZE_B + 0x8000;
-
-            dbgf("start stack: %#X\n", p_esp);
-
             break;
         }
     }
 
-    if (p_code == 0) {
+    if (code == 0) {
         dbgf("file doesn't have code section\n");
         return -1;
     }
 
-    if (p_data == 0) {
-        p_data = (char *) mem_alloc_user_page(0x30000, 0x8000, PTE_RW);
-        p_esp = p_data + 0x8000;
-    }
+    // スタックの準備
 
-    unsigned char *stack0 = mem_alloc(8 * 1024);
-    unsigned char *esp0 = stack0 + (8 * 1024);
+    unsigned long stack = (unsigned long) mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
+    unsigned long esp = stack + 0x8000;
+
+    unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
+    unsigned long esp0 = stack0 + (8 * 1024);
  
 
     char app_name[9];
@@ -236,13 +232,13 @@ int elf_load(void *p, unsigned int size, const char *name)
     int pid = task_new(app_name);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) ehdr->e_entry, (unsigned long) p_esp, (unsigned long) esp0);
+    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
 
     TSS *t = pid2tss(pid);
-    t->code   = (unsigned long) p_code;
-    t->data   = (unsigned long) p_data;
-    t->stack  = (unsigned long) stack0;
-    t->stack_size = 8 * 1024;
+    t->code   = code;
+    t->data   = data;
+    t->stack  = stack;
+    t->stack0 = stack0;
 
     task_run(pid, 20);
 

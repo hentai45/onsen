@@ -63,9 +63,9 @@ typedef struct TSS {
     // メモリ
     unsigned long code;
     unsigned long data;
-    // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack;
-    unsigned long stack_size;
+    // OSタスクなら普通のスタック。アプリならOS権限時のスタック
+    unsigned long stack0;
 
     // ファイルテーブル
     FTE file_table[FILE_TABLE_SIZE];
@@ -250,6 +250,14 @@ int task_free(int pid, int exit_status)
     mem_free_user((void *) t->code);
     mem_free_user((void *) t->data);
     mem_free_user((void *) t->stack);
+    mem_free_user((void *) t->stack0);
+
+    for (int i = 0; i < BASE_PD_I; i++) {
+        if (t->pd[i]) {
+            mem_free_maddr(t->pd[i]);
+        }
+    }
+
     mem_free(t->pd);
 
     app_area_clear();
@@ -293,14 +301,13 @@ int chopsticks(void)
     __asm__ __volatile__ ("movl %%esp, %0" : "=r" (cur_esp));
     __asm__ __volatile__ ("movl %%ebp, %0" : "=r" (cur_ebp));
 
-    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned long esp = stack + (cur_esp - g_cur->stack);
+    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned long esp0 = stack0 + (cur_esp - g_cur->stack0);
 
-    memcpy((void *) stack, (void *) g_cur->stack, DEFAULT_STACK0_SIZE);
+    memcpy((void *) stack0, (void *) g_cur->stack0, DEFAULT_STACK0_SIZE);
 
-    tss->stack = stack;
-    tss->stack_size = DEFAULT_STACK0_SIZE;
-    tss->ebp = stack + (cur_ebp - g_cur->stack);
+    tss->stack0 = stack0;
+    tss->ebp = stack0 + (cur_ebp - g_cur->stack0);
 
     task_run(pid, DEFAULT_TIMESLICE_MS);
 
@@ -514,14 +521,13 @@ int run_os_task(char *name, void (*main)(void))
 {
     int pid = task_new(name);
 
-    unsigned long stack = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned long esp = stack + DEFAULT_STACK0_SIZE;
+    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
 
-    set_os_tss(pid, main, esp);
+    set_os_tss(pid, main, esp0);
 
     TSS *tss = &l_mng.tss[pid];
-    tss->stack = stack;
-    tss->stack_size = DEFAULT_STACK0_SIZE;
+    tss->stack0 = stack0;
 
     task_run(pid, DEFAULT_TIMESLICE_MS);
 

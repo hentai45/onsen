@@ -24,10 +24,7 @@ void main(void)
 
     while (get_message(&msg)) {
         if (msg.message == MSG_KEYDOWN) {
-            int keycode = msg.u_param;
-
-            if (keycode == KC_ESC) {
-                timer_free(tid);
+            if (msg.u_param == KC_ENTER) {
                 exit(0);
             }
         }
@@ -55,7 +52,6 @@ void main(void)
         }
     }
 
-    timer_free(tid);
     exit(0);
 }
 

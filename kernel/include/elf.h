@@ -49,7 +49,7 @@ bool is_elf(Elf_Ehdr *ehdr)
 
 //-----------------------------------------------------------------------------
 
-/// プログラムヘッダ
+// プログラムヘッダ
 typedef struct Elf_Phdr {
     Elf32_Word    p_type;
     Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
@@ -74,7 +74,7 @@ typedef struct Elf_Phdr {
 
 //-----------------------------------------------------------------------------
 
-/// セクションヘッダ
+// セクションヘッダ
 typedef struct Elf_Shdr {
     Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;

@@ -76,6 +76,11 @@
 
 #define BYTE_TO_PAGE(byte) ((CEIL_4KB(byte)) >> 12)
 
+#define VADDR_TO_PD_INDEX(vaddr)  (((unsigned long) vaddr) >> 22)
+#define VADDR_TO_PT_INDEX(vaddr)  ((((unsigned long) vaddr) >> 12) & 0x3FF)
+
+#define BASE_PD_I  VADDR_TO_PD_INDEX(VADDR_BASE)
+
 
 typedef unsigned long PDE;
 typedef unsigned long PTE;
@@ -111,12 +116,7 @@ void paging_dbg(void);
 #define NUM_PDE     (1024)  // １つの PD 内の PDE の数
 #define NUM_PTE     (1024)  // １つの PT 内の PTE の数
 
-#define VADDR_TO_PD_INDEX(vaddr)  (((unsigned long) vaddr) >> 22)
-#define VADDR_TO_PT_INDEX(vaddr)  ((((unsigned long) vaddr) >> 12) & 0x3FF)
-
 #define MAKE_PTE(maddr, flg)  (((unsigned long) (maddr) & ~0xFFF) | (flg & 0xFFF))
-
-#define BASE_PD_I  VADDR_TO_PD_INDEX(VADDR_BASE)
 
 static PDE *get_pt(int i_pd);
 static PTE *get_pte(void *vp_vaddr);
