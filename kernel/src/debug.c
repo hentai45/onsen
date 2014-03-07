@@ -40,7 +40,7 @@ void dbgf(const char *fmt, ...);
 void dbg_clear(void);
 void dbg_seg(void);
 
-void dbg_fault(const char *msg, int no, INT_REGISTERS regs);
+void dbg_fault(const char *msg, int no, INT_REGISTERS *regs);
 
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;
@@ -263,7 +263,7 @@ void dbg_seg(void)
 
 
 // 例外（フォールト）が発生したときにデバッグ表示する用の関数
-void dbg_fault(const char *msg, int no, INT_REGISTERS regs)
+void dbg_fault(const char *msg, int no, INT_REGISTERS *regs)
 {
     unsigned short bk_fg = fg;
     unsigned short bk_bg = bg;
@@ -279,26 +279,26 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS regs)
     // ---- レジスタの内容を表示
 
     dbgf("EAX = %X, EBX = %X, ECX = %X, EDX = %X\n",
-            regs.eax, regs.ebx, regs.ecx, regs.edx);
+            regs->eax, regs->ebx, regs->ecx, regs->edx);
 
     dbgf("EBP = %X, ESI = %X, EDI = %X, ESP = %X\n\n",
-            regs.ebp, regs.esi, regs.edi, regs.esp);
+            regs->ebp, regs->esi, regs->edi, regs->esp);
 
-    dbgf("ERROR CODE = %X", regs.err_code);
+    dbgf("ERROR CODE = %X", regs->err_code);
     if (no == /* page fault */ 0x0E) {
-        if (regs.err_code & 16)
+        if (regs->err_code & 16)
             dbgf(" [Present]");
 
-        if (regs.err_code & 8)
+        if (regs->err_code & 8)
             dbgf(" [Write]");
 
-        if (regs.err_code & 4)
+        if (regs->err_code & 4)
             dbgf(" [User]");
 
-        if (regs.err_code & 2)
+        if (regs->err_code & 2)
             dbgf(" [Reserved write]");
 
-        if (regs.err_code & 1)
+        if (regs->err_code & 1)
             dbgf(" [Instruction Fetch]");
 
         unsigned long cr2;
@@ -317,17 +317,17 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS regs)
     dbgf("%X %X %X %X\n", ds, es, ss, esp);
     */
 
-    dbgf("EIP = %X", regs.eip);
-    dbgf(", CS = %d * 8 + %d", regs.cs >> 3, regs.cs & 0x07);
-    dbgf(", DS = %d * 8 + %d", regs.ds >> 3, regs.ds & 0x07);
-    dbgf(", ES = %d * 8 + %d\n", regs.es >> 3, regs.es & 0x07);
+    dbgf("EIP = %X", regs->eip);
+    dbgf(", CS = %d * 8 + %d", regs->cs >> 3, regs->cs & 0x07);
+    dbgf(", DS = %d * 8 + %d", regs->ds >> 3, regs->ds & 0x07);
+    dbgf(", ES = %d * 8 + %d\n", regs->es >> 3, regs->es & 0x07);
 
-    dbgf("EFLAGS = %X", regs.eflags);
-    int intr_flg = (regs.eflags & 0x0200) ? 1 : 0;
+    dbgf("EFLAGS = %X", regs->eflags);
+    int intr_flg = (regs->eflags & 0x0200) ? 1 : 0;
     dbgf("  IF = %d\n", intr_flg);
 
-    dbgf("APP ESP = %X", regs.app_esp);
-    dbgf(", APP SS = %d * 8 + %d\n", regs.app_ss >> 3, regs.app_ss & 0x07);
+    dbgf("APP ESP = %X", regs->app_esp);
+    dbgf(", APP SS = %d * 8 + %d\n", regs->app_ss >> 3, regs->app_ss & 0x07);
 
     fg = bk_fg;
     bg = bk_bg;

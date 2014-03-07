@@ -12,11 +12,11 @@ void asm_api(void);
 */
 
 
-.globl asm_api
+    .globl asm_api
 
-.extern onsen_api
+    .extern onsen_api
 
-.text
+    .text
 
 
 # API(システムコール)を処理するトラップゲートから呼ばれる

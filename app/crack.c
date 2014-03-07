@@ -1,6 +1,6 @@
 #include "onsen.h"
 
-void HariMain(void)
+void main(void)
 {
     short cs, ds;
     __asm__ __volatile__ ("mov %%cs, %0" : "=r" (cs));

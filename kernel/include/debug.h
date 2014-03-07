@@ -34,7 +34,7 @@ void dbgf(const char *fmt, ...);
 void dbg_clear(void);
 void dbg_seg(void);
 
-void dbg_fault(const char *msg, int no, INT_REGISTERS regs);
+void dbg_fault(const char *msg, int no, INT_REGISTERS *regs);
 
 extern FILE_T *f_debug;
 extern FILE_T *f_dbg_temp;

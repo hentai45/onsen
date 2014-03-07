@@ -33,6 +33,7 @@ void set_pic1_mask(unsigned char mask);
 #include "asmfunc.h"
 #include "debug.h"
 #include "graphic.h"
+#include "memory.h"
 #include "msg_q.h"
 #include "str.h"
 #include "task.h"
@@ -159,16 +160,29 @@ INT_HANDLER(0E, "page fault")
 //=============================================================================
 // 非公開関数
 
+static int page_fault_handler(INT_REGISTERS *regs);
+
 static void fault_handler(const char *message, int no, INT_REGISTERS regs)
 {
     if (is_os_task(g_pid)) {
-        dbg_fault(message, no, regs);
+        dbg_fault(message, no, &regs);
 
         for (;;) {
             hlt();
         }
     } else {
-        dbg_fault(message, no, regs);
+        int ret = 0;
+
+        if (no == 0x0E) {  // page fault
+            ret = page_fault_handler(&regs);
+        }
+
+        if (ret == 1) {
+            sti();
+            return;
+        }
+
+        dbg_fault(message, no, &regs);
 
         MSG msg;
         msg.message = MSG_REQUEST_EXIT;
@@ -184,3 +198,21 @@ static void fault_handler(const char *message, int no, INT_REGISTERS regs)
 }
 
 
+static int page_fault_handler(INT_REGISTERS *regs)
+{
+    unsigned long cr2;
+
+    __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
+
+    // スタックの拡張
+    if (regs->app_esp <= cr2 && cr2 <= g_cur->stack) {
+        unsigned long new_stack = mem_expand_stack(g_cur->stack, regs->app_esp);
+        if (new_stack == 0)
+            return -1;
+
+        g_cur->stack = new_stack;
+        return 1;
+    }
+
+    return 0;
+}

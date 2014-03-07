@@ -54,7 +54,8 @@ extern SYSTEM_INFO *g_sys_info;
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user_page(unsigned long vaddr, int flags, int size_B);
+void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
 int   mem_free_user(void *vp_vaddr);
@@ -364,6 +365,42 @@ int mem_free_user(void *vp_vaddr)
     }
 
     return page_free_maddr((void *) vaddr);
+}
+
+
+unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
+{
+    new_stack &= ~0xFFF;
+    new_stack -= 0x1000;  // ちょっと余裕をもたせる
+
+    if (mem_alloc_user_page(new_stack, old_stack - new_stack, PTE_RW) < 0) {
+        return 0;
+    }
+
+    // 古いスタックと新しいスタックを１つにまとめる
+
+    void *new_stack_last = (void *) (old_stack - 0x1000);
+    int flg = paging_get_flags(new_stack_last);
+    if ((flg & PTE_END) == 0) {
+        DBGF("bug!");
+    }
+    flg &= ~PTE_END;
+    paging_set_flags(new_stack_last, flg);
+    if ((flg & PTE_START) == 0) {
+        flg |= PTE_CONT;
+    }
+
+    flg = paging_get_flags((void *) old_stack);
+    if ((flg & PTE_START) == 0) {
+        DBGF("bug!");
+    }
+    flg &= ~PTE_START;
+    if ((flg & PTE_END) == 0) {
+        flg |= PTE_CONT;
+    }
+    paging_set_flags((void *) old_stack, flg);
+
+    return new_stack;
 }
 
 

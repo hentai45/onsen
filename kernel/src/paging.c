@@ -69,6 +69,7 @@
 #define PTE_START   (0x200)  // 連続領域開始。カスタムフラグ
 #define PTE_CONT    (0x400)  // 連続領域続く。カスタムフラグ
 #define PTE_END     (0x800)  // 連続領域終了。カスタムフラグ
+#define PTE_MNG_MASK (0xE00)  // カスタムフラグを取得するためのマスク
 
 #define IS_4KB_ALIGN(byte) (((unsigned long) (byte) & 0xFFF) == 0)  // 4KB 境界であるか確認
 #define CEIL_4KB(byte)  (((byte) + 0xFFF) & ~0xFFF) // 4KB 単位で切り上げ
@@ -89,7 +90,8 @@ void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
 PDE *create_user_pd(void);
-int paging_get_flags(void *vp_vaddr);
+int  paging_get_flags(void *vp_vaddr);
+int  paging_set_flags(void *vp_vaddr, int flags);
 
 void app_area_copy(PDE *pd);
 void app_area_clear(void);
@@ -185,6 +187,22 @@ int paging_get_flags(void *vp_vaddr)
     }
 
     return *pte & 0xFFF;
+}
+
+
+int paging_set_flags(void *vp_vaddr, int flags)
+{
+    PTE *pte = get_pte(vp_vaddr);
+
+    if (pte == 0) {
+        return -1;
+    }
+
+    flags &= 0xFFF;
+
+    *pte &= ~0xFFF;
+    *pte |= flags;
+    return 0;
 }
 
 
