@@ -232,7 +232,7 @@ int elf_load(void *p, unsigned int size, const char *name)
     int pid = task_new(app_name);
 
     PDE *pd = create_user_pd();
-    set_app_tss(pid, (PDE) paging_get_maddr(pd), (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
+    set_app_tss(pid, (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
 
     TSS *t = pid2tss(pid);
     t->code   = code;
@@ -240,7 +240,7 @@ int elf_load(void *p, unsigned int size, const char *name)
     t->stack  = stack;
     t->stack0 = stack0;
 
-    task_run(pid, 20);
+    task_run(pid);
 
     return pid;
 }

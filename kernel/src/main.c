@@ -76,8 +76,8 @@ static void init_onsen(void)
 
     init_gui();
 
-    run_os_task("debug", debug_main);
-    run_os_task("console", console_main);
+    task_run_os("debug", debug_main);
+    task_run_os("console", console_main);
 }
 
 

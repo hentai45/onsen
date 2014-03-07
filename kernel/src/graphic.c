@@ -70,7 +70,7 @@ int  new_window_from_buf(int x, int y, int w, int h, char *title,
         void *buf, int color_width);
 
 void free_surface(int sid);
-void free_surface_task(int pid);
+void free_task_surface(int pid);
 
 int  get_screen_w(void);
 int  get_screen_h(void);
@@ -470,7 +470,7 @@ void free_surface(int sid)
 }
 
 
-void free_surface_task(int pid)
+void free_task_surface(int pid)
 {
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
         SURFACE *srf = &(l_mng.surfaces[sid]);

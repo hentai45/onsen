@@ -398,6 +398,7 @@ void *mem_alloc_maddr(void)
 int mem_free_maddr(void *vp_maddr)
 {
     SET_FREE_MADDR(vp_maddr & ~0xFFF);
+    return 0;
 }
 
 

@@ -10,7 +10,6 @@
 #define ERROR_PID        (-1)
 
 #define TASK_MAX         (32)  // 最大タスク数
-#define FILE_TABLE_SIZE  (16)
 
 #define TASK_FLG_FREE     (0)   // 割り当てなし
 #define TASK_FLG_ALLOC    (1)   // 割り当て済み
@@ -61,7 +60,7 @@ typedef struct TSS {
     unsigned long stack0;
 
     // ファイルテーブル
-    FTE file_table[FILE_TABLE_SIZE];
+    FTE *file_tbl;
 
     bool is_os_task;
 } __attribute__ ((__packed__)) TSS;
@@ -79,28 +78,22 @@ typedef struct TASK_MNG {
 
 
 void task_init(void);
-int  task_new(char *name);
+int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
 int  chopsticks(void);
-void task_run(int pid, int timeslice_ms);
-int  task_run_app(void *p, unsigned int size, const char *name);
+void task_run(int pid);
+int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
 void task_sleep(int pid);
 void task_wakeup(int pid);
-int run_os_task(char *name, void (*main)(void));
 const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
 
-int get_free_fd(void);
-FILE_T *task_get_file(int fd);
-int task_set_file(int fd, FILE_T *f);
-
 int is_os_task(int pid);
 
-// TODO: 一時的にstaticをはずしてグローバルにしている
-void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
+void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
 TSS *pid2tss(int pid);
 
 extern TSS *g_cur;

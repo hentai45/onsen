@@ -10,7 +10,7 @@
 void timer_init(void);
 int  timer_new(void);
 void timer_free(int tid);
-void timer_task_free(int pid);
+void free_task_timer(int pid);
 void timer_start(int tid, unsigned int timeout_ms);
 int  timer_stop(int tid);
 unsigned int timer_get_count_10ms(void);

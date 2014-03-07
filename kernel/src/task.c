@@ -17,7 +17,6 @@
 #define ERROR_PID        (-1)
 
 #define TASK_MAX         (32)  // 最大タスク数
-#define FILE_TABLE_SIZE  (16)
 
 #define TASK_FLG_FREE     (0)   // 割り当てなし
 #define TASK_FLG_ALLOC    (1)   // 割り当て済み
@@ -68,7 +67,7 @@ typedef struct TSS {
     unsigned long stack0;
 
     // ファイルテーブル
-    FTE file_table[FILE_TABLE_SIZE];
+    FTE *file_tbl;
 
     bool is_os_task;
 } __attribute__ ((__packed__)) TSS;
@@ -86,28 +85,22 @@ typedef struct TASK_MNG {
 
 
 void task_init(void);
-int  task_new(char *name);
+int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
 int  chopsticks(void);
-void task_run(int pid, int timeslice_ms);
-int  task_run_app(void *p, unsigned int size, const char *name);
+void task_run(int pid);
+int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
 void task_sleep(int pid);
 void task_wakeup(int pid);
-int run_os_task(char *name, void (*main)(void));
 const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
 
 void task_dbg(void);
 
-int get_free_fd(void);
-FILE_T *task_get_file(int fd);
-int task_set_file(int fd, FILE_T *f);
-
 int is_os_task(int pid);
 
-// TODO: 一時的にstaticをはずしてグローバルにしている
-void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
+void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
 TSS *pid2tss(int pid);
 
 extern TSS *g_cur;
@@ -177,7 +170,15 @@ void task_init(void)
         t->flags = TASK_FLG_FREE;
         t->ppid = 0;
         memset(t->name, 0, TASK_NAME_MAX);
-        memset(t->file_table, 0, FILE_TABLE_SIZE * sizeof(FTE));
+        t->file_tbl = create_file_tbl();
+
+        // TODO
+        t->file_tbl[0].flags = FILE_FLG_USED;
+        t->file_tbl[0].file = f_console;
+        t->file_tbl[1].flags = FILE_FLG_USED;
+        t->file_tbl[1].file = f_console;
+        t->file_tbl[2].flags = FILE_FLG_USED;
+        t->file_tbl[2].file = f_console;
     }
 
 
@@ -186,7 +187,7 @@ void task_init(void)
     init_tss_seg();
 
     g_root_pid = create_root_task();
-    g_idle_pid = run_os_task("idle", idle_main);
+    g_idle_pid = task_run_os("idle", idle_main);
 
     ltr(pid2tss_sel(g_root_pid));
 
@@ -196,6 +197,7 @@ void task_init(void)
     timer_start(ts_tid, DEFAULT_TIMESLICE_MS);
 }
 
+
 static int create_root_task(void)
 {
     int pid = task_new("root");
@@ -203,13 +205,13 @@ static int create_root_task(void)
     // 最初のtssはタスクスイッチした時に設定される？
     set_os_tss(pid, /* eip = */ 0, /* esp = */ 0);
 
-    task_run(pid, DEFAULT_TIMESLICE_MS);
+    task_run(pid);
 
     return pid;
 }
 
 
-int task_new(char *name)
+int task_new(const char *name)
 {
     for (int pid = 0; pid < TASK_MAX; pid++) {
         TSS *t = &l_mng.tss[pid];
@@ -254,17 +256,17 @@ int task_free(int pid, int exit_status)
 
     for (int i = 0; i < BASE_PD_I; i++) {
         if (t->pd[i]) {
-            mem_free_maddr(t->pd[i]);
+            mem_free_maddr((void *) t->pd[i]);
         }
     }
+
+    free_task_timer(pid);
+    free_task_surface(pid);
+    free_file_tbl(t->file_tbl);
 
     mem_free(t->pd);
 
     app_area_clear();
-
-    timer_task_free(pid);
-
-    free_surface_task(pid);
 
     t->flags = TASK_FLG_FREE;
 
@@ -309,7 +311,7 @@ int chopsticks(void)
     tss->stack0 = stack0;
     tss->ebp = stack0 + (cur_ebp - g_cur->stack0);
 
-    task_run(pid, DEFAULT_TIMESLICE_MS);
+    task_run(pid);
 
 new_task_start:
 
@@ -321,7 +323,7 @@ new_task_start:
 }
 
 
-void task_run(int pid, int timeslice_ms)
+void task_run(int pid)
 {
     TSS *t = pid2tss(pid);
 
@@ -330,9 +332,27 @@ void task_run(int pid, int timeslice_ms)
     }
 
     t->flags = TASK_FLG_RUNNING;
-    t->timeslice_ms = timeslice_ms;
+    t->timeslice_ms = DEFAULT_TIMESLICE_MS;
     l_mng.run[l_mng.num_running] = t;
     l_mng.num_running++;
+}
+
+
+int task_run_os(const char *name, void (*main)(void))
+{
+    int pid = task_new(name);
+
+    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
+
+    set_os_tss(pid, main, esp0);
+
+    TSS *tss = &l_mng.tss[pid];
+    tss->stack0 = stack0;
+
+    task_run(pid);
+
+    return pid;
 }
 
 
@@ -431,33 +451,7 @@ void task_wakeup(int pid)
         return;
     }
 
-    task_run(pid, t->timeslice_ms);
-}
-
-
-int get_free_fd(void)
-{
-    for (int fd = 0; fd < FILE_TABLE_SIZE; fd++) {
-        if (g_cur->file_table[fd].flags == FILE_FLG_FREE) {
-            return fd;
-        }
-    }
-
-    return -1;
-}
-
-
-FILE_T *task_get_file(int fd)
-{
-    return g_cur->file_table[fd].file;
-}
-
-
-int task_set_file(int fd, FILE_T *f)
-{
-    g_cur->file_table[fd].file = f;
-
-    return 0;
+    task_run(pid);
 }
 
 
@@ -517,24 +511,6 @@ int is_os_task(int pid)
 }
 
 
-int run_os_task(char *name, void (*main)(void))
-{
-    int pid = task_new(name);
-
-    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
-
-    set_os_tss(pid, main, esp0);
-
-    TSS *tss = &l_mng.tss[pid];
-    tss->stack0 = stack0;
-
-    task_run(pid, DEFAULT_TIMESLICE_MS);
-
-    return pid;
-}
-
-
 static void idle_main(void)
 {
     for (;;) {
@@ -563,18 +539,15 @@ static void set_os_tss(int pid, void (*f)(void), unsigned long esp)
 }
 
 
-void set_app_tss(int pid, PDE maddr_pd, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0)
+void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0)
 {
+    PDE maddr_pd = (PDE) paging_get_maddr((void *) vaddr_pd);
+
     // | 3 は要求者特権レベルを3にするため
     TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
             EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
 
-    tss->file_table[0].flags = FILE_FLG_USED;
-    tss->file_table[0].file  = f_keyboard;
-    tss->file_table[1].flags = FILE_FLG_USED;
-    tss->file_table[1].file  = f_console;
-    tss->file_table[2].flags = FILE_FLG_USED;
-    tss->file_table[2].file  = f_console;
+    tss->is_os_task = false;
 }
 
 

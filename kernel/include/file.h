@@ -3,6 +3,8 @@
 #ifndef HEADER_FILE
 #define HEADER_FILE
 
+#define FILE_TABLE_SIZE  (16)
+
 #define STDIN_FILENO   (0)
 #define STDOUT_FILENO  (1)
 #define STDERR_FILENO  (2)
@@ -28,7 +30,10 @@ typedef struct _FILE_TABLE_ENTRY {
 } FTE;
 
 
+FTE *create_file_tbl(void);
+int free_file_tbl(FTE *tbl);
 FILE_T *f_get_file(int fd);
+int f_set_file(int fd, FILE_T *f);
 
 int f_open(const char *name, int flags);
 int f_close(int fd);

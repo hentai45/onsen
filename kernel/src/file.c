@@ -9,6 +9,8 @@
 #ifndef HEADER_FILE
 #define HEADER_FILE
 
+#define FILE_TABLE_SIZE  (16)
+
 #define STDIN_FILENO   (0)
 #define STDOUT_FILENO  (1)
 #define STDERR_FILENO  (2)
@@ -34,7 +36,10 @@ typedef struct _FILE_TABLE_ENTRY {
 } FTE;
 
 
+FTE *create_file_tbl(void);
+int free_file_tbl(FTE *tbl);
 FILE_T *f_get_file(int fd);
+int f_set_file(int fd, FILE_T *f);
 
 int f_open(const char *name, int flags);
 int f_close(int fd);
@@ -52,8 +57,11 @@ FILE_T *f_keyboard;
 
 #include "console.h"
 #include "debug.h"
+#include "memory.h"
 #include "str.h"
 #include "task.h"
+
+static int get_free_fd(void);
 
 
 //=============================================================================
@@ -68,13 +76,13 @@ int f_open(const char *name, int flags)
         return -1;
 
     if (strcmp(name, "/dev/tty") == 0 && flags == O_WRONLY){
-        task_set_file(fd, f_console);
+        f_set_file(fd, f_console);
         return fd;
     } else if (strcmp(name, "/dev/keyboard") == 0 && flags == O_RDONLY) {
-        task_set_file(fd, f_keyboard);
+        f_set_file(fd, f_keyboard);
         return fd;
     } else if (strcmp(name, "/debug/temp") == 0) {
-        task_set_file(fd, f_dbg_temp);
+        f_set_file(fd, f_dbg_temp);
         return fd;
     }
 
@@ -88,6 +96,8 @@ int f_close(int fd)
 
     if (f == 0)
         return -1;
+
+    g_cur->file_tbl[fd].flags = FILE_FLG_FREE;
 
     if (f->close == 0)
         return 0;
@@ -124,13 +134,74 @@ int f_write(int fd, const void *buf, int cnt)
 }
 
 
-FILE_T *f_get_file(int fd)
+FTE *create_file_tbl(void)
 {
-    return task_get_file(fd);
+    int size = sizeof(FTE) * FILE_TABLE_SIZE;
+
+    FTE *tbl = (FTE *) mem_alloc(size);
+
+    memset(tbl, 0, size);
+
+    return tbl;
 }
 
+
+int free_file_tbl(FTE *tbl)
+{
+    return mem_free(tbl);
+}
+
+
+FILE_T *f_get_file(int fd)
+{
+    if (g_cur->file_tbl == 0)
+        return 0;
+
+    if (fd < 0 || FILE_TABLE_SIZE <= fd) {
+        DBGF("invalid fd (%d)\n", fd);
+        return 0;
+    }
+
+    return g_cur->file_tbl[fd].file;
+}
+
+
+int f_set_file(int fd, FILE_T *f)
+{
+    if (g_cur->file_tbl == 0)
+        return -1;
+
+    if (fd < 0 || FILE_TABLE_SIZE <= fd) {
+        DBGF("invalid fd (%d)\n", fd);
+        return -1;
+    }
+
+    if (g_cur->file_tbl[fd].flags == FILE_FLG_USED) {
+        DBGF("used fd (%d)\n", fd);
+        return -1;
+    }
+
+    g_cur->file_tbl[fd].flags = FILE_FLG_USED;
+    g_cur->file_tbl[fd].file = f;
+
+    return 0;
+}
 
 //=============================================================================
 // 非公開関数
 
+
+static int get_free_fd(void)
+{
+    if (g_cur->file_tbl == 0)
+        return -1;
+
+    for (int fd = 0; fd < FILE_TABLE_SIZE; fd++) {
+        if (g_cur->file_tbl[fd].flags == FILE_FLG_FREE) {
+            return fd;
+        }
+    }
+
+    return -1;
+}
 
