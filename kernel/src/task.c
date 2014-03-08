@@ -89,6 +89,8 @@ void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
 int  task_copy(API_REGISTERS *regs, int flg);
+int  kernel_thread(int (*fn)(void), int flg);
+int  task_exec(API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
@@ -118,10 +120,13 @@ extern int g_idle_pid;
 
 #include <stdbool.h>
 
+#include "apino.h"
 #include "asmapi.h"
 #include "asmfunc.h"
 #include "console.h"
 #include "debug.h"
+#include "elf.h"
+#include "fat12.h"
 #include "gdt.h"
 #include "graphic.h"
 #include "memory.h"
@@ -172,9 +177,9 @@ void task_init(void)
         t->flags = TASK_FLG_FREE;
         t->ppid = 0;
         memset(t->name, 0, TASK_NAME_MAX);
-        t->file_tbl = create_file_tbl();
 
         // TODO
+        t->file_tbl = create_file_tbl();
         t->file_tbl[0].flags = FILE_FLG_USED;
         t->file_tbl[0].file = f_console;
         t->file_tbl[1].flags = FILE_FLG_USED;
@@ -237,10 +242,6 @@ int task_new(const char *name)
 
 int task_free(int pid, int exit_status)
 {
-    if (is_os_task(pid)) {
-        return -1;
-    }
-
     TSS *t = pid2tss(pid);
 
     if (t == 0 || t->flags == TASK_FLG_FREE) {
@@ -249,32 +250,38 @@ int task_free(int pid, int exit_status)
 
     task_sleep(pid);
 
-    app_area_copy(t->pd);
+    if ( ! is_os_task(pid)) {
+        app_area_copy(t->pd);
 
-    mem_free_user((void *) t->code);
-    mem_free_user((void *) t->data);
-    mem_free_user((void *) t->stack);
-    mem_free_user((void *) t->stack0);
+        mem_free_user((void *) t->code);
+        mem_free_user((void *) t->data);
+        mem_free_user((void *) t->stack);
+        mem_free_user((void *) t->stack0);
 
-    for (int i = 0; i < BASE_PD_I; i++) {
-        if (t->pd[i]) {
-            mem_free_maddr((void *) t->pd[i]);
+        for (int i = 0; i < BASE_PD_I; i++) {
+            if (t->pd[i]) {
+                mem_free_maddr((void *) t->pd[i]);
+            }
         }
     }
 
     free_task_timer(pid);
     free_task_surface(pid);
-    free_file_tbl(t->file_tbl);
+    // TODO
+    //free_file_tbl(t->file_tbl);
+    //t->file_tbl = create_file_tbl();
 
-    mem_free(t->pd);
+    if ( ! is_os_task(pid)) {
+        mem_free(t->pd);
 
-    app_area_clear();
+        app_area_clear();
+    }
 
     t->flags = TASK_FLG_FREE;
 
     // 親タスクにメッセージで終了を通知
     TSS *parent = pid2tss(t->ppid);
-    if (parent != 0) {
+    if (parent != 0 && parent->flags != TASK_FLG_FREE) {
         MSG msg;
         msg.message = MSG_NOTIFY_CHILD_EXIT;
         msg.u_param = pid;
@@ -320,7 +327,7 @@ int task_copy(API_REGISTERS *regs, int flg)
 
         tss->stack = stack;
 
-        mem_free(temp_stack);
+        mem_free((void *) temp_stack);
 
         // ----
 
@@ -349,6 +356,72 @@ int task_copy(API_REGISTERS *regs, int flg)
     task_run(pid);
 
     return pid;
+}
+
+
+int kernel_thread(int (*fn)(void), int flg)
+{
+    int pid = 0;
+
+    __asm__ __volatile__ (
+        "int  $0x44\n"
+        "cmpl $0, %%eax\n"
+        "jne   1f\n"
+
+        "call *%2\n"
+
+        "movl $1, %%eax\n"  // API_EXIT
+        "movl $0, %%ebx\n"  // exit status
+        "int $0x44\n"
+        "1:\n"
+
+        : "=a" (pid)
+        : "0" (API_CHOPSTICKS), "r" (fn)
+    );
+
+    return pid;
+}
+
+
+int task_exec(API_REGISTERS *regs, const char *fname)
+{
+    FILEINFO *finfo = fat12_get_file_info();
+    int i_fi = fat12_search_file(finfo, fname);
+
+    if (i_fi < 0) {  // ファイルが見つからなかった
+        return -1;
+    }
+
+    FILEINFO *fi = &finfo[i_fi];
+
+    char *p = (char *) mem_alloc(fi->size);
+    fat12_load_file(fi->clustno, fi->size, p);
+
+    if (g_cur->is_os_task) {
+        // スタックの準備
+
+        unsigned long stack = (unsigned long) mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
+        unsigned long esp = stack + 0x8000;
+
+        unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
+        unsigned long esp0 = stack0 + (8 * 1024);
+
+        g_cur->stack  = stack;
+        g_cur->stack0 = stack0;
+    } else {
+        mem_free_user((void *) g_cur->code);
+        mem_free_user((void *) g_cur->data);
+        paging_clear_pd_range(0, g_cur->stack - 0x400000);  // １つ前のPDEを指すために4MB引く
+    }
+
+    memcpy(g_cur->name, fi->name, 8);
+    g_cur->name[8] = 0;
+
+    int ret = elf_load2(regs, p, fi->size);
+
+    mem_free(p);
+
+    return ret;
 }
 
 

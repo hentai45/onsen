@@ -93,7 +93,7 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 {
     switch (message) {
     case MSG_REQUEST_EXIT:
-        //dbgf("request exit: %s\n", task_get_name(u_param));
+        //dbgf("request exit: pid=%d %s\n", u_param, task_get_name(u_param));
         task_free(/* exit app pid =  */ u_param, /* exit status =  */ l_param);
         break;
 

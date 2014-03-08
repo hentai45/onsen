@@ -301,21 +301,13 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS *regs)
         if (regs->err_code & 1)
             dbgf(" [Instruction Fetch]");
 
-        unsigned long cr2;
+        unsigned long cr2, cr3;
         __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
-        dbgf("\nCR2 = %X\n", cr2);
+        __asm__ __volatile__ ("movl %%cr3, %0" : "=r" (cr3));
+        dbgf("\nCR2 = %X, CR3 = %X\n", cr2, cr3);
     } else {
         dbgf("\n");
     }
-
-    /*
-    int ds, es, ss, esp;
-    __asm__ __volatile__ ("mov %%ds, %0" : "=r" (ds));
-    __asm__ __volatile__ ("mov %%es, %0" : "=r" (es));
-    __asm__ __volatile__ ("mov %%ss, %0" : "=r" (ss));
-    __asm__ __volatile__ ("mov %%esp, %0" : "=r" (esp));
-    dbgf("%X %X %X %X\n", ds, es, ss, esp);
-    */
 
     dbgf("EIP = %X", regs->eip);
     dbgf(", CS = %d * 8 + %d", regs->cs >> 3, regs->cs & 0x07);
@@ -348,6 +340,7 @@ static void debug_proc(unsigned int msg, unsigned long u_param, long l_param)
 //-----------------------------------------------------------------------------
 // 画面出力
 
+#include "asmfunc.h"
 
 static int dbg_write(void *self, const void *buf, int cnt)
 {

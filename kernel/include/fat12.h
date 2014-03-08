@@ -18,7 +18,7 @@ typedef struct FILEINFO {
 void fat12_init(void);
 FILEINFO *fat12_get_file_info(void);
 void fat12_load_file(int clustno, int size, char *buf);
-int fat12_search_file(FILEINFO *fi, char *fname);
+int fat12_search_file(FILEINFO *fi, const char *fname);
 
 
 #endif

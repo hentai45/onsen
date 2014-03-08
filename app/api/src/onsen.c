@@ -15,11 +15,12 @@ typedef struct _POINT {
 
 void exit(int status);
 int chopsticks(void);
+int write(int fd, const void *buf, int cnt);
+int exec(const char *fname);
+int getpid(void);
+
 int get_message(struct MSG *msg);
 int getkey(int wait);
-
-int write(int fd, const void *buf, int cnt);
-
 
 //-----------------------------------------------------------------------------
 // タイマ

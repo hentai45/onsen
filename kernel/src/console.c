@@ -130,17 +130,6 @@ void console_main(void)
 
     put_prompt();
 
-    /*
-    int pid = chopsticks();
-    dbgf("chopsticks = %d\n", pid);
-
-    if (pid == 0) {
-        dbgf("I'm sleep.\n");
-        for (;;)
-            ;
-    }
-    */
-
     MSG msg;
 
     while (get_message(&msg)) {
@@ -527,17 +516,6 @@ static int cmd_app(char *cmd_name, int bgp)
     FILEINFO *finfo = fat12_get_file_info();
     int i_fi = fat12_search_file(finfo, name);
 
-    // 見つからなかったら、後ろに.HRBをつけてもう１度検索する
-    if (i_fi < 0) {
-        name[i_name    ] = '.';
-        name[i_name + 1] = 'H';
-        name[i_name + 2] = 'R';
-        name[i_name + 3] = 'B';
-        name[i_name + 4] = 0;
-
-        i_fi = fat12_search_file(finfo, name);
-    }
-
     if (i_fi < 0) {  // ファイルが見つからなかった
         return -2;
     }
@@ -549,8 +527,9 @@ static int cmd_app(char *cmd_name, int bgp)
 
     if (is_elf((Elf_Ehdr *) p)) {
         child_pid = elf_load(p, fi->size, fi->name);
+        //mem_free(p);
     } else {
-        dbgf("%.4s\n", p + 4);
+        //mem_free(p);
         return -1;
     }
 

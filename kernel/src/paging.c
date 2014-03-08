@@ -303,6 +303,7 @@ void app_area_copy(PDE *pd)
 void app_area_clear(void)
 {
     memset(l_pd, 0, BASE_PD_I * 4);
+    flush_tlb();
 }
 
 

@@ -71,12 +71,20 @@ int onsen_api(API_REGISTERS regs)
         ret = task_copy(&regs, 0);
         break;
 
-    case API_GET_MESSAGE:
-        ret = get_message((MSG *) arg1);
-        break;
-
     case API_WRITE:
         ret = f_write(arg1, (const void *) arg2, arg3);
+        break;
+
+    case API_EXEC:
+        ret = task_exec(&regs, (const char *) arg1);
+        break;
+
+    case API_GETPID:
+        ret = g_pid;
+        break;
+
+    case API_GET_MESSAGE:
+        ret = get_message((MSG *) arg1);
         break;
 
     case API_TIMER_NEW:

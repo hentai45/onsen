@@ -4,6 +4,7 @@
 #define HEADER_ELF
 
 #include <stdbool.h>
+#include "api.h"
 
 typedef unsigned int    Elf32_Addr;
 typedef unsigned short  Elf32_Half;
@@ -97,5 +98,6 @@ bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
 }
 
 int elf_load(void *p, unsigned int size, const char *name);
+int elf_load2(API_REGISTERS *regs, void *p, unsigned int size);
 
 #endif

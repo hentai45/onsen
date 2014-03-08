@@ -13,7 +13,7 @@ static int api0(int api_no)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no)
@@ -30,7 +30,7 @@ static int api1(int api_no, int arg1)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no), "b" (arg1)
@@ -47,7 +47,7 @@ int api2(int api_no, int arg1, int arg2)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no), "b" (arg1), "c" (arg2)
@@ -64,7 +64,7 @@ int api3(int api_no, int arg1, int arg2, int arg3)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no), "b" (arg1), "c" (arg2), "d" (arg3)
@@ -81,7 +81,7 @@ int api4(int api_no, int arg1, int arg2, int arg3, int arg4)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no), "b" (arg1), "c" (arg2), "d" (arg3), "S" (arg4)
@@ -98,7 +98,7 @@ int api5(int api_no, int arg1, int arg2, int arg3, int arg4, int arg5)
     int ret = 0;
 
     __asm__ __volatile__ (
-        "int   $0x44"
+        "int $0x44"
 
         : "=a" (ret)
         : "0" (api_no), "b" (arg1), "c" (arg2), "d" (arg3),

@@ -12,6 +12,7 @@
 #define HEADER_ELF
 
 #include <stdbool.h>
+#include "api.h"
 
 typedef unsigned int    Elf32_Addr;
 typedef unsigned short  Elf32_Half;
@@ -105,6 +106,7 @@ bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
 }
 
 int elf_load(void *p, unsigned int size, const char *name);
+int elf_load2(API_REGISTERS *regs, void *p, unsigned int size);
 
 #endif
 
@@ -112,7 +114,9 @@ int elf_load(void *p, unsigned int size, const char *name);
 //=============================================================================
 // 非公開ヘッダ
 
+#include "asmfunc.h"
 #include "debug.h"
+#include "gdt.h"
 #include "memory.h"
 #include "paging.h"
 #include "str.h"
@@ -234,6 +238,8 @@ int elf_load(void *p, unsigned int size, const char *name)
     PDE *pd = create_user_pd();
     set_app_tss(pid, (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
 
+    dbgf("pd = %p, pd_maddr = %p, cur cr3 = %p\n", pd, paging_get_maddr(pd), load_cr3());
+
     TSS *t = pid2tss(pid);
     t->code   = code;
     t->data   = data;
@@ -243,6 +249,116 @@ int elf_load(void *p, unsigned int size, const char *name)
     task_run(pid);
 
     return pid;
+}
+
+
+int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
+{
+    char *head = (char *) p;
+    Elf_Ehdr *ehdr = (Elf_Ehdr *) head;
+
+    // ---- 形式チェック
+
+    if ( ! is_elf(ehdr)) {
+        dbgf("This is not ELF file.\n");
+        return -1;
+    }
+
+    if (ehdr->e_type != ET_EXEC) {
+        dbgf("This is not executable file.\n");
+        return -1;
+    }
+
+    // ---- ロード
+
+    Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
+    Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
+
+    unsigned long code = 0, data = 0;
+    int bss_size;
+
+    for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
+        if (phdr->p_type != PT_LOAD) {
+            continue;
+        }
+
+        switch (phdr->p_flags) {
+        // ---- .text
+        case PF_R | PF_X:
+            if (code) {
+                dbgf("file has two text sections.\n");
+                return -1;
+            }
+
+            dbgf(".text: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr,
+                    phdr->p_filesz, phdr->p_memsz);
+
+            code = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
+            memcpy((void *) (code + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            break;
+
+        // ---- .data
+        case PF_R | PF_W:
+            if (data) {
+                dbgf("file has two data sections.\n");
+                return -1;
+            }
+
+            dbgf(".data: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+                    phdr->p_offset, phdr->p_vaddr,
+                    phdr->p_filesz, phdr->p_memsz);
+
+            data = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            memcpy((void *) (data + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+
+            // ---- .bss 領域を0クリア
+
+            bss_size = phdr->p_memsz - phdr->p_filesz;
+            if (bss_size > 0) {
+                // .bss セクションと同じか確認
+                if (bss_shdr && has_section(phdr, bss_shdr)) {
+                    if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
+                        if (bss_shdr->sh_size == bss_size) {
+                            memset((void *) (data + phdr->p_filesz), 0, bss_size);
+                        } else {
+                            dbgf("bss size is different");
+                        }
+                    } else {
+                        dbgf("bss->addr != data->addr + data->filesz\n");
+                        dbgf("%#X != %#X + %X (%p)\n", bss_shdr->sh_addr, phdr->p_vaddr, phdr->p_filesz, phdr->p_vaddr + phdr->p_filesz);
+                    }
+                } else {
+                    dbgf("p_filesz != p_memsz, but file doesn't have .bss section\n");
+                }
+            }
+
+            break;
+        }
+    }
+
+    if (code == 0) {
+        dbgf("file doesn't have code section\n");
+        return -1;
+    }
+
+    g_cur->code = code;
+    g_cur->data = data;
+
+    regs->eip = ehdr->e_entry;
+    regs->esp = VADDR_USER_ESP;
+
+    /*
+    __asm__ __volatile__ (
+        "movl %0, %%esp\n"
+        "jmp  %1"
+
+        :
+        : "r" (VADDR_USER_ESP), "r" (ehdr->e_entry)
+    );
+    */
+
+    return -1;
 }
 
 

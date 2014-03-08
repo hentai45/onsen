@@ -75,10 +75,12 @@ unsigned int mem_total_vfree_B(void);
 //=============================================================================
 // 非公開ヘッダ
 
+#include <stdbool.h>
+
 #include "asmfunc.h"
 #include "debug.h"
 #include "paging.h"
-#include "stdbool.h"
+#include "stacktrace.h"
 #include "str.h"
 #include "sysinfo.h"
 
@@ -283,6 +285,12 @@ void *mem_alloc(unsigned int size_B)
 int mem_free(void *vp_vaddr)
 {
     if (vp_vaddr == 0) {
+        return -1;
+    }
+
+    if (vp_vaddr < VADDR_MEM_START) {
+        DBGF("vaddr < VADDR_MEM_START\n");
+        stacktrace(3, f_debug);
         return -1;
     }
 

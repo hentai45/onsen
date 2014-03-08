@@ -3,10 +3,16 @@
 
 #define API_EXIT          1
 #define API_CHOPSTICKS    2
-#define API_GET_MESSAGE   9
-#define API_GETKEY      33
+#define API_READ          3
+#define API_WRITE         4
+#define API_OPEN          5
+#define API_CLOSE         6
+#define API_EXEC         11
+#define API_GETPID       20
 
-#define API_WRITE       10
+#define API_GET_MESSAGE  200
+#define API_GETKEY       201
+
 
 //-----------------------------------------------------------------------------
 // タイマ
