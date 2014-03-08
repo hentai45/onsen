@@ -4,6 +4,7 @@
 #define HEADER_TASK
 
 #include <stdbool.h>
+#include "api.h"
 #include "file.h"
 #include "paging.h"
 
@@ -62,7 +63,7 @@ typedef struct TSS {
     // ファイルテーブル
     FTE *file_tbl;
 
-    bool is_os_task;
+    bool is_os_task;  // TODO: フラグに移す
 } __attribute__ ((__packed__)) TSS;
 
 
@@ -80,7 +81,7 @@ typedef struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-int  chopsticks(void);
+int  task_copy(API_REGISTERS *regs, int flg);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);

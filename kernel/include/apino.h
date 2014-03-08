@@ -2,6 +2,7 @@
 #define HEADER_ONSEN_API_NO
 
 #define API_EXIT          1
+#define API_CHOPSTICKS    2
 #define API_GET_MESSAGE   9
 #define API_GETKEY      33
 

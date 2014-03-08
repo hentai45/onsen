@@ -42,6 +42,8 @@ void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
 PDE *create_user_pd(void);
+PDE *copy_pd(void);
+void paging_clear_pd_range(unsigned long start_vaddr, unsigned long end_vaddr);
 int  paging_get_flags(void *vp_vaddr);
 int  paging_set_flags(void *vp_vaddr, int flags);
 

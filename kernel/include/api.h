@@ -10,7 +10,7 @@ typedef struct _API_REGISTERS {
     unsigned int edi, esi, ebp, esp0, ebx, edx, ecx, eax;  // pushal
     unsigned int ds, es;
 
-    // 以下は、ソフトウェア読み込み時にCPUが自動でpushしたもの
+    // 以下は、ソフトウェア割り込み時にCPUが自動でpushしたもの
     unsigned int eip, cs, eflags, esp, ss;
 } API_REGISTERS;
 

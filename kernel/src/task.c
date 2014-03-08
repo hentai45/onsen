@@ -11,6 +11,7 @@
 #define HEADER_TASK
 
 #include <stdbool.h>
+#include "api.h"
 #include "file.h"
 #include "paging.h"
 
@@ -69,7 +70,7 @@ typedef struct TSS {
     // ファイルテーブル
     FTE *file_tbl;
 
-    bool is_os_task;
+    bool is_os_task;  // TODO: フラグに移す
 } __attribute__ ((__packed__)) TSS;
 
 
@@ -87,7 +88,7 @@ typedef struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-int  chopsticks(void);
+int  task_copy(API_REGISTERS *regs, int flg);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
@@ -117,6 +118,7 @@ extern int g_idle_pid;
 
 #include <stdbool.h>
 
+#include "asmapi.h"
 #include "asmfunc.h"
 #include "console.h"
 #include "debug.h"
@@ -285,10 +287,15 @@ int task_free(int pid, int exit_status)
 }
 
 
-/* 今実行されているタスクの複製を作る。forkのようなもの */
-int chopsticks(void)
+/* 今実行されているタスクの複製を作る */
+int task_copy(API_REGISTERS *regs, int flg)
 {
     int pid = task_new(g_cur->name);
+
+    if (pid == ERROR_PID) {
+        dbgf("could not copy\n");
+        return ERROR_PID;
+    }
 
     TSS *tss = &l_mng.tss[pid];
 
@@ -297,29 +304,51 @@ int chopsticks(void)
     tss->flags = TASK_FLG_ALLOC;
     tss->pid   = pid;
     tss->ppid  = g_cur->pid;
-    tss->eip   = (unsigned long) &&new_task_start;
 
-    unsigned long cur_esp, cur_ebp;
-    __asm__ __volatile__ ("movl %%esp, %0" : "=r" (cur_esp));
-    __asm__ __volatile__ ("movl %%ebp, %0" : "=r" (cur_ebp));
+    if ( ! g_cur->is_os_task) {
+        // ---- スタック領域をコピー
+
+        int size = VADDR_USER_ESP - g_cur->stack;
+        unsigned long temp_stack = (unsigned long) mem_alloc(size);
+        memcpy((void *) temp_stack, (void *) g_cur->stack, size);
+
+        PDE *src_pd = copy_pd();
+        paging_clear_pd_range(g_cur->stack, VADDR_USER_ESP);
+
+        unsigned long stack = (unsigned long) mem_alloc_user_page(g_cur->stack, size, PTE_RW);
+        memcpy((void *) stack, (void *) temp_stack, size);
+
+        tss->stack = stack;
+
+        mem_free(temp_stack);
+
+        // ----
+
+        tss->cr3 = load_cr3();
+        tss->cs = KERNEL_CS;
+        tss->ds = KERNEL_DS;
+        tss->es = KERNEL_DS;
+        tss->ss = KERNEL_DS;
+
+        store_cr3((unsigned long) paging_get_maddr(src_pd));
+    }
 
     unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned long esp0 = stack0 + (cur_esp - g_cur->stack0);
-
-    memcpy((void *) stack0, (void *) g_cur->stack0, DEFAULT_STACK0_SIZE);
-
+    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
     tss->stack0 = stack0;
-    tss->ebp = stack0 + (cur_ebp - g_cur->stack0);
+    tss->esp0 = esp0;
+
+    API_REGISTERS *new_regs  = (API_REGISTERS *) (esp0 - sizeof(API_REGISTERS));
+    *new_regs = *regs;
+
+    new_regs->eax = 0;  // 子の戻り値は0
+
+    tss->eip = (unsigned long) new_task_start;
+    tss->esp = (unsigned long) new_regs;
 
     task_run(pid);
 
-new_task_start:
-
-    if (g_pid == pid) {
-        return 0;
-    } else {
-        return pid;
-    }
+    return pid;
 }
 
 

@@ -14,6 +14,7 @@ typedef struct _POINT {
 #define RGB(r, g, b) ((unsigned int) (((r) & 0xFF) << 16) | (((g) & 0xFF) << 8) | ((b) & 0xFF))
 
 void exit(int status);
+int chopsticks(void);
 int get_message(struct MSG *msg);
 int getkey(int wait);
 

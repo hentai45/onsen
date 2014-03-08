@@ -7,12 +7,14 @@
 #define HEADER_ASMAPI
 
 void asm_api(void);
+void new_task_start(void);
 
 #endif
 */
 
 
     .globl asm_api
+    .globl new_task_start
 
     .extern onsen_api
 
@@ -31,6 +33,12 @@ asm_api:
     call   onsen_api
     movl   %eax, 28(%esp)  # 戻り値をこの関数の入り口の pushal で積んだ
                            # eax レジスタに格納する。
+    popal
+    popl  %ds
+    popl  %es
+    iret
+
+new_task_start:
     popal
     popl  %ds
     popl  %es

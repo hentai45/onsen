@@ -23,7 +23,7 @@ typedef struct _API_REGISTERS {
     unsigned int edi, esi, ebp, esp0, ebx, edx, ecx, eax;  // pushal
     unsigned int ds, es;
 
-    // 以下は、ソフトウェア読み込み時にCPUが自動でpushしたもの
+    // 以下は、ソフトウェア割り込み時にCPUが自動でpushしたもの
     unsigned int eip, cs, eflags, esp, ss;
 } API_REGISTERS;
 
@@ -65,6 +65,10 @@ int onsen_api(API_REGISTERS regs)
     switch (api_no) {
     case API_EXIT:
         api_exit_app(arg1);
+        break;
+
+    case API_CHOPSTICKS:
+        ret = task_copy(&regs, 0);
         break;
 
     case API_GET_MESSAGE:

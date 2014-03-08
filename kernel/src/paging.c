@@ -90,6 +90,8 @@ void paging_init(void);
 void paging_map(void *vp_vaddr, void *vp_maddr, int flg);
 void *paging_get_maddr(void *vp_vaddr);
 PDE *create_user_pd(void);
+PDE *copy_pd(void);
+void paging_clear_pd_range(unsigned long start_vaddr, unsigned long end_vaddr);
 int  paging_get_flags(void *vp_vaddr);
 int  paging_set_flags(void *vp_vaddr, int flags);
 
@@ -216,6 +218,23 @@ void *paging_get_maddr(void *vp_vaddr)
 }
 
 
+// stack領域とdata領域が同じpdeを使わないことが前提
+void paging_clear_pd_range(unsigned long start_vaddr, unsigned long end_vaddr)
+{
+    if (start_vaddr > end_vaddr)
+        return;
+
+    int i_start_pd = VADDR_TO_PD_INDEX(start_vaddr);
+    int i_end_pd   = VADDR_TO_PD_INDEX(end_vaddr);
+
+    for (int i_pd = i_start_pd; i_pd <= i_end_pd; i_pd++) {
+        l_pd[i_pd] = 0;
+    }
+
+    flush_tlb();
+}
+
+
 PDE *create_user_pd(void)
 {
     PDE *pd = mem_alloc(PAGE_SIZE_B);
@@ -224,6 +243,22 @@ PDE *create_user_pd(void)
 
     app_area_clear();
 
+    // 自分自身を参照できるようにする
+    int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
+    void *p = paging_get_maddr(pd);
+    pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_PRESENT);
+
+    return pd;
+}
+
+
+PDE *copy_pd(void)
+{
+    PDE *pd = mem_alloc(PAGE_SIZE_B);
+
+    memcpy(pd, l_pd, PAGE_SIZE_B);
+
+    // 自分自身を参照できるようにする
     int i_pd = VADDR_TO_PD_INDEX(VADDR_PD_SELF);
     void *p = paging_get_maddr(pd);
     pd[i_pd] = ((unsigned long) p & ~0xFFF) | (PTE_RW | PTE_PRESENT);
