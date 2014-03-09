@@ -134,9 +134,15 @@ extern int g_idle_pid;
 #include "str.h"
 #include "timer.h"
 
+#define FREE_USER_PAGES(addr) do {      \
+    if ((addr) != 0) {                  \
+        mem_free_user((void *) (addr)); \
+        (addr) = 0;                     \
+    }                                   \
+} while (0)
+
 
 static int pid2tss_sel(int pid);
-
 
 extern int timer_ts_tid(void);
 
@@ -235,7 +241,7 @@ int task_new(const char *name)
     }
 
     // もう全部使用中
-    DBGF("could not allocate new task.");
+    ERROR("could not allocate new task.");
     return ERROR_PID;
 }
 
@@ -244,19 +250,22 @@ int task_free(int pid, int exit_status)
 {
     TSS *t = pid2tss(pid);
 
-    if (t == 0 || t->flags == TASK_FLG_FREE) {
-        return -2;
-    }
+    ASSERT2(t && t->flags != TASK_FLG_FREE, "");
 
     task_sleep(pid);
 
     if ( ! is_os_task(pid)) {
         app_area_copy(t->pd);
 
-        mem_free_user((void *) t->code);
-        mem_free_user((void *) t->data);
-        mem_free_user((void *) t->stack);
-        mem_free_user((void *) t->stack0);
+        // TODO: ページのリファレンス数を管理できるようにする
+        dbgf("%d[%s]: code %#X, %#X\n", pid, task_get_name(pid), t->code, paging_get_maddr((void *) t->code));
+
+        FREE_USER_PAGES(t->code);
+        FREE_USER_PAGES(t->data);
+        FREE_USER_PAGES(t->stack);
+
+        mem_free((void *) t->stack0);
+        t->stack0 = 0;
 
         for (int i = 0; i < BASE_PD_I; i++) {
             if (t->pd[i]) {
@@ -300,7 +309,7 @@ int task_copy(API_REGISTERS *regs, int flg)
     int pid = task_new(g_cur->name);
 
     if (pid == ERROR_PID) {
-        dbgf("could not copy\n");
+        ERROR("could not copy");
         return ERROR_PID;
     }
 
@@ -359,6 +368,9 @@ int task_copy(API_REGISTERS *regs, int flg)
 }
 
 
+// forkから戻ってきた子プロセスはebpが正しく設定されていない。
+// なので、この関数内で変数を正しく参照できないため、
+// アセンブリ言語で書くことでその問題を回避している。
 int kernel_thread(int (*fn)(void), int flg)
 {
     int pid = 0;
@@ -389,6 +401,7 @@ int task_exec(API_REGISTERS *regs, const char *fname)
     int i_fi = fat12_search_file(finfo, fname);
 
     if (i_fi < 0) {  // ファイルが見つからなかった
+        dbgf("not found %s\n", fname);
         return -1;
     }
 
@@ -409,8 +422,9 @@ int task_exec(API_REGISTERS *regs, const char *fname)
         g_cur->stack  = stack;
         g_cur->stack0 = stack0;
     } else {
-        mem_free_user((void *) g_cur->code);
-        mem_free_user((void *) g_cur->data);
+        FREE_USER_PAGES(g_cur->code);
+        FREE_USER_PAGES(g_cur->data);
+
         paging_clear_pd_range(0, g_cur->stack - 0x400000);  // １つ前のPDEを指すために4MB引く
     }
 
@@ -429,9 +443,7 @@ void task_run(int pid)
 {
     TSS *t = pid2tss(pid);
 
-    if (t == 0 || t->flags == TASK_FLG_RUNNING) {
-        return;
-    }
+    ASSERT2(t && t->flags != TASK_FLG_RUNNING, "");
 
     t->flags = TASK_FLG_RUNNING;
     t->timeslice_ms = DEFAULT_TIMESLICE_MS;
@@ -484,11 +496,7 @@ void task_sleep(int pid)
 {
     TSS *t = pid2tss(pid);
 
-    if (t == 0) {
-        return;
-    }
-
-    if (t->flags != TASK_FLG_RUNNING) {
+    if (t == 0 || (t->flags & TASK_FLG_RUNNING) == 0) {
         return;
     }
 
@@ -505,11 +513,7 @@ void task_sleep(int pid)
         }
     }
 
-    if (i_rt >= l_mng.num_running) {
-        // ここに来たらOSのバグ
-        DBGF("[task_sleep] FOUND BUG!!");
-        i_rt = l_mng.num_running - 1;
-    }
+    ASSERT2(i_rt < l_mng.num_running, "bug");
 
     // cur_run をずらす
     if (i_rt < l_mng.cur_run) {
@@ -545,11 +549,7 @@ void task_wakeup(int pid)
 {
     TSS *t = pid2tss(pid);
 
-    if (t == 0) {
-        return;
-    }
-
-    if (t->flags != TASK_FLG_ALLOC) {
+    if (t == 0 || t->flags != TASK_FLG_ALLOC) {
         return;
     }
 

@@ -153,6 +153,10 @@ int onsen_api(API_REGISTERS regs)
         }
 
         break;
+
+    default:
+        ERROR("unknown api no: %d", api_no);
+        break;
     }
 
     return ret;

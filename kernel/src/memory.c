@@ -51,6 +51,7 @@ extern SYSTEM_INFO *g_sys_info;
 //-----------------------------------------------------------------------------
 // メモリ管理
 
+
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
@@ -80,7 +81,6 @@ unsigned int mem_total_vfree_B(void);
 #include "asmfunc.h"
 #include "debug.h"
 #include "paging.h"
-#include "stacktrace.h"
 #include "str.h"
 #include "sysinfo.h"
 
@@ -178,7 +178,7 @@ static unsigned long l_mfree_B;
 
 
 static void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg);
-static int page_free(void *maddr);
+static int page_free(void *vp_vaddr, bool is_only_maddr);
 
 //=============================================================================
 // 関数
@@ -264,9 +264,7 @@ static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size)
  */
 void *mem_alloc(unsigned int size_B)
 {
-    if (size_B == 0) {
-        return 0;
-    }
+    ASSERT(size_B, "attempted to allocate 0 bytes memory");
 
     if (size_B >= PAGE_SIZE_B - (l_mng_b->info_size * l_mng_b->unit)) {
         return mem_alloc_kernel_page(BYTE_TO_PAGE(size_B), SET_MNG_FLG);
@@ -284,44 +282,33 @@ void *mem_alloc(unsigned int size_B)
 
 int mem_free(void *vp_vaddr)
 {
-    if (vp_vaddr == 0) {
-        return -1;
-    }
+    ASSERT(vp_vaddr != 0, "attempted to free address 0");
 
-    if (vp_vaddr < VADDR_MEM_START) {
-        DBGF("vaddr < VADDR_MEM_START\n");
-        stacktrace(3, f_debug);
-        return -1;
-    }
+    unsigned int vaddr = (unsigned int) vp_vaddr;
 
-    if ((unsigned long) vp_vaddr & 0x7) {
-        // メモリ管理が返すメモリは、下位3ビットが0であるはず
-        return -1;
-    }
+    ASSERT(VADDR_MEM_START <= vaddr || vaddr <= VADDR_MEM_END,
+            "vaddr < VADDR_MEM_START || VADDR_MEM_END < vaddr: %p", vp_vaddr);
+
+    // メモリ管理が返すメモリは、下位3ビットが0であるはず
+    ASSERT((vaddr & 0x7) == 0, "(vaddr(%p) & 0x7) != 0", vp_vaddr);
 
     int flg = paging_get_flags(vp_vaddr);
 
     if (flg & 0xE00) {  // ページ単位メモリ管理が使うフラグが立っている
         /* ページ単位メモリ管理 */
 
-        if (IS_4KB_ALIGN(vp_vaddr)) {
-            return page_free(vp_vaddr);
-        } else {
-            return -1;
-        }
+        ASSERT(IS_4KB_ALIGN(vp_vaddr), "vaddr(%p) is not 4KB align", vp_vaddr);
+
+        return page_free(vp_vaddr, false);
     }
 
-    /* 8バイト単位メモリ管理 */
-
-    unsigned int vaddr = (unsigned int) vp_vaddr;
+    // ---- 8バイト単位メモリ管理
 
     // 割り当てサイズの取得
     INFO_8BYTES *info = (INFO_8BYTES *) (vaddr - MEM_INFO_B);
 
     // 「ここで管理されてます」という印はあるか？
-    if (info->signature != MM_SIG) {
-        return -1;
-    }
+    ASSERT(info->signature == MM_SIG, "not found the memory management signature");
 
     return mem_set_free(l_mng_b, (void *) info, info->size);
 }
@@ -329,50 +316,9 @@ int mem_free(void *vp_vaddr)
 
 int mem_free_user(void *vp_vaddr)
 {
-    if (vp_vaddr == 0) {
-        return -1;
-    }
+    ASSERT((unsigned long) vp_vaddr < VADDR_BASE, "attempted to free kernel address");
 
-    if ( ! IS_4KB_ALIGN(vp_vaddr)) {
-        return -1;
-    }
-
-    int flg = paging_get_flags(vp_vaddr);
-    if ((flg & PTE_START) == 0) {
-        return -1;
-    }
-
-    if (page_free_maddr(vp_vaddr) < 0) {
-        return -1;
-    }
-
-    if (flg & PTE_END) {
-        return 0;
-    }
-
-    unsigned long vaddr = (unsigned long) vp_vaddr;
-    vaddr += PAGE_SIZE_B;
-    flg = paging_get_flags((void *) vaddr);
-
-    while ((flg & PTE_END) == 0) {
-        if ((flg & PTE_CONT) == 0) {
-            return -1;
-        }
-
-        /* ASSERT */
-        if (flg & PTE_START) {
-            return -1;
-        }
-
-        if (page_free_maddr((void *) vaddr) < 0) {
-            return -1;
-        }
-
-        vaddr += PAGE_SIZE_B;
-        flg = paging_get_flags((void *) vaddr);
-    }
-
-    return page_free_maddr((void *) vaddr);
+    return page_free(vp_vaddr, true);
 }
 
 
@@ -381,7 +327,8 @@ unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
     new_stack &= ~0xFFF;
     new_stack -= 0x1000;  // ちょっと余裕をもたせる
 
-    if (mem_alloc_user_page(new_stack, old_stack - new_stack, PTE_RW) < 0) {
+    if (mem_alloc_user_page(new_stack, old_stack - new_stack, PTE_RW) == 0) {
+        ERROR("could not allocate pages");
         return 0;
     }
 
@@ -389,9 +336,7 @@ unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
 
     void *new_stack_last = (void *) (old_stack - 0x1000);
     int flg = paging_get_flags(new_stack_last);
-    if ((flg & PTE_END) == 0) {
-        DBGF("bug!");
-    }
+    ASSERT(flg & PTE_END, "not found end flag");
     flg &= ~PTE_END;
     paging_set_flags(new_stack_last, flg);
     if ((flg & PTE_START) == 0) {
@@ -399,9 +344,7 @@ unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
     }
 
     flg = paging_get_flags((void *) old_stack);
-    if ((flg & PTE_START) == 0) {
-        DBGF("bug!");
-    }
+    ASSERT(flg & PTE_START, "not found start flag");
     flg &= ~PTE_START;
     if ((flg & PTE_END) == 0) {
         flg |= PTE_CONT;
@@ -433,6 +376,7 @@ void *mem_alloc_maddr(void)
     }
 
     /* 物理アドレスが足りない */
+    ERROR("no remaining maddr");
     return 0;
 }
 
@@ -496,6 +440,7 @@ void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
     int num_pages = BYTE_TO_PAGE(size_B + fraction);
 
     if (mem_alloc_page_sub(vaddr, num_pages, flags | PTE_US, SET_MNG_FLG) < 0) {
+        ERROR("could not allocate user pages: vaddr=%#X, size=%Z", vaddr, size_B);
         return 0;
     } else {
         return (void *) vaddr;
@@ -508,18 +453,18 @@ void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
  */
 void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg)
 {
-    if (num_pages == 0) {
-        return 0;
-    }
+    ASSERT(num_pages, "attempted to allocate 0 pages");
 
     void *vaddr = get_free_addr(l_mng_v, num_pages);
 
     /* 論理アドレスが足りない */
     if (vaddr == 0) {
+        ERROR("no remaining vaddr");
         return 0;
     }
 
     if (mem_alloc_page_sub((unsigned long) vaddr, num_pages, PTE_RW, set_mng_flg) < 0) {
+        ERROR("could not allocate pages: vaddr=%#X, num pages=%d", vaddr, num_pages);
         return 0;
     } else {
         return vaddr;
@@ -569,25 +514,33 @@ static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, boo
     }
 
     /* 物理アドレスが足りない */
+    ERROR("no remaining maddr");
     return -1;
 }
 
 
-static int page_free(void *vp_vaddr)
+static int page_free(void *vp_vaddr, bool is_only_maddr)
 {
+    ASSERT(vp_vaddr, "vaddr == 0");
+
+    ASSERT(IS_4KB_ALIGN(vp_vaddr), "vaddr(%p) is not 4KB align", vp_vaddr);
+
     int flg = paging_get_flags(vp_vaddr);
-    if ((flg & PTE_START) == 0) {
-        return -1;
-    }
+    ASSERT(flg & PTE_START, "not found a start flag");
 
     unsigned int num_pages = 1;
 
     if (page_free_maddr(vp_vaddr) < 0) {
+        ERROR("could not free maddr");
         return -1;
     }
 
     if (flg & PTE_END) {
-        return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+        if (is_only_maddr) {
+            return 0;
+        } else {
+            return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+        }
     }
 
     unsigned long vaddr = (unsigned long) vp_vaddr;
@@ -596,16 +549,11 @@ static int page_free(void *vp_vaddr)
     flg = paging_get_flags((void *) vaddr);
 
     while ((flg & PTE_END) == 0) {
-        if ((flg & PTE_CONT) == 0) {
-            return -1;
-        }
-
-        /* ASSERT */
-        if (flg & PTE_START) {
-            return -1;
-        }
+        ASSERT(flg & PTE_CONT, "not found continue flag");
+        ASSERT((flg & PTE_START) == 0, "invalid start flag");
 
         if (page_free_maddr((void *) vaddr) < 0) {
+            ERROR("could not free maddr");
             return -1;
         }
 
@@ -615,21 +563,29 @@ static int page_free(void *vp_vaddr)
     }
 
     if (page_free_maddr((void *) vaddr) < 0) {
+        ERROR("could not free maddr");
         return -1;
     }
 
-    return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+    if (is_only_maddr) {
+        return 0;
+    } else {
+        return mem_set_free(l_mng_v, vp_vaddr, num_pages);
+    }
 }
+
 
 static int page_free_maddr(void *vp_vaddr)
 {
     void *vp_maddr = paging_get_maddr(vp_vaddr);
 
     if (vp_maddr == 0) {
+        ERROR("could not get free maddr");
         return -1;
     }
 
     if (IS_FREE_MADDR(vp_maddr)) {
+        ERROR("maddr is already free");
         return -1;
     }
 

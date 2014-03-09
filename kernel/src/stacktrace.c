@@ -71,14 +71,19 @@ void stacktrace(unsigned int max_frames, FILE_T *f)
         ebp = (unsigned int *) ebp[0];
         //unsigned int *arguments = &ebp[2];
         char *name = get_func_name(eip);
-        fprintf(f, "  %#X: %.32s\n", eip, name);
+        if (name) {
+            fprintf(f, "  %#X: %.32s\n", eip, name);
+        } else {
+            fprintf(f, "  %#X: %.32s\n", eip, "unknown func");
+            return;
+        }
     }
 }
 
 
 static char *get_func_name(unsigned int addr)
 {
-    char *name = "unknown func";
+    char *name = 0;
 
     if (l_func_names == 0)
         return name;

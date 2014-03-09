@@ -45,6 +45,7 @@ extern SYSTEM_INFO *g_sys_info;
 //-----------------------------------------------------------------------------
 // メモリ管理
 
+
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);

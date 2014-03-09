@@ -56,6 +56,9 @@ void OnSenMain(void)
 
 static void init_onsen(void)
 {
+    void *vram = (void *) VADDR_VRAM;
+    minimal_graphic_init(vram, g_sys_info->w, g_sys_info->h, g_sys_info->color_width);
+
     mem_init();     // メモリ初期化
     paging_init();
     fat12_init();
@@ -69,8 +72,7 @@ static void init_onsen(void)
     set_pic1_mask(0xEF);  // マウスの割り込みを許可
     task_init();
     // タスク初期化のあとでする必要がある
-    void *vram = (void *) VADDR_VRAM;
-    graphic_init(vram);  // 画面初期化
+    graphic_init();  // 画面初期化
     mouse_init();
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
 

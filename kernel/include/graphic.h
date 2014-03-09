@@ -55,7 +55,8 @@ extern int g_vram_sid;
 extern int g_dt_sid;
 
 
-void graphic_init(void *vram);
+void minimal_graphic_init(void *vram, int w, int h, int color_width);
+void graphic_init(void);
 
 int  new_surface(int parent_sid, int w, int h);
 int  new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width);

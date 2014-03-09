@@ -60,7 +60,8 @@ extern int g_vram_sid;
 extern int g_dt_sid;
 
 
-void graphic_init(void *vram);
+void minimal_graphic_init(void *vram, int w, int h, int color_width);
+void graphic_init(void);
 
 int  new_surface(int parent_sid, int w, int h);
 int  new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width);
@@ -154,9 +155,9 @@ void graphic_dbg(void);
 #define SRF_FLG_WIN_ACTIVE      (1 << 2)
 
 typedef struct SURFACE {
-    int sid;    ///< SURFACE ID
+    int sid;    // SURFACE ID
     unsigned int flags;
-    int pid;    ///< この SURFACE を持っているプロセス ID
+    int pid;    // この SURFACE を持っているプロセス ID
     char *name;
 
     int x;
@@ -221,7 +222,7 @@ static unsigned int l_h;
 //=============================================================================
 // 公開関数
 
-void graphic_init(void *vram)
+void minimal_graphic_init(void *vram, int w, int h, int color_width)
 {
     l_w = g_sys_info->w;
     l_h = g_sys_info->h;
@@ -237,9 +238,7 @@ void graphic_init(void *vram)
     }
 
 
-    // ---- SURFACE の作成
-
-    // -------- VRAM SURFACE の作成
+    // ---- VRAM SURFACE の作成
 
     SURFACE *srf = srf_alloc();
     int sid = srf->sid;
@@ -253,17 +252,21 @@ void graphic_init(void *vram)
     srf->g.m   = g_gbuf_method16;
 
     l_vram_srf = srf;
+}
 
-    // -------- デスクトップ画面の作成
 
-    sid = new_surface(NO_PARENT_SID, l_w, l_h);
+void graphic_init(void)
+{
+    // ---- デスクトップ画面の作成
+
+    int sid = new_surface(NO_PARENT_SID, l_w, l_h);
     g_dt_sid = sid;
-    srf = sid2srf(sid);
+    SURFACE *srf = sid2srf(sid);
     srf->pid = g_root_pid;
 
     l_dt_srf = srf;
 
-    // -------- バッファの作成
+    // ---- バッファの作成
 
     sid = new_surface(NO_PARENT_SID, l_w, l_h);
     l_buf_sid = sid;
@@ -272,11 +275,11 @@ void graphic_init(void *vram)
 
     l_buf_srf = srf;
 
-    // -------- 閉じるボタン SURFACE の作成
+    // ---- 閉じるボタン SURFACE の作成
 
     create_close_button_surface();
 
-    // -------- マウス SURFACE の作成
+    // ---- マウス SURFACE の作成
 
     create_mouse_surface();
 
