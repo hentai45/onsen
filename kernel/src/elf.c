@@ -152,7 +152,7 @@ int elf_load(void *p, unsigned int size, const char *name)
     Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
     Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
-    unsigned long code = 0, data = 0;
+    USER_PAGE *code = 0, *data = 0;
     int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
@@ -172,8 +172,8 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            code = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
-            memcpy((void *) (code + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            code = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
+            memcpy((void *) (code->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
             break;
 
         // ---- .data
@@ -187,8 +187,8 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            data = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
-            memcpy((void *) (data + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
 
@@ -217,13 +217,18 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     if (code == 0) {
         dbgf("file doesn't have code section\n");
+
+        if (data) {
+            mem_free_user(data);
+        }
+
         return -1;
     }
 
     // スタックの準備
 
-    unsigned long stack = (unsigned long) mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
-    unsigned long esp = stack + 0x8000;
+    USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
+    unsigned long esp = stack->vaddr + 0x8000;
 
     unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
     unsigned long esp0 = stack0 + (8 * 1024);
@@ -237,8 +242,6 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     PDE *pd = create_user_pd();
     set_app_tss(pid, (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
-
-    dbgf("pd = %p, pd_maddr = %p, cur cr3 = %p\n", pd, paging_get_maddr(pd), load_cr3());
 
     TSS *t = pid2tss(pid);
     t->code   = code;
@@ -274,7 +277,7 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
     Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
     Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
-    unsigned long code = 0, data = 0;
+    USER_PAGE *code = 0, *data = 0;
     int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
@@ -294,8 +297,8 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            code = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
-            memcpy((void *) (code + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            code = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
+            memcpy((void *) (code->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
             break;
 
         // ---- .data
@@ -309,8 +312,8 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            data = (unsigned long) mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
-            memcpy((void *) (data + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
 
@@ -339,6 +342,11 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
 
     if (code == 0) {
         dbgf("file doesn't have code section\n");
+
+        if (data) {
+            mem_free_user(data);
+        }
+
         return -1;
     }
 
@@ -347,16 +355,6 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
 
     regs->eip = ehdr->e_entry;
     regs->esp = VADDR_USER_ESP;
-
-    /*
-    __asm__ __volatile__ (
-        "movl %0, %%esp\n"
-        "jmp  %1"
-
-        :
-        : "r" (VADDR_USER_ESP), "r" (ehdr->e_entry)
-    );
-    */
 
     return -1;
 }

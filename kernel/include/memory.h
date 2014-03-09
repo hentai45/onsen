@@ -45,15 +45,20 @@ extern SYSTEM_INFO *g_sys_info;
 //-----------------------------------------------------------------------------
 // メモリ管理
 
+typedef struct _USER_PAGE {
+    unsigned long vaddr;
+    int refs;
+} USER_PAGE;
+
 
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
-unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack);
+USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
-int   mem_free_user(void *vp_vaddr);
+int   mem_free_user(USER_PAGE *page);
 int   mem_free_maddr(void *vp_maddr);
 void  mem_dbg(void);
 

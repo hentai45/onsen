@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include "api.h"
 #include "file.h"
+#include "memory.h"
 #include "paging.h"
 
 #define ERROR_PID        (-1)
@@ -61,9 +62,9 @@ typedef struct TSS {
     int timeslice_ms;
 
     // メモリ
-    unsigned long code;
-    unsigned long data;
-    unsigned long stack;
+    USER_PAGE *code;
+    USER_PAGE *data;
+    USER_PAGE *stack;
     // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack0;
 
@@ -134,11 +135,11 @@ extern int g_idle_pid;
 #include "str.h"
 #include "timer.h"
 
-#define FREE_USER_PAGES(addr) do {      \
-    if ((addr) != 0) {                  \
-        mem_free_user((void *) (addr)); \
-        (addr) = 0;                     \
-    }                                   \
+#define FREE_USER_PAGES(page) do { \
+    if ((page) != 0) {             \
+        mem_free_user((page));     \
+        (page) = 0;                \
+    }                              \
 } while (0)
 
 
@@ -257,9 +258,6 @@ int task_free(int pid, int exit_status)
     if ( ! is_os_task(pid)) {
         app_area_copy(t->pd);
 
-        // TODO: ページのリファレンス数を管理できるようにする
-        dbgf("%d[%s]: code %#X, %#X\n", pid, task_get_name(pid), t->code, paging_get_maddr((void *) t->code));
-
         FREE_USER_PAGES(t->code);
         FREE_USER_PAGES(t->data);
         FREE_USER_PAGES(t->stack);
@@ -322,17 +320,22 @@ int task_copy(API_REGISTERS *regs, int flg)
     tss->ppid  = g_cur->pid;
 
     if ( ! g_cur->is_os_task) {
+        // ---- 共有しているページのリファレンス数を増やす
+
+        if (tss->code) tss->code->refs++;
+        if (tss->data) tss->data->refs++;
+
         // ---- スタック領域をコピー
 
-        int size = VADDR_USER_ESP - g_cur->stack;
+        int size = VADDR_USER_ESP - g_cur->stack->vaddr;
         unsigned long temp_stack = (unsigned long) mem_alloc(size);
-        memcpy((void *) temp_stack, (void *) g_cur->stack, size);
+        memcpy((void *) temp_stack, (void *) g_cur->stack->vaddr, size);
 
-        PDE *src_pd = copy_pd();
-        paging_clear_pd_range(g_cur->stack, VADDR_USER_ESP);
+        PDE *src_pd = copy_pd();  // バックアップ
+        paging_clear_pd_range(g_cur->stack->vaddr, VADDR_USER_ESP);
 
-        unsigned long stack = (unsigned long) mem_alloc_user_page(g_cur->stack, size, PTE_RW);
-        memcpy((void *) stack, (void *) temp_stack, size);
+        USER_PAGE *stack = mem_alloc_user_page(g_cur->stack->vaddr, size, PTE_RW);
+        memcpy((void *) stack->vaddr, (void *) temp_stack, size);
 
         tss->stack = stack;
 
@@ -346,6 +349,8 @@ int task_copy(API_REGISTERS *regs, int flg)
         tss->es = KERNEL_DS;
         tss->ss = KERNEL_DS;
 
+        // リストア
+        g_cur->pd = src_pd;
         store_cr3((unsigned long) paging_get_maddr(src_pd));
     }
 
@@ -354,7 +359,7 @@ int task_copy(API_REGISTERS *regs, int flg)
     tss->stack0 = stack0;
     tss->esp0 = esp0;
 
-    API_REGISTERS *new_regs  = (API_REGISTERS *) (esp0 - sizeof(API_REGISTERS));
+    API_REGISTERS *new_regs = (API_REGISTERS *) (esp0 - sizeof(API_REGISTERS));
     *new_regs = *regs;
 
     new_regs->eax = 0;  // 子の戻り値は0
@@ -413,8 +418,8 @@ int task_exec(API_REGISTERS *regs, const char *fname)
     if (g_cur->is_os_task) {
         // スタックの準備
 
-        unsigned long stack = (unsigned long) mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
-        unsigned long esp = stack + 0x8000;
+        USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
+        unsigned long esp = stack->vaddr + 0x8000;
 
         unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
         unsigned long esp0 = stack0 + (8 * 1024);
@@ -425,7 +430,7 @@ int task_exec(API_REGISTERS *regs, const char *fname)
         FREE_USER_PAGES(g_cur->code);
         FREE_USER_PAGES(g_cur->data);
 
-        paging_clear_pd_range(0, g_cur->stack - 0x400000);  // １つ前のPDEを指すために4MB引く
+        paging_clear_pd_range(0, g_cur->stack->vaddr - 0x400000);  // １つ前のPDEを指すために4MB引く
     }
 
     memcpy(g_cur->name, fi->name, 8);

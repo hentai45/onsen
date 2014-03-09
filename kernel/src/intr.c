@@ -205,12 +205,11 @@ static int page_fault_handler(INT_REGISTERS *regs)
     __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
 
     // スタックの拡張
-    if (regs->app_esp <= cr2 && cr2 <= g_cur->stack) {
-        unsigned long new_stack = mem_expand_stack(g_cur->stack, regs->app_esp);
-        if (new_stack == 0)
+    if (regs->app_esp <= cr2 && cr2 <= g_cur->stack->vaddr) {
+        int ret = mem_expand_stack(g_cur->stack, regs->app_esp);
+        if (ret < 0)
             return -1;
 
-        g_cur->stack = new_stack;
         return 1;
     }
 

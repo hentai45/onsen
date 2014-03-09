@@ -51,15 +51,20 @@ extern SYSTEM_INFO *g_sys_info;
 //-----------------------------------------------------------------------------
 // メモリ管理
 
+typedef struct _USER_PAGE {
+    unsigned long vaddr;
+    int refs;
+} USER_PAGE;
+
 
 void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
-unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack);
+USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
 int   mem_free(void *vp_vaddr);
-int   mem_free_user(void *vp_vaddr);
+int   mem_free_user(USER_PAGE *page);
 int   mem_free_maddr(void *vp_maddr);
 void  mem_dbg(void);
 
@@ -313,28 +318,49 @@ int mem_free(void *vp_vaddr)
     return mem_set_free(l_mng_b, (void *) info, info->size);
 }
 
+// TODO
+#include "task.h"
 
-int mem_free_user(void *vp_vaddr)
+int mem_free_user(USER_PAGE *page)
 {
-    ASSERT((unsigned long) vp_vaddr < VADDR_BASE, "attempted to free kernel address");
+    ASSERT(page, "");
+    ASSERT(page->vaddr, "");
+    ASSERT(page->vaddr < VADDR_BASE, "attempted to free kernel address");
 
-    return page_free(vp_vaddr, true);
+    if (page->refs > 1) {
+        page->refs--;
+        return 0;
+    }
+
+    ASSERT(page->refs == 1, "invalid page refs");
+
+    int ret = page_free((void *) page->vaddr, true);
+
+    mem_free(page);
+
+    return ret;
 }
 
 
-unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
+int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack)
 {
     new_stack &= ~0xFFF;
     new_stack -= 0x1000;  // ちょっと余裕をもたせる
 
-    if (mem_alloc_user_page(new_stack, old_stack - new_stack, PTE_RW) == 0) {
+    int size_B = stack->vaddr - new_stack;
+
+    USER_PAGE *new_stack_page = mem_alloc_user_page(new_stack, size_B, PTE_RW);
+    if (new_stack_page == 0) {
         ERROR("could not allocate pages");
-        return 0;
+        return -1;
     }
+
+    ASSERT(new_stack == new_stack_page->vaddr, "");
+    mem_free(new_stack_page);
 
     // 古いスタックと新しいスタックを１つにまとめる
 
-    void *new_stack_last = (void *) (old_stack - 0x1000);
+    void *new_stack_last = (void *) (stack->vaddr - 0x1000);
     int flg = paging_get_flags(new_stack_last);
     ASSERT(flg & PTE_END, "not found end flag");
     flg &= ~PTE_END;
@@ -343,15 +369,18 @@ unsigned long mem_expand_stack(unsigned long old_stack, unsigned long new_stack)
         flg |= PTE_CONT;
     }
 
-    flg = paging_get_flags((void *) old_stack);
+    flg = paging_get_flags((void *) stack->vaddr);
     ASSERT(flg & PTE_START, "not found start flag");
     flg &= ~PTE_START;
     if ((flg & PTE_END) == 0) {
         flg |= PTE_CONT;
     }
-    paging_set_flags((void *) old_stack, flg);
+    paging_set_flags((void *) stack->vaddr, flg);
 
-    return new_stack;
+    // 更新
+    stack->vaddr = new_stack;
+
+    return 0;
 }
 
 
@@ -432,8 +461,11 @@ void *mem_alloc_str(const char *s)
 
 static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, bool set_mng_flg);
 
-void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
+USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
 {
+    USER_PAGE *page = (USER_PAGE *) mem_alloc(sizeof(USER_PAGE));
+    page->refs = 1;
+
     int fraction = vaddr & 0xFFF;
     vaddr &= ~0xFFF;
 
@@ -443,7 +475,8 @@ void *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
         ERROR("could not allocate user pages: vaddr=%#X, size=%Z", vaddr, size_B);
         return 0;
     } else {
-        return (void *) vaddr;
+        page->vaddr = vaddr;
+        return page;
     }
 }
 

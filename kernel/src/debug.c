@@ -367,7 +367,14 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS *regs)
     }
 
     dbgf("EIP = %X", regs->eip);
-    dbgf(", CS = %d * 8 + %d", regs->cs >> 3, regs->cs & 0x07);
+    char *name = get_func_name(regs->eip);
+    if (name) {
+        dbgf(", %s\n", name);
+    } else {
+        dbgf("\n");
+    }
+
+    dbgf("CS = %d * 8 + %d", regs->cs >> 3, regs->cs & 0x07);
     dbgf(", DS = %d * 8 + %d", regs->ds >> 3, regs->ds & 0x07);
     dbgf(", ES = %d * 8 + %d\n", regs->es >> 3, regs->es & 0x07);
 
@@ -376,7 +383,11 @@ void dbg_fault(const char *msg, int no, INT_REGISTERS *regs)
     dbgf("  IF = %d\n", intr_flg);
 
     dbgf("APP ESP = %X", regs->app_esp);
-    dbgf(", APP SS = %d * 8 + %d\n", regs->app_ss >> 3, regs->app_ss & 0x07);
+    dbgf(", APP SS = %d * 8 + %d\n\n", regs->app_ss >> 3, regs->app_ss & 0x07);
+
+    if (g_cur->is_os_task) {
+        stacktrace2(5, f_debug, (unsigned int *) regs->ebp);
+    }
 
     fg = bk_fg;
     bg = bk_bg;

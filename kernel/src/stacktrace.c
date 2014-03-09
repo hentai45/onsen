@@ -14,6 +14,8 @@
 
 void init_func_names(void);
 void stacktrace(unsigned int max_frames, FILE_T *f);
+void stacktrace2(unsigned int max_frames, FILE_T *f, unsigned int *ebp);
+char *get_func_name(unsigned int addr);
 
 
 #endif
@@ -33,8 +35,6 @@ typedef struct _FUNC_NAME {
     char name[32];
 } FUNC_NAME;
 
-
-static char *get_func_name(unsigned int addr);
 
 static FUNC_NAME *l_func_names = 0;
 static int l_num_fnames = 0;
@@ -61,6 +61,12 @@ void init_func_names(void)
 void stacktrace(unsigned int max_frames, FILE_T *f)
 {
     unsigned int *ebp = &max_frames - 2;
+    stacktrace2(max_frames, f, ebp);
+}
+
+
+void stacktrace2(unsigned int max_frames, FILE_T *f, unsigned int *ebp)
+{
     fprintf(f, "stack trace:\n");
     for(unsigned int frame = 0; frame < max_frames; ++frame)
     {
@@ -81,7 +87,7 @@ void stacktrace(unsigned int max_frames, FILE_T *f)
 }
 
 
-static char *get_func_name(unsigned int addr)
+char *get_func_name(unsigned int addr)
 {
     char *name = 0;
 

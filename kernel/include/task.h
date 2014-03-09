@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "api.h"
 #include "file.h"
+#include "memory.h"
 #include "paging.h"
 
 #define ERROR_PID        (-1)
@@ -54,9 +55,9 @@ typedef struct TSS {
     int timeslice_ms;
 
     // メモリ
-    unsigned long code;
-    unsigned long data;
-    unsigned long stack;
+    USER_PAGE *code;
+    USER_PAGE *data;
+    USER_PAGE *stack;
     // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack0;
 
