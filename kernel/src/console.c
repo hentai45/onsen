@@ -327,27 +327,27 @@ static void run_cmd(char *cmd_name)
 {
     int run_status = 0;
 
-    if (strcmp(cmd_name, "ls") == 0) {
+    if (STRCMP(cmd_name, ==, "ls")) {
         cmd_ls();
-    } else if (strcmp(cmd_name, "clear") == 0) {
+    } else if (STRCMP(cmd_name, ==, "clear")) {
         cmd_clear();
-    } else if (strncmp(cmd_name, "cat ", 4) == 0) {
+    } else if (STRNCMP(cmd_name, ==, "cat ", 4)) {
         cmd_cat(&cmd_name[4]);
-    } else if (strcmp(cmd_name, "ps") == 0) {
+    } else if (STRCMP(cmd_name, ==, "ps")) {
         cmd_ps();
-    } else if (strcmp(cmd_name, "mem") == 0) {
+    } else if (STRCMP(cmd_name, ==, "mem")) {
         cmd_mem();
-    } else if (strncmp(cmd_name, "kill ", 5) == 0) {
+    } else if (STRNCMP(cmd_name, ==, "kill ", 5)) {
         if (cmd_name[5] < '0' || '9' < cmd_name[5]) {
             putf("Usage: kill pid\n\n");
         } else {
             cmd_kill(atoi(&cmd_name[5]));
         }
-    } else if (strncmp(cmd_name, "run ", 4) == 0) {
+    } else if (STRNCMP(cmd_name, ==, "run ", 4)) {
         run_status = cmd_app(&cmd_name[4], 1);
-    } else if (strcmp(cmd_name, "dbg") == 0) {
+    } else if (STRCMP(cmd_name, ==, "dbg")) {
         cmd_dbg("all");
-    } else if (strncmp(cmd_name, "dbg ", 4) == 0) {
+    } else if (STRNCMP(cmd_name, ==, "dbg ", 4)) {
         cmd_dbg(&cmd_name[4]);
     } else {
         run_status = cmd_app(cmd_name, 0);
@@ -463,29 +463,29 @@ static void cmd_kill(int pid)
 
 static void cmd_dbg(char *name)
 {
-    if (strcmp(name, "all") == 0) {
+    if (STRCMP(name, ==, "all")) {
         graphic_dbg();
         mem_dbg();
         paging_dbg();
         task_dbg();
         timer_dbg();
-    } else if (strcmp(name, "sysinfo") == 0) {
+    } else if (STRCMP(name, ==, "sysinfo")) {
         dbgf("\nvram = %X\n", g_sys_info->vram);
         dbgf("width = %d\n", g_sys_info->w);
         dbgf("height = %d\n", g_sys_info->h);
         dbgf("color width = %d\n", g_sys_info->color_width);
         dbgf("end_free_maddr = %#X\n\n", g_sys_info->end_free_maddr);
-    } else if (strcmp(name, "task") == 0) {
+    } else if (STRCMP(name, ==, "task")) {
         task_dbg();
-    } else if (strcmp(name, "timer") == 0) {
+    } else if (STRCMP(name, ==, "timer")) {
         timer_dbg();
-    } else if (strcmp(name, "mem") == 0) {
+    } else if (STRCMP(name, ==, "mem")) {
         mem_dbg();
-    } else if (strcmp(name, "paging") == 0) {
+    } else if (STRCMP(name, ==, "paging")) {
         paging_dbg();
-    } else if (strcmp(name, "graphic") == 0) {
+    } else if (STRCMP(name, ==, "graphic")) {
         graphic_dbg();
-    } else if (strcmp(name, "temp") == 0) {
+    } else if (STRCMP(name, ==, "temp")) {
         g_dbg_temp_flg = 1;
         int fd = f_open("/debug/temp", O_RDONLY);
         char buf[4096];

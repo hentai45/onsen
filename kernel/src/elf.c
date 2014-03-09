@@ -374,7 +374,9 @@ static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name)
     char *name_sect = head + name_shdr->sh_offset;
 
     for (int i = 0; i < ehdr->e_shnum; i++, shdr++) {
-        if (strcmp(name_sect + shdr->sh_name, name) == 0) {
+        char *sect_name = name_sect + shdr->sh_name;
+
+        if (STRCMP(sect_name, ==, name)) {
             return shdr;
         }
     }

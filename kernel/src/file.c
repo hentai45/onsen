@@ -75,13 +75,13 @@ int f_open(const char *name, int flags)
     if (fd == -1)
         return -1;
 
-    if (strcmp(name, "/dev/tty") == 0 && flags == O_WRONLY){
+    if (STRCMP(name, ==, "/dev/tty") && flags == O_WRONLY){
         f_set_file(fd, f_console);
         return fd;
-    } else if (strcmp(name, "/dev/keyboard") == 0 && flags == O_RDONLY) {
+    } else if (STRCMP(name, ==, "/dev/keyboard") && flags == O_RDONLY) {
         f_set_file(fd, f_keyboard);
         return fd;
-    } else if (strcmp(name, "/debug/temp") == 0) {
+    } else if (STRCMP(name, ==, "/debug/temp")) {
         f_set_file(fd, f_dbg_temp);
         return fd;
     }

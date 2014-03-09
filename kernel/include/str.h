@@ -25,4 +25,9 @@ void *memcpy(void *dst, const void *src, unsigned int);
 void *memmove(void *dst, const void *src, unsigned int);
 void *memset(void *dst, int c, unsigned int count);
 
+// 『エキスパートCプログラミング』p109
+#define STRCMP(a, R, b)  (strcmp(a,b) R 0)
+
+#define STRNCMP(a, R, b, n)  (strncmp(a,b,n) R 0)
+
 #endif
