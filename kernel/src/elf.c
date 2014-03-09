@@ -149,6 +149,8 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     // ---- ロード
 
+    cli();
+
     Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
     Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
@@ -242,6 +244,8 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     PDE *pd = create_user_pd();
     set_app_tss(pid, (PDE) pd, (void (*)(void)) ehdr->e_entry, esp, esp0);
+
+    sti();
 
     TSS *t = pid2tss(pid);
     t->code   = code;
@@ -356,7 +360,7 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
     regs->eip = ehdr->e_entry;
     regs->esp = VADDR_USER_ESP;
 
-    return -1;
+    return 0;
 }
 
 

@@ -318,8 +318,6 @@ int mem_free(void *vp_vaddr)
     return mem_set_free(l_mng_b, (void *) info, info->size);
 }
 
-// TODO
-#include "task.h"
 
 int mem_free_user(USER_PAGE *page)
 {

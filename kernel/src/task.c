@@ -320,6 +320,8 @@ int task_copy(API_REGISTERS *regs, int flg)
     tss->ppid  = g_cur->pid;
 
     if ( ! g_cur->is_os_task) {
+        cli();
+
         // ---- 共有しているページのリファレンス数を増やす
 
         if (tss->code) tss->code->refs++;
@@ -351,13 +353,18 @@ int task_copy(API_REGISTERS *regs, int flg)
 
         // リストア
         g_cur->pd = src_pd;
-        store_cr3((unsigned long) paging_get_maddr(src_pd));
+        unsigned long cr3 = (unsigned long) paging_get_maddr(src_pd);
+        g_cur->cr3 = cr3;
+        store_cr3(cr3);
+
+        sti();
     }
 
     unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
     unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
     tss->stack0 = stack0;
     tss->esp0 = esp0;
+    tss->ss0  = KERNEL_DS;
 
     API_REGISTERS *new_regs = (API_REGISTERS *) (esp0 - sizeof(API_REGISTERS));
     *new_regs = *regs;
@@ -400,6 +407,21 @@ int kernel_thread(int (*fn)(void), int flg)
 }
 
 
+int execve(const char *cmd, char **argv, char **envp)
+{
+    int ret;
+
+    __asm__ __volatile__ (
+        "int $0x44"
+
+        : "=a" (ret)
+        : "0" (API_EXECVE), "b" (cmd), "c" (argv), "d" (envp)
+    );
+
+    return ret;
+}
+
+
 int task_exec(API_REGISTERS *regs, const char *fname)
 {
     FILEINFO *finfo = fat12_get_file_info();
@@ -416,16 +438,29 @@ int task_exec(API_REGISTERS *regs, const char *fname)
     fat12_load_file(fi->clustno, fi->size, p);
 
     if (g_cur->is_os_task) {
+        cli();
+
+        PDE *pd = create_user_pd();
+        g_cur->pd = pd;
+        unsigned long cr3 = (unsigned long) paging_get_maddr(pd);
+        g_cur->cr3 = cr3;
+        store_cr3(cr3);
+
+        sti();
+
         // スタックの準備
 
-        USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
-        unsigned long esp = stack->vaddr + 0x8000;
-
-        unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
-        unsigned long esp0 = stack0 + (8 * 1024);
+        USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - DEFAULT_STACK0_SIZE, DEFAULT_STACK0_SIZE, PTE_RW);
 
         g_cur->stack  = stack;
-        g_cur->stack0 = stack0;
+        g_cur->ss0    = KERNEL_DS;
+        g_cur->is_os_task = false;
+
+        regs->esp = VADDR_USER_ESP;
+        regs->cs  = USER_CS | 3;
+        regs->ds  = USER_DS | 3;
+        regs->es  = USER_DS | 3;
+        regs->ss  = USER_DS | 3;
     } else {
         FREE_USER_PAGES(g_cur->code);
         FREE_USER_PAGES(g_cur->data);

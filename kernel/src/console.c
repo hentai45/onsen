@@ -110,6 +110,10 @@ static void cmd_kill(int pid);
 static void cmd_dbg(char *name);
 static int  cmd_app(char *cmd_name, int bgp);
 
+void test_main(void)
+{
+    execve("b", 0, 0);
+}
 
 //=============================================================================
 // 関数
@@ -127,6 +131,9 @@ void console_main(void)
     l_sid = new_window(700, 280, w, h, "console");
     fill_surface(l_sid, bg);
     update_surface(l_sid);
+
+    int pid = kernel_thread(test_main, 0);
+    dbgf("child pid is %d\n", pid);
 
     put_prompt();
 

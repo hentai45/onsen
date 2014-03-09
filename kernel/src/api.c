@@ -174,6 +174,7 @@ void api_exit_app(int exit_status)
     for (;;) {
         // メッセージが処理されるのをここで待つ
         // これがないとアプリケーションが return でおかしなところに飛んでいく
+        hlt();
     }
 }
 
