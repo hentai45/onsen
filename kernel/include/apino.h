@@ -2,12 +2,12 @@
 #define HEADER_ONSEN_API_NO
 
 #define API_EXIT          1
-#define API_CHOPSTICKS    2
+#define API_FORK          2
 #define API_READ          3
 #define API_WRITE         4
 #define API_OPEN          5
 #define API_CLOSE         6
-#define API_EXEC         11
+#define API_EXECVE       11
 #define API_GETPID       20
 
 #define API_GET_MESSAGE  200

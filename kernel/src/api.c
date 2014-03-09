@@ -67,7 +67,7 @@ int onsen_api(API_REGISTERS regs)
         api_exit_app(arg1);
         break;
 
-    case API_CHOPSTICKS:
+    case API_FORK:
         ret = task_copy(&regs, 0);
         break;
 
@@ -75,7 +75,7 @@ int onsen_api(API_REGISTERS regs)
         ret = f_write(arg1, (const void *) arg2, arg3);
         break;
 
-    case API_EXEC:
+    case API_EXECVE:
         ret = task_exec(&regs, (const char *) arg1);
         break;
 

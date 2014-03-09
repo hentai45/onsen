@@ -16,9 +16,9 @@ typedef struct _POINT {
 #define RGB(r, g, b) ((unsigned int) (((r) & 0xFF) << 16) | (((g) & 0xFF) << 8) | ((b) & 0xFF))
 
 void exit(int status);
-int chopsticks(void);
+int fork(void);
 int write(int fd, const void *buf, int cnt);
-int exec(const char *fname);
+int execve(const char *fname, char *const argv[], char *const envp[]);
 int getpid(void);
 
 int get_message(struct MSG *msg);

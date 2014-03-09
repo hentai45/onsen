@@ -393,7 +393,7 @@ int kernel_thread(int (*fn)(void), int flg)
         "1:\n"
 
         : "=a" (pid)
-        : "0" (API_CHOPSTICKS), "r" (fn)
+        : "0" (API_FORK), "r" (fn)
     );
 
     return pid;
