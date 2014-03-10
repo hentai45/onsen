@@ -469,6 +469,11 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
         g_cur->ss0    = KERNEL_DS;
         g_cur->is_os_task = false;
 
+        // regsのcsをユーザ用CSにすることで
+        // asm_apiのiret時(スタックからEIP,CS,ELFAGSをポップする)に
+        // カーネルモードからユーザモードへの移行が起こる。
+        // iret時に特権レベルが変わるとスタックからさらにESPとSSがポップされる。
+
         regs->esp = VADDR_USER_ESP;
         regs->cs  = USER_CS | 3;
         regs->ds  = USER_DS | 3;

@@ -119,6 +119,22 @@ void main(void)
 
 static void console_proc(unsigned int msg, unsigned long u_param, long l_param)
 {
+    /*
+    if (child_pid != 0) {
+        if (msg == MSG_INTR) {
+            task_free(child_pid, -1);
+        }
+
+        if (msg == MSG_INTR || msg == MSG_NOTIFY_CHILD_EXIT) {
+            child_pid = 0;
+            timer_start(cursor_tid, CURSOR_INTERVAL_MS);
+            newline();
+            put_prompt();
+        }
+        return;
+    }
+    */
+
     if (msg == MSG_TIMER) {
         int tid = u_param;
         if (tid == cursor_tid) {

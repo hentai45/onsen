@@ -57,7 +57,7 @@ extern int g_dbg_temp_flg;
         dbgf("COND: %s\n", #cond);                                            \
         dbgf(fmt "\n", ##__VA_ARGS__);                                        \
         stacktrace(5, f_debug);                                               \
-        for (;;) { hlt(); }                                                   \
+        cli(); hlt();                                                         \
     }                                                                         \
 } while (0)
 
@@ -70,7 +70,7 @@ extern int g_dbg_temp_flg;
         blue_screen_f(1, "FILE: %s, FUNC: %s, LINE: %d", __FILE__, __func__, __LINE__); \
         blue_screen_f(2, "COND: %s", #cond);                                            \
         blue_screen_f(3, fmt, ##__VA_ARGS__);                                           \
-        for (;;) { hlt(); }                                                             \
+        cli(); hlt();                                                                   \
     }                                                                                   \
 } while (0)
 

@@ -167,9 +167,7 @@ static void fault_handler(const char *message, int no, struct INT_REGISTERS regs
     if (is_os_task(g_pid)) {
         dbg_fault(message, no, &regs);
 
-        for (;;) {
-            hlt();
-        }
+        hlt();
     } else {
         int ret = 0;
 
@@ -192,7 +190,9 @@ static void fault_handler(const char *message, int no, struct INT_REGISTERS regs
 
         sti();
 
+        // 終了されるのを待つ
         for (;;) {
+            hlt();
         }
     }
 }
