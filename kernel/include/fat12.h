@@ -3,7 +3,7 @@
 #ifndef HEADER_FAT12
 #define HEADER_FAT12
 
-typedef struct FILEINFO {
+struct FILEINFO {
     char name[8];
     char ext[3];
     unsigned char type;
@@ -12,13 +12,13 @@ typedef struct FILEINFO {
     unsigned short data;
     unsigned short clustno;
     unsigned int size;
-} FILEINFO;
+};
 
 
 void fat12_init(void);
-FILEINFO *fat12_get_file_info(void);
+struct FILEINFO *fat12_get_file_info(void);
 void fat12_load_file(int clustno, int size, char *buf);
-int fat12_search_file(FILEINFO *fi, const char *fname);
+int fat12_search_file(struct FILEINFO *fi, const char *fname);
 
 
 #endif

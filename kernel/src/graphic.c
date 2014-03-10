@@ -52,9 +52,10 @@ enum {
     OP_SRC_INVERT
 };
 
-typedef struct _POINT {
-    int x, y;
-} POINT;
+struct POINT {
+    int x;
+    int y;
+};
 
 extern int g_vram_sid;
 extern int g_dt_sid;
@@ -154,7 +155,7 @@ void graphic_dbg(void);
 #define SRF_FLG_WINDOW          (1 << 1)
 #define SRF_FLG_WIN_ACTIVE      (1 << 2)
 
-typedef struct SURFACE {
+struct SURFACE {
     int sid;    // SURFACE ID
     unsigned int flags;
     int pid;    // この SURFACE を持っているプロセス ID
@@ -163,7 +164,7 @@ typedef struct SURFACE {
     int x;
     int y;
 
-    GBUFFER g;
+    struct GBUFFER g;
 
     struct SURFACE *parent;
     struct SURFACE *prev_srf;
@@ -171,50 +172,50 @@ typedef struct SURFACE {
 
     int num_children;
     struct SURFACE *children;
-} SURFACE;
+};
 
 
-typedef struct SURFACE_MNG {
+struct SURFACE_MNG {
     // 記憶領域の確保用。
     // surfaces のインデックスと SID は同じ
-    SURFACE surfaces[SURFACE_MAX];
-} SURFACE_MNG;
+    struct SURFACE surfaces[SURFACE_MAX];
+};
 
 
 int g_vram_sid;  // この SID を使うと更新しなくても画面に直接表示される
 int g_dt_sid;
 
-static SURFACE_MNG l_mng;
+static struct SURFACE_MNG l_mng;
 
 static int l_close_button_sid;
-static SURFACE *l_close_button_srf;
+static struct SURFACE *l_close_button_srf;
 
 static int l_mouse_sid;
-static SURFACE *l_mouse_srf;
+static struct SURFACE *l_mouse_srf;
 
-static SURFACE *sid2srf(int sid);
+static struct SURFACE *sid2srf(int sid);
 
-static void conv_screen_cord(SURFACE *srf, int *x, int *y, bool client_cord);
+static void conv_screen_cord(struct SURFACE *srf, int *x, int *y, bool client_cord);
 
-static SURFACE *srf_alloc(void);
+static struct SURFACE *srf_alloc(void);
 
 static void create_close_button_surface(void);
 static void create_mouse_surface(void);
 
-static int draw_char(SURFACE *srf, int x, int y, COLOR32 color, char ch);
-static int draw_char_bg(SURFACE *srf, int x, int y, COLOR32 color,
+static int draw_char(struct SURFACE *srf, int x, int y, COLOR32 color, char ch);
+static int draw_char_bg(struct SURFACE *srf, int x, int y, COLOR32 color,
         COLOR32 bg_color, char ch);
 
-static void add_child(SURFACE *srf);
-//static void add_child_head(SURFACE *srf);
-static void remove_child(SURFACE *srf);
+static void add_child(struct SURFACE *srf);
+//static void add_child_head(struct SURFACE *srf);
+static void remove_child(struct SURFACE *srf);
 
-static SURFACE *get_active_win(void);
+static struct SURFACE *get_active_win(void);
 
-static SURFACE *l_vram_srf;
-static SURFACE *l_dt_srf;
+static struct SURFACE *l_vram_srf;
+static struct SURFACE *l_dt_srf;
 static int l_buf_sid;
-static SURFACE *l_buf_srf;
+static struct SURFACE *l_buf_srf;
 
 static unsigned int l_w;
 static unsigned int l_h;
@@ -230,7 +231,7 @@ void minimal_graphic_init(void *vram, int w, int h, int color_width)
     // ---- SURFACE 初期化
 
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
-        SURFACE *srf = &l_mng.surfaces[sid];
+        struct SURFACE *srf = &l_mng.surfaces[sid];
 
         srf->sid = sid;
         srf->flags = SRF_FLG_FREE;
@@ -240,7 +241,7 @@ void minimal_graphic_init(void *vram, int w, int h, int color_width)
 
     // ---- VRAM SURFACE の作成
 
-    SURFACE *srf = srf_alloc();
+    struct SURFACE *srf = srf_alloc();
     int sid = srf->sid;
 
     g_vram_sid = sid;
@@ -261,7 +262,7 @@ void graphic_init(void)
 
     int sid = new_surface(NO_PARENT_SID, l_w, l_h);
     g_dt_sid = sid;
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
     srf->pid = g_root_pid;
 
     l_dt_srf = srf;
@@ -311,7 +312,7 @@ int new_window_from_buf(int x, int y, int cw, int ch, char *title,
         return sid;
     }
 
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     srf->name = mem_alloc_str(title);
     srf->flags |= SRF_FLG_WINDOW;
@@ -328,11 +329,11 @@ int new_window_from_buf(int x, int y, int cw, int ch, char *title,
     return sid;
 }
 
-static void draw_win_titlebar(SURFACE *srf);
+static void draw_win_titlebar(struct SURFACE *srf);
 
 static void draw_window(int sid)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     int w = srf->g.w;
     int h = srf->g.h;
@@ -371,7 +372,7 @@ static void draw_window(int sid)
     srf->flags = flags;
 }
 
-static void draw_win_titlebar(SURFACE *srf)
+static void draw_win_titlebar(struct SURFACE *srf)
 {
     unsigned int flags = srf->flags;
     srf->flags &= ~SRF_FLG_WINDOW;
@@ -407,7 +408,7 @@ int new_surface(int parent_sid, int w, int h)
 // buf は mem_alloc で取得したメモリを使用すること
 int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_width)
 {
-    SURFACE *parent = 0;
+    struct SURFACE *parent = 0;
 
     if (parent_sid != NO_PARENT_SID) {
         parent = sid2srf(parent_sid);
@@ -418,7 +419,7 @@ int new_surface_from_buf(int parent_sid, int w, int h, void *buf, int color_widt
         }
     }
 
-    SURFACE *srf = srf_alloc();
+    struct SURFACE *srf = srf_alloc();
 
     if (srf == 0) {
         DBGF("could't create surface");
@@ -450,7 +451,7 @@ void free_surface(int sid)
         return;
     }
 
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0 || (srf->flags & SRF_FLG_ALLOC) == 0) {
         return;
@@ -476,7 +477,7 @@ void free_surface(int sid)
 void free_task_surface(int pid)
 {
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
-        SURFACE *srf = &(l_mng.surfaces[sid]);
+        struct SURFACE *srf = &(l_mng.surfaces[sid]);
 
         if (srf->pid != pid || (srf->flags & SRF_FLG_ALLOC) == 0) {
             continue;
@@ -510,7 +511,7 @@ int  get_screen_h(void)
 
 void set_surface_pos(int sid, int x, int y)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -523,13 +524,13 @@ void set_surface_pos(int sid, int x, int y)
 
 void move_surface(int sid, int x, int y)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
     }
 
-    SURFACE *parent = srf->parent;
+    struct SURFACE *parent = srf->parent;
 
     if (parent == 0 || parent == l_vram_srf) {
         return;
@@ -554,7 +555,7 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord);
 
 void update_surface(int sid)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -577,7 +578,7 @@ void update_window(int pid)
     if (l_dt_srf->num_children == 0)
         return;
 
-    SURFACE *srf = l_dt_srf->children;
+    struct SURFACE *srf = l_dt_srf->children;
 
     do {
         if (srf->pid == pid) {
@@ -589,7 +590,7 @@ void update_window(int pid)
 
 void update_from_buf(void)
 {
-    GBUFFER *g = &l_buf_srf->g;
+    struct GBUFFER *g = &l_buf_srf->g;
     g->m->blit(g, 0, 0, l_w, l_h, &l_vram_srf->g, 0, 0, OP_SRC_COPY);
 }
 
@@ -603,11 +604,11 @@ void update_rect(int sid, int x, int y, int w, int h)
     sti();
 }
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h);
+static void update_rect_sub(struct SURFACE *srf, int x, int y, int w, int h);
 
 static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -631,7 +632,7 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 
     update_rect_sub(srf, screen_x, screen_y, w, h);
 
-    GBUFFER *g = &l_buf_srf->g;
+    struct GBUFFER *g = &l_buf_srf->g;
     g->m->blit(g, screen_x, screen_y, w, h,
             &l_vram_srf->g, screen_x, screen_y, OP_SRC_COPY);
 
@@ -647,7 +648,7 @@ static void update_rect0(int sid, int x, int y, int w, int h, bool client_cord)
 }
 
 
-static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
+static void update_rect_sub(struct SURFACE *srf, int x, int y, int w, int h)
 {
     int l_x = 0, l_y = 0;
     conv_screen_cord(srf, &l_x, &l_y, false);
@@ -663,14 +664,14 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
     if (u_w > 0 && u_h > 0) {
 
         /* 自分を更新 */
-        GBUFFER *g = &srf->g;
+        struct GBUFFER *g = &srf->g;
         g->m->blit(g, ABS(l_x - u_x0), ABS(l_y - u_y0), u_w, u_h,
                 &l_buf_srf->g, u_x0, u_y0, OP_SRC_COPY);
 
         /* 子どもたちを更新 */
 
         if (srf->num_children != 0) {
-            SURFACE *p = srf->children;
+            struct SURFACE *p = srf->children;
             do {
                 update_rect_sub(p, x, y, w, h);
             } while ((p = p->next_srf) != srf->children);
@@ -683,7 +684,7 @@ static void update_rect_sub(SURFACE *srf, int x, int y, int w, int h)
     if (srf->parent == 0)
         return;
 
-    SURFACE *p = srf;
+    struct SURFACE *p = srf;
     while ((p = p->next_srf) != srf->parent->children) {
         update_rect_sub(p, x, y, w, h);
     }
@@ -704,14 +705,14 @@ void update_char(int sid, int x, int y)
 
 void draw_surface(int src_sid, int dst_sid, int x, int y, int op)
 {
-    SURFACE *src = sid2srf(src_sid);
-    SURFACE *dst = sid2srf(dst_sid);
+    struct SURFACE *src = sid2srf(src_sid);
+    struct SURFACE *dst = sid2srf(dst_sid);
 
     if (src == 0 || dst == 0) {
         return;
     }
 
-    GBUFFER *g = &src->g;
+    struct GBUFFER *g = &src->g;
 
     g->m->blit(g, 0, 0, g->w, g->h, &dst->g, x, y, op);
 }
@@ -719,14 +720,14 @@ void draw_surface(int src_sid, int dst_sid, int x, int y, int op)
 
 void draw_surface2(int src_sid, int dst_sid, int op)
 {
-    SURFACE *src = sid2srf(src_sid);
-    SURFACE *dst = sid2srf(dst_sid);
+    struct SURFACE *src = sid2srf(src_sid);
+    struct SURFACE *dst = sid2srf(dst_sid);
 
     if (src == 0 || dst == 0) {
         return;
     }
 
-    GBUFFER *g = &src->g;
+    struct GBUFFER *g = &src->g;
 
     g->m->blit(g, 0, 0, g->w, g->h, &dst->g, src->x, src->y, op);
 }
@@ -742,7 +743,7 @@ void fill_surface(int sid, COLOR32 color)
 // 矩形を塗りつぶす
 void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -766,7 +767,7 @@ void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
     w = MAXMIN(0, w, max_w);
     h = MAXMIN(0, h, max_h);
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     g->m->fill_rect(g, x, y, w, h, color);
 }
@@ -775,7 +776,7 @@ void fill_rect(int sid, int x, int y, int w, int h, COLOR32 color)
 // 文字列を画面に出力する
 void draw_text(int sid, int x, int y, COLOR32 color, const char *s)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -791,7 +792,7 @@ void draw_text(int sid, int x, int y, COLOR32 color, const char *s)
 void draw_text_bg(int sid, int x, int y, COLOR32 color,
         COLOR32 bg_color, const char *s)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -805,7 +806,7 @@ void draw_text_bg(int sid, int x, int y, COLOR32 color,
 
 void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR32 color)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -816,7 +817,7 @@ void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR32 color)
         y += CLIENT_Y;
     }
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     g->m->put(g, x, y, color);
 }
@@ -827,7 +828,7 @@ void draw_pixel(int sid, unsigned int x, unsigned int y, COLOR32 color)
  */
 void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR32 color)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -883,7 +884,7 @@ void draw_line(int sid, int x0, int y0, int x1, int y1, COLOR32 color)
         }
     }
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     for (int i = 0; i < len; i++) {
         g->m->put(g, x >> 10, y >> 10, color);
@@ -909,7 +910,7 @@ void erase_char(int sid, int x, int y, COLOR32 color, bool update)
 
 void scroll_surface(int sid, int cx, int cy)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -948,7 +949,7 @@ void scroll_surface(int sid, int cx, int cy)
         dst_y += CLIENT_Y;
     }
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     g->m->blit(g, src_x, src_y, g->w, g->h, g, dst_x, dst_y, OP_SRC_COPY);
 }
@@ -956,7 +957,7 @@ void scroll_surface(int sid, int cx, int cy)
 
 void set_colorkey(int sid, COLOR32 colorkey)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -970,7 +971,7 @@ void set_colorkey(int sid, COLOR32 colorkey)
 
 void clear_colorkey(int sid)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -982,7 +983,7 @@ void clear_colorkey(int sid)
 
 void set_alpha(int sid, unsigned char alpha)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -1000,7 +1001,7 @@ void set_alpha(int sid, unsigned char alpha)
 
 void clear_alpha(int sid)
 {
-    SURFACE *srf = sid2srf(sid);
+    struct SURFACE *srf = sid2srf(sid);
 
     if (srf == 0) {
         return;
@@ -1015,7 +1016,7 @@ void set_mouse_pos(int x, int y)
     int mx = l_mouse_srf->x;
     int my = l_mouse_srf->y;
 
-    GBUFFER *g = &l_buf_srf->g;
+    struct GBUFFER *g = &l_buf_srf->g;
 
     g->m->blit(g, mx, my, MOUSE_W, MOUSE_H,
             &l_vram_srf->g, mx, my, OP_SRC_COPY);
@@ -1030,7 +1031,7 @@ void set_mouse_pos(int x, int y)
 }
 
 
-static SURFACE *l_moving_srf = 0;
+static struct SURFACE *l_moving_srf = 0;
 static int l_moving_click_x = 0;
 static int l_moving_click_y = 0;
 static int l_moving_srf_x = 0;
@@ -1043,8 +1044,8 @@ void graphic_left_down(int x, int y)
     if (l_dt_srf->num_children == 0)
         return;
 
-    SURFACE *active_win = get_active_win();
-    SURFACE *p = active_win;
+    struct SURFACE *active_win = get_active_win();
+    struct SURFACE *p = active_win;
     do {
         int s_x = 0;
         int s_y = 0;
@@ -1099,13 +1100,13 @@ void graphic_left_drag(int x, int y)
 }
 
 
-SURFACE *get_active_win(void)
+struct SURFACE *get_active_win(void)
 {
     if (l_dt_srf == 0 || l_dt_srf->num_children == 0)
         return 0;
 
     int i = 0;
-    SURFACE *p = l_dt_srf->children;
+    struct SURFACE *p = l_dt_srf->children;
     do {
         if (i++ > 3)
             break;
@@ -1121,7 +1122,7 @@ void switch_window(void)
     if (l_dt_srf == 0 || l_dt_srf->num_children <= 1)
         return;
 
-    SURFACE *old_head = l_dt_srf->children;
+    struct SURFACE *old_head = l_dt_srf->children;
     remove_child(old_head);
     add_child(old_head);
 }
@@ -1132,7 +1133,7 @@ void graphic_dbg(void)
     dbgf("\n");
     DBGF("DEBUG GRAPHIC");
 
-    SURFACE *srf;
+    struct SURFACE *srf;
     dbgf("%d %d %d %d\n", CLIENT_X, CLIENT_Y, WINDOW_EXT_WIDTH, WINDOW_EXT_HEIGHT);
 
     dbgf("surfaces:\n");
@@ -1156,7 +1157,7 @@ void graphic_dbg(void)
             if (srf->num_children == 0)
                 continue;
 
-            SURFACE *p = srf->children;
+            struct SURFACE *p = srf->children;
             dbgf("    children: ");
             do {
                 dbgf("%d ", p->sid);
@@ -1182,11 +1183,11 @@ void graphic_dbg(void)
 // 非公開関数
 
 
-/// 新しい SURFACE を割り当てる。ただし、buf は割り当てない
-static SURFACE *srf_alloc(void)
+// 新しい SURFACE を割り当てる。ただし、buf は割り当てない
+static struct SURFACE *srf_alloc(void)
 {
     for (int sid = 0; sid < SURFACE_MAX; sid++) {
-        SURFACE *srf = &(l_mng.surfaces[sid]);
+        struct SURFACE *srf = &(l_mng.surfaces[sid]);
 
         if (srf->flags == SRF_FLG_FREE) {
             srf->flags = SRF_FLG_ALLOC;
@@ -1233,7 +1234,7 @@ static void create_close_button_surface(void)
     l_close_button_sid = new_surface(NO_PARENT_SID, CLOSE_BTN_W, CLOSE_BTN_H);
     l_close_button_srf = sid2srf(l_close_button_sid);
 
-    GBUFFER *g = &l_close_button_srf->g;
+    struct GBUFFER *g = &l_close_button_srf->g;
     COLOR32 color;
 
     for (int y = 0; y < CLOSE_BTN_H; y++) {
@@ -1291,7 +1292,7 @@ static void create_mouse_surface(void)
 
     char *cur = cursor;
 
-    GBUFFER *g = &l_mouse_srf->g;
+    struct GBUFFER *g = &l_mouse_srf->g;
     COLOR32 color;
 
     for (int y = 0; y < MOUSE_H; y++) {
@@ -1313,7 +1314,7 @@ static void create_mouse_surface(void)
 
 
 // １文字を画面に出力する
-static int draw_char(SURFACE *srf, int x, int y, COLOR32 color, char ch)
+static int draw_char(struct SURFACE *srf, int x, int y, COLOR32 color, char ch)
 {
     int old_x = x;
 
@@ -1329,7 +1330,7 @@ static int draw_char(SURFACE *srf, int x, int y, COLOR32 color, char ch)
     extern char hankaku[4096];
     char *font = hankaku + (((unsigned char) ch) * 16);
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     for (int ch_y = 0; ch_y < HANKAKU_H; ch_y++) {
         char font_line = font[ch_y];
@@ -1345,8 +1346,8 @@ static int draw_char(SURFACE *srf, int x, int y, COLOR32 color, char ch)
 }
 
 
-/// １文字を画面に出力する（背景色を指定）
-static int draw_char_bg(SURFACE *srf, int x, int y, COLOR32 color,
+// １文字を画面に出力する（背景色を指定）
+static int draw_char_bg(struct SURFACE *srf, int x, int y, COLOR32 color,
         COLOR32 bg_color, char ch)
 {
     int old_x = x;
@@ -1363,7 +1364,7 @@ static int draw_char_bg(SURFACE *srf, int x, int y, COLOR32 color,
     extern char hankaku[4096];
     char *font = hankaku + (((unsigned char) ch) * 16);
 
-    GBUFFER *g = &srf->g;
+    struct GBUFFER *g = &srf->g;
 
     for (int ch_y = 0; ch_y < HANKAKU_H; ch_y++) {
         char font_line = font[ch_y];
@@ -1383,33 +1384,33 @@ static int draw_char_bg(SURFACE *srf, int x, int y, COLOR32 color,
 
 static void change_win_active(void)
 {
-    SURFACE *srf = get_active_win();
+    struct SURFACE *srf = get_active_win();
     srf->flags |= SRF_FLG_WIN_ACTIVE;
     send_window_active_msg(g_root_pid, srf->pid);
 }
 
-static void change_win_deactive(SURFACE *srf)
+static void change_win_deactive(struct SURFACE *srf)
 {
     srf->flags &= ~SRF_FLG_WIN_ACTIVE;
     send_window_deactive_msg(g_root_pid, srf->pid);
 }
 
 
-static void add_child(SURFACE *srf)
+static void add_child(struct SURFACE *srf)
 {
-    SURFACE *parent = srf->parent;
+    struct SURFACE *parent = srf->parent;
 
     if (parent == 0) {
         return;
     }
 
-    SURFACE *old_active_win = get_active_win();
+    struct SURFACE *old_active_win = get_active_win();
 
     if (parent->num_children == 0) {
         parent->children = srf;
     } else {
-        SURFACE *head = parent->children;
-        SURFACE *old_last = head->prev_srf;
+        struct SURFACE *head = parent->children;
+        struct SURFACE *old_last = head->prev_srf;
 
         srf->prev_srf = old_last;
         srf->next_srf = head;
@@ -1431,9 +1432,9 @@ static void add_child(SURFACE *srf)
 
 
 /*
-static void add_child_head(SURFACE *srf)
+static void add_child_head(struct SURFACE *srf)
 {
-    SURFACE *parent = srf->parent;
+    struct SURFACE *parent = srf->parent;
 
     if (parent == 0) {
         return;
@@ -1446,8 +1447,8 @@ static void add_child_head(SURFACE *srf)
             change_win_active();
         }
     } else {
-        SURFACE *old_head = parent->children;
-        SURFACE *last = old_head->prev_srf;
+        struct SURFACE *old_head = parent->children;
+        struct SURFACE *last = old_head->prev_srf;
 
         srf->prev_srf = last;
         srf->next_srf = old_head;
@@ -1463,9 +1464,9 @@ static void add_child_head(SURFACE *srf)
 */
 
 
-static void remove_child(SURFACE *srf)
+static void remove_child(struct SURFACE *srf)
 {
-    SURFACE *parent = srf->parent;
+    struct SURFACE *parent = srf->parent;
 
     if (parent == 0) {
         return;
@@ -1493,13 +1494,13 @@ static void remove_child(SURFACE *srf)
         return;
     }
 
-    SURFACE *old_active_win = get_active_win();
+    struct SURFACE *old_active_win = get_active_win();
 
-    SURFACE *s = parent->children;
+    struct SURFACE *s = parent->children;
     do {
         if (s == srf) {
-            SURFACE *prev = srf->prev_srf;
-            SURFACE *next = srf->next_srf;
+            struct SURFACE *prev = srf->prev_srf;
+            struct SURFACE *next = srf->next_srf;
 
             prev->next_srf = next;
             next->prev_srf = prev;
@@ -1521,7 +1522,7 @@ static void remove_child(SURFACE *srf)
 }
 
 
-static SURFACE *sid2srf(int sid)
+static struct SURFACE *sid2srf(int sid)
 {
     if (sid < 0 || SURFACE_MAX <= sid) {
         return 0;
@@ -1531,9 +1532,9 @@ static SURFACE *sid2srf(int sid)
 }
 
 
-static void conv_screen_cord(SURFACE *srf, int *x, int *y, bool client_cord)
+static void conv_screen_cord(struct SURFACE *srf, int *x, int *y, bool client_cord)
 {
-    SURFACE *p = srf;
+    struct SURFACE *p = srf;
 
     while (p) {
         *x += p->x;

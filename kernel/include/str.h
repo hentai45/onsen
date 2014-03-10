@@ -15,9 +15,9 @@ int  strncmp(const char *s, const char *t, int n);
 int  atoi(const char *s);
 
 int  printf(const char *fmt, ...);
-int  fprintf(FILE_T *f, const char *fmt, ...);
+int  fprintf(struct FILE_T *f, const char *fmt, ...);
 int  snprintf(char *s, unsigned int n, const char *fmt, ...);
-int  vfprintf(FILE_T *f, const char *fmt, va_list ap);
+int  vfprintf(struct FILE_T *f, const char *fmt, va_list ap);
 int  vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap);
 
 int   memcmp(const void *buf1, const void *buf2, unsigned int);

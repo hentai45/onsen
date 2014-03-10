@@ -16,7 +16,7 @@
 
 struct _GBUFFER_METHOD;
 
-typedef struct _GBUFFER {
+struct GBUFFER {
     void *buf;
 
     int w;
@@ -28,19 +28,19 @@ typedef struct _GBUFFER {
     COLOR32 colorkey;  // 透明にする色。SRF_FLG_HAS_COLORKEYで有効。
     unsigned char alpha;
 
-    struct _GBUFFER_METHOD *m;
-} GBUFFER;
+    struct GBUFFER_METHOD *m;
+};
 
 
-typedef struct _GBUFFER_METHOD {
-    COLOR32 (*get)(GBUFFER *self, int x, int y);
-    void (*put)(GBUFFER *self, int x, int y, COLOR32 color);
-    void (*fill_rect)(GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
-    void (*blit)(GBUFFER *self, int src_x, int src_y, int w, int h, GBUFFER *dst, int x, int y, int op);
-} GBUFFER_METHOD;
+struct GBUFFER_METHOD {
+    COLOR32 (*get)(struct GBUFFER *self, int x, int y);
+    void (*put)(struct GBUFFER *self, int x, int y, COLOR32 color);
+    void (*fill_rect)(struct GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
+    void (*blit)(struct GBUFFER *self, int src_x, int src_y, int w, int h, struct GBUFFER *dst, int x, int y, int op);
+};
 
 
-extern struct _GBUFFER_METHOD *g_gbuf_method16;
+extern struct GBUFFER_METHOD *g_gbuf_method16;
 
 #endif
 
@@ -59,21 +59,21 @@ extern struct _GBUFFER_METHOD *g_gbuf_method16;
 #define ABS(X) ((X) < 0 ? -(X) : X)
 
 
-static COLOR32 get16(GBUFFER *self, int x, int y);
-static void put16(GBUFFER *self, int x, int y, COLOR32 color);
-static void fill_rect16(GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
-static void blit16(GBUFFER *self, int src_x, int src_y, int w, int h, GBUFFER *dst, int dst_x, int dst_y, int op);
+static COLOR32 get16(struct GBUFFER *self, int x, int y);
+static void put16(struct GBUFFER *self, int x, int y, COLOR32 color);
+static void fill_rect16(struct GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
+static void blit16(struct GBUFFER *self, int src_x, int src_y, int w, int h, struct GBUFFER *dst, int dst_x, int dst_y, int op);
 
-static struct _GBUFFER_METHOD l_gbuf_method16 = { .get = get16, .put = put16,
+static struct GBUFFER_METHOD l_gbuf_method16 = { .get = get16, .put = put16,
     .fill_rect = fill_rect16, .blit = blit16 };
-struct _GBUFFER_METHOD *g_gbuf_method16 = &l_gbuf_method16;
+struct GBUFFER_METHOD *g_gbuf_method16 = &l_gbuf_method16;
 
 
 
 //=============================================================================
 // 関数
 
-static COLOR32 get16(GBUFFER *self, int x, int y)
+static COLOR32 get16(struct GBUFFER *self, int x, int y)
 {
     if (x < 0 || y < 0 || self->w <= x || self->h <= y)
         return 0;
@@ -83,7 +83,7 @@ static COLOR32 get16(GBUFFER *self, int x, int y)
 }
 
 
-static void put16(GBUFFER *self, int x, int y, COLOR32 color)
+static void put16(struct GBUFFER *self, int x, int y, COLOR32 color)
 {
     if (x < 0 || y < 0 || self->w <= x || self->h <= y)
         return;
@@ -94,7 +94,7 @@ static void put16(GBUFFER *self, int x, int y, COLOR32 color)
 
 
 // 矩形を塗りつぶす
-static void fill_rect16(GBUFFER *self, int x, int y, int w, int h, COLOR32 color)
+static void fill_rect16(struct GBUFFER *self, int x, int y, int w, int h, COLOR32 color)
 {
     if (w == 0 && h == 0) {
         w = self->w;
@@ -129,13 +129,13 @@ static void fill_rect16(GBUFFER *self, int x, int y, int w, int h, COLOR32 color
     }
 }
 
-static void blit_src_copy16(GBUFFER *src, int src_x, int src_y, int w, int h,
-        GBUFFER *dst, int dst_x, int dst_y);
-static void blit_src_invert16(GBUFFER *src, int src_x, int src_y, int w, int h,
-        GBUFFER *dst, int dst_x, int dst_y);
+static void blit_src_copy16(struct GBUFFER *src, int src_x, int src_y, int w, int h,
+        struct GBUFFER *dst, int dst_x, int dst_y);
+static void blit_src_invert16(struct GBUFFER *src, int src_x, int src_y, int w, int h,
+        struct GBUFFER *dst, int dst_x, int dst_y);
 
-static void blit16(GBUFFER *self, int src_x, int src_y, int w, int h,
-        GBUFFER *dst, int dst_x, int dst_y, int op)
+static void blit16(struct GBUFFER *self, int src_x, int src_y, int w, int h,
+        struct GBUFFER *dst, int dst_x, int dst_y, int op)
 {
     // ---- 範囲チェック＆修正
 
@@ -171,8 +171,8 @@ static void blit16(GBUFFER *self, int src_x, int src_y, int w, int h,
 
 
 // ビットマップコピー
-static void blit_src_copy16(GBUFFER *src, int src_x, int src_y, int w, int h,
-        GBUFFER *dst, int dst_x, int dst_y)
+static void blit_src_copy16(struct GBUFFER *src, int src_x, int src_y, int w, int h,
+        struct GBUFFER *dst, int dst_x, int dst_y)
 {
     // src と dst が同じ場合は、重なっている場合も考慮しないといけないので
     // 場合分けが少し複雑になっている。
@@ -258,8 +258,8 @@ static void blit_src_copy16(GBUFFER *src, int src_x, int src_y, int w, int h,
 
 
 // ビットマップxor。srcとdstの重なりには対応してない
-static void blit_src_invert16(GBUFFER *src, int src_x, int src_y, int w, int h,
-        GBUFFER *dst, int dst_x, int dst_y)
+static void blit_src_invert16(struct GBUFFER *src, int src_x, int src_y, int w, int h,
+        struct GBUFFER *dst, int dst_x, int dst_y)
 {
     COLOR16 *src_buf = (COLOR16 *) src->buf;
     src_buf = &src_buf[src_y * src->w + src_x];;

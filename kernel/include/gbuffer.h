@@ -11,7 +11,7 @@
 
 struct _GBUFFER_METHOD;
 
-typedef struct _GBUFFER {
+struct GBUFFER {
     void *buf;
 
     int w;
@@ -23,18 +23,18 @@ typedef struct _GBUFFER {
     COLOR32 colorkey;  // 透明にする色。SRF_FLG_HAS_COLORKEYで有効。
     unsigned char alpha;
 
-    struct _GBUFFER_METHOD *m;
-} GBUFFER;
+    struct GBUFFER_METHOD *m;
+};
 
 
-typedef struct _GBUFFER_METHOD {
-    COLOR32 (*get)(GBUFFER *self, int x, int y);
-    void (*put)(GBUFFER *self, int x, int y, COLOR32 color);
-    void (*fill_rect)(GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
-    void (*blit)(GBUFFER *self, int src_x, int src_y, int w, int h, GBUFFER *dst, int x, int y, int op);
-} GBUFFER_METHOD;
+struct GBUFFER_METHOD {
+    COLOR32 (*get)(struct GBUFFER *self, int x, int y);
+    void (*put)(struct GBUFFER *self, int x, int y, COLOR32 color);
+    void (*fill_rect)(struct GBUFFER *self, int x, int y, int w, int h, COLOR32 color);
+    void (*blit)(struct GBUFFER *self, int src_x, int src_y, int w, int h, struct GBUFFER *dst, int x, int y, int op);
+};
 
 
-extern struct _GBUFFER_METHOD *g_gbuf_method16;
+extern struct GBUFFER_METHOD *g_gbuf_method16;
 
 #endif

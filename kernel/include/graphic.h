@@ -47,9 +47,10 @@ enum {
     OP_SRC_INVERT
 };
 
-typedef struct _POINT {
-    int x, y;
-} POINT;
+struct POINT {
+    int x;
+    int y;
+};
 
 extern int g_vram_sid;
 extern int g_dt_sid;

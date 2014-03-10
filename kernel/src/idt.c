@@ -8,7 +8,7 @@
 #ifndef HEADER_IDT
 #define HEADER_IDT
 
-// API(システムコール)を呼び出すときの割り込み番号。44は大分県の都道府県コード
+// API(システムコール)を呼び出すときの割り込み番号
 #define IDT_API_NO  (0x44)
 
 
@@ -35,32 +35,32 @@ void set_gate_desc(int no, unsigned short sel, void (*f)(void),
         asm_int ## NO ## _handler, 0, SEG_TYPE_INTR_GATE, 0)
 
 
-typedef struct GATE_DESC {
+struct GATE_DESC {
     unsigned short offset_low;
     unsigned short selector;
     unsigned char count;
     unsigned char type;
     unsigned short offset_high;
-} __attribute__ ((__packed__)) GATE_DESC;
+} __attribute__ ((__packed__));
 
 
-static GATE_DESC *idt = (GATE_DESC *) VADDR_IDT;
+static struct GATE_DESC *idt = (struct GATE_DESC *) VADDR_IDT;
 
 
-typedef struct {
+struct IDTR {
     unsigned short limit;
     unsigned long base;
-} __attribute__ ((__packed__)) IDTR;
+} __attribute__ ((__packed__));
 
 
-inline static void load_idtr(IDTR *idtr)
+inline static void load_idtr(struct IDTR *idtr)
 {
     __asm__ __volatile__ ("lidt (%0)" : : "q" (idtr));
 }
 
 
 //=============================================================================
-// 公開関数
+// 関数
 
 void idt_init(void)
 {
@@ -69,7 +69,7 @@ void idt_init(void)
         set_gate_desc(i, 0, 0, 0, 0, 0);
     }
 
-    IDTR idtr;
+    struct IDTR idtr;
     idtr.limit = LIMIT_IDT;
     idtr.base = VADDR_IDT;
     load_idtr(&idtr);
@@ -102,7 +102,7 @@ void idt_init(void)
 void set_gate_desc(int no, unsigned short sel, void (*f)(void),
         int count , int type, int dpl)
 {
-    GATE_DESC *gate = idt + no;
+    struct GATE_DESC *gate = idt + no;
 
     int offset = (int) f;
 
@@ -112,9 +112,4 @@ void set_gate_desc(int no, unsigned short sel, void (*f)(void),
     gate->type = type | (dpl << 5);
     gate->offset_high = (offset >> 16) & 0xFFFF;
 }
-
-
-//=============================================================================
-// 非公開関数
-
 

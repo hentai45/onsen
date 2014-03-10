@@ -50,7 +50,7 @@ void int21_handler(int *esp)
     unsigned char data = inb(PORT_RW_KBC_DATA);
 
     // データをメッセージキューに入れる
-    MSG msg;
+    struct MSG msg;
     msg.message = MSG_KEYDOWN;
     msg.u_param = data;
 
@@ -102,7 +102,7 @@ char keycode2char(int keycode, bool is_shift_on)
     };
 
 
-    // **** [キーコード => 文字コード] 変換
+    // [キーコード => 文字コード] 変換
 
     char ch;
     if (keycode < 0x80) {
@@ -115,7 +115,7 @@ char keycode2char(int keycode, bool is_shift_on)
         ch = 0;
     }
 
-    // **** 大文字・小文字変換
+    // 大文字・小文字変換
 
     if ('A' <= ch && ch <= 'Z') {
         if (! is_shift_on) {
@@ -132,11 +132,4 @@ char keycode2char(int keycode, bool is_shift_on)
     // その他
     return 0;
 }
-
-
-//=============================================================================
-// 非公開関数
-
-
-
 

@@ -3,11 +3,11 @@
 #ifndef HEADER_MSG
 #define HEADER_MSG
 
-typedef struct MSG {
+struct MSG {
     unsigned int message;
     unsigned long u_param;
     long l_param;
-} MSG;
+};
 
 
 //-----------------------------------------------------------------------------
@@ -15,9 +15,9 @@ typedef struct MSG {
 
 typedef void (*ONSEN_PROC) (unsigned int, unsigned long, long);
 
-int get_message(MSG *msg);
-int peek_message(MSG *msg);
-void dispatch_message(const MSG *msg, ONSEN_PROC proc);
+int get_message(struct MSG *msg);
+int peek_message(struct MSG *msg);
+void dispatch_message(const struct MSG *msg, ONSEN_PROC proc);
 
 //-----------------------------------------------------------------------------
 // メッセージ

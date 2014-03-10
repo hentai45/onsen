@@ -28,7 +28,7 @@
 #define DEFAULT_TIMESLICE_MS  (20)
 
 
-typedef struct TSS {
+struct TSS {
     // ---- レジスタ保存部
 
     short backlink; short f1;
@@ -55,36 +55,36 @@ typedef struct TSS {
     int timeslice_ms;
 
     // メモリ
-    USER_PAGE *code;
-    USER_PAGE *data;
-    USER_PAGE *stack;
+    struct USER_PAGE *code;
+    struct USER_PAGE *data;
+    struct USER_PAGE *stack;
     // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack0;
 
     // ファイルテーブル
-    FTE *file_tbl;
+    struct FILE_TABLE_ENTRY *file_tbl;
 
     bool is_os_task;  // TODO: フラグに移す
-} __attribute__ ((__packed__)) TSS;
+} __attribute__ ((__packed__));
 
 
-typedef struct TASK_MNG {
+struct TASK_MNG {
     // 記憶領域の確保用。
     // tss のインデックスと PID は同じ
-    TSS tss[TASK_MAX];
+    struct TSS tss[TASK_MAX];
 
     int num_running;
     int cur_run;  // 現在実行しているタスクの run でのインデックス
-    TSS *run[TASK_MAX];
-} TASK_MNG;
+    struct TSS *run[TASK_MAX];
+};
 
 
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-int  task_copy(API_REGISTERS *regs, int flg);
+int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
-int  task_exec(API_REGISTERS *regs, const char *fname);
+int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
@@ -98,9 +98,9 @@ void task_dbg(void);
 int is_os_task(int pid);
 
 void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
-TSS *pid2tss(int pid);
+struct TSS *pid2tss(int pid);
 
-extern TSS *g_cur;
+extern struct TSS *g_cur;
 extern int g_pid;
 
 extern int g_root_pid;

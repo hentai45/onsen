@@ -18,14 +18,14 @@
 
 void api_exit_app(int exit_status);
 
-typedef struct _API_REGISTERS {
+struct API_REGISTERS {
     // asmapi.S で積まれたスタックの内容
     unsigned int edi, esi, ebp, esp0, ebx, edx, ecx, eax;  // pushal
     unsigned int ds, es;
 
     // 以下は、ソフトウェア割り込み時にCPUが自動でpushしたもの
     unsigned int eip, cs, eflags, esp, ss;
-} API_REGISTERS;
+};
 
 #endif
 
@@ -51,7 +51,7 @@ typedef struct _API_REGISTERS {
  *
  * asmapi.S から呼ばれる
  */
-int onsen_api(API_REGISTERS regs)
+int onsen_api(struct API_REGISTERS regs)
 {
     int ret = 0;
 
@@ -84,7 +84,7 @@ int onsen_api(API_REGISTERS regs)
         break;
 
     case API_GET_MESSAGE:
-        ret = get_message((MSG *) arg1);
+        ret = get_message((struct MSG *) arg1);
         break;
 
     case API_TIMER_NEW:
@@ -117,8 +117,8 @@ int onsen_api(API_REGISTERS regs)
 
     case API_DRAW_LINE:
         {
-            POINT *pt0 = (POINT *) arg2;
-            POINT *pt1 = (POINT *) arg3;
+            struct POINT *pt0 = (struct POINT *) arg2;
+            struct POINT *pt1 = (struct POINT *) arg3;
             draw_line(arg1, pt0->x, pt0->y, pt1->x, pt1->y, arg4);
         }
         break;
@@ -129,7 +129,7 @@ int onsen_api(API_REGISTERS regs)
 
     case API_GETKEY:
         if (arg1 == 0) {
-            MSG msg;
+            struct MSG msg;
             while (peek_message(&msg)) {
                 if (msg.message == MSG_KEYDOWN && msg.u_param == 0x1C) {
                     ret = '\n';
@@ -140,7 +140,7 @@ int onsen_api(API_REGISTERS regs)
                 }
             }
         } else {
-            MSG msg;
+            struct MSG msg;
             while (get_message(&msg)) {
                 if (msg.message == MSG_KEYDOWN && msg.u_param == 0x1C) {
                     ret = '\n';
@@ -165,7 +165,7 @@ int onsen_api(API_REGISTERS regs)
 
 void api_exit_app(int exit_status)
 {
-    MSG msg;
+    struct MSG msg;
     msg.message = MSG_REQUEST_EXIT;
     msg.u_param = g_pid;
     msg.l_param = exit_status;

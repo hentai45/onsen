@@ -17,7 +17,7 @@ typedef unsigned int    Elf32_Word;
 #define EI_NIDENT   (16)
 
 // ELF ヘッダ
-typedef struct Elf_Ehdr {
+struct Elf_Ehdr {
     unsigned char e_ident[EI_NIDENT];  // マジックナンバなど
     Elf32_Half    e_type;              // ファイルタイプ
     Elf32_Half    e_machine;           // マシンアーキテクチャ
@@ -32,12 +32,12 @@ typedef struct Elf_Ehdr {
     Elf32_Half    e_shentsize;         // セクションヘッダエントリのサイズ
     Elf32_Half    e_shnum;             // セクションヘッダエントリの数
     Elf32_Half    e_shstrndx;          // セクション名格納用セクション
-} Elf_Ehdr;
+};
 
 
 // ---- Elf_Ehdr.e_ident
 inline __attribute__ ((always_inline))
-bool is_elf(Elf_Ehdr *ehdr)
+bool is_elf(struct Elf_Ehdr *ehdr)
 {
     return (ehdr->e_ident[0] == 0x7F && ehdr->e_ident[1] == 'E' &&
             ehdr->e_ident[2] == 'L'  && ehdr->e_ident[3] == 'F');
@@ -51,7 +51,7 @@ bool is_elf(Elf_Ehdr *ehdr)
 //-----------------------------------------------------------------------------
 
 // プログラムヘッダ
-typedef struct Elf_Phdr {
+struct Elf_Phdr {
     Elf32_Word    p_type;
     Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
     Elf32_Addr    p_vaddr;     // ロード先の仮想アドレス
@@ -60,7 +60,7 @@ typedef struct Elf_Phdr {
     Elf32_Word    p_memsz;     // メモリ上でのセグメントのサイズ
     Elf32_Word    p_flags;
     Elf32_Word    p_align;
-} Elf_Phdr;
+};
 
 
 // ---- Elf_Phdr.p_type
@@ -76,7 +76,7 @@ typedef struct Elf_Phdr {
 //-----------------------------------------------------------------------------
 
 // セクションヘッダ
-typedef struct Elf_Shdr {
+struct Elf_Shdr {
     Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;
     Elf32_Word    sh_flags;
@@ -87,17 +87,17 @@ typedef struct Elf_Shdr {
     Elf32_Word    sh_info;
     Elf32_Word    sh_addralign;
     Elf32_Word    sh_entsize;
-} Elf_Shdr;
+};
 
 
 inline __attribute__ ((always_inline))
-bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
+bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
 {
     return (phdr->p_vaddr <= shdr->sh_addr &&
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
 int elf_load(void *p, unsigned int size, const char *name);
-int elf_load2(API_REGISTERS *regs, void *p, unsigned int size);
+int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size);
 
 #endif

@@ -23,7 +23,7 @@ void debug_main(void);
 //-----------------------------------------------------------------------------
 // 画面出力
 
-typedef struct _INT_REGISTERS {
+struct INT_REGISTERS {
     // asm_inthander.S で積まれたスタックの内容
     unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;  // pushal
     unsigned int ds, es;
@@ -31,7 +31,7 @@ typedef struct _INT_REGISTERS {
     // 以下は、例外発生時にCPUが自動でpushしたもの
     unsigned int err_code;
     unsigned int eip, cs, eflags, app_esp, app_ss;
-} INT_REGISTERS;
+};
 
 
 void temp_dbgf(const char *fmt, ...);
@@ -42,10 +42,10 @@ void dbg_seg(void);
 void blue_screen(void);
 void blue_screen_f(int line_no, const char *fmt, ...);
 
-void dbg_fault(const char *msg, int no, INT_REGISTERS *regs);
+void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs);
 
-extern FILE_T *f_debug;
-extern FILE_T *f_dbg_temp;
+extern struct FILE_T *f_debug;
+extern struct FILE_T *f_dbg_temp;
 
 extern int g_dbg_temp_flg;
 
@@ -127,14 +127,14 @@ static char l_tmp[TMP_SIZE];
 
 static int dbg_write(void *self, const void *buf, int cnt);
 
-FILE_T l_f_debug = { .write = dbg_write };
-FILE_T *f_debug = &l_f_debug;
+struct FILE_T l_f_debug = { .write = dbg_write };
+struct FILE_T *f_debug = &l_f_debug;
 
 static int dbg_temp_read(void *self, void *buf, int cnt);
 static int dbg_temp_write(void *self, const void *buf, int cnt);
 
-FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write };
-FILE_T *f_dbg_temp = &l_f_dbg_temp;
+struct FILE_T l_f_dbg_temp = { .read = dbg_temp_read, .write = dbg_temp_write };
+struct FILE_T *f_dbg_temp = &l_f_dbg_temp;
 
 
 //=============================================================================
@@ -155,7 +155,7 @@ void debug_main(void)
 
     update_all();
 
-    MSG msg;
+    struct MSG msg;
 
     while (get_message(&msg)) {
         dispatch_message(&msg, debug_proc);
@@ -320,7 +320,7 @@ void dbg_seg(void)
 
 
 // 例外（フォールト）が発生したときにデバッグ表示する用の関数
-void dbg_fault(const char *msg, int no, INT_REGISTERS *regs)
+void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs)
 {
     unsigned short bk_fg = fg;
     unsigned short bk_bg = bg;

@@ -45,27 +45,30 @@
 #define MADDR_FREE_START    (0x00400000)
 
 
-extern SYSTEM_INFO *g_sys_info;
+extern struct SYSTEM_INFO *g_sys_info;
 
 
 //-----------------------------------------------------------------------------
 // メモリ管理
 
-typedef struct _USER_PAGE {
+struct USER_PAGE {
     unsigned long vaddr;
     int refs;
-} USER_PAGE;
+};
 
 
 void  mem_init(void);
+
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
-int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack);
+struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int   mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
-int   mem_free(void *vp_vaddr);
-int   mem_free_user(USER_PAGE *page);
-int   mem_free_maddr(void *vp_maddr);
+
+int mem_free(void *vp_vaddr);
+int mem_free_user(struct USER_PAGE *page);
+int mem_free_maddr(void *vp_maddr);
+
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
@@ -90,61 +93,61 @@ unsigned int mem_total_vfree_B(void);
 #include "sysinfo.h"
 
 
-SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) VADDR_SYS_INFO;
+struct SYSTEM_INFO *g_sys_info = (struct SYSTEM_INFO *) VADDR_SYS_INFO;
 
 //-----------------------------------------------------------------------------
 // メモリ管理
 
-typedef struct _MEMORY {
+struct MEMORY {
     void *addr;
     unsigned int size;
-} MEMORY;
+};
 
 
-typedef struct _MEM_MNG {
+struct MEM_MNG {
     // 記憶領域の確保用。
     // free.addrの昇順でなければならない
-    MEMORY *free;
+    struct MEMORY *free;
 
     int max_free;    // freeの最大数
     int num_free;    // 空き情報の数
     int total_free;  // free.sizeの合計
     int unit;        // sizeの単位
     int info_size;   // 管理情報のサイズ
-} MEM_MNG;
+};
 
 
-static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size);
-static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size);
-static void *get_free_addr(MEM_MNG *mng, unsigned int size);
-static int page_free_maddr(void *vp_vaddr);
+static int   mem_set_free(struct MEM_MNG *mng, void *vp_addr, unsigned int size);
+static void  init_mem_mng(struct MEM_MNG *mng, int max_free, int unit, int info_size);
+static void *get_free_addr(struct MEM_MNG *mng, unsigned int size);
+static int   page_free_maddr(void *vp_vaddr);
 
 
 //-----------------------------------------------------------------------------
 // 8バイト単位メモリ管理（4096-8バイト以下のメモリ割り当てを管理する）
 
-#define BYTE_MEM_MNG_MAX  (4096)
-#define MEM_INFO_B        (8)                // メモリの先頭に置く管理情報のサイズ
+#define BYTE_MEM_MNG_MAX  4096
+#define MEM_INFO_B        8                // メモリの先頭に置く管理情報のサイズ
 #define BYTE_MEM_BYTES    (1 * 1024 * 1024)  // バイト管理する容量
 #define MM_SIG            (0xBAD41BAD)       // メモリの先頭に置くシグネチャ
 #define BYTES_TO_8BYTES(b)   (((b) + 7) >> 3)  // バイトを8バイト単位に変換する
 
-typedef struct _INFO_8BYTES {
+struct INFO_8BYTES {
     unsigned long signature;
     unsigned long size;
-} INFO_8BYTES;
+};
 
-static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
+static struct MEM_MNG *l_mng_b = (struct MEM_MNG *) VADDR_BMEM_MNG;
 
 
 //-----------------------------------------------------------------------------
 // ページ単位メモリ管理
 
 
-#define PAGE_MEM_MNG_MAX   (4096)
+#define PAGE_MEM_MNG_MAX   4096
 
-#define SET_MNG_FLG  (true)
-#define NO_MNG_FLG   (false)
+#define SET_MNG_FLG  true
+#define NO_MNG_FLG   false
 
 /**
  * 物理アドレスからビットマップのインデックスに変換
@@ -171,7 +174,7 @@ static MEM_MNG *l_mng_b = (MEM_MNG *) VADDR_BMEM_MNG;
 
 #define BITMAP_ST MADDR2IDX(MADDR_FREE_START)
 
-static MEM_MNG *l_mng_v = (MEM_MNG *) VADDR_VMEM_MNG;
+static struct MEM_MNG *l_mng_v = (struct MEM_MNG *) VADDR_VMEM_MNG;
 
 // 物理アドレスを管理するためのビットマップ。使用中なら0、空きなら1
 static unsigned long *l_bitmap = (unsigned long *) VADDR_BITMAP_START;
@@ -251,9 +254,9 @@ static void init_byte_mem(void)
 /**
  * メモリ管理構造体の初期化
  */
-static void init_mem_mng(MEM_MNG *mng, int max_free, int unit, int info_size)
+static void init_mem_mng(struct MEM_MNG *mng, int max_free, int unit, int info_size)
 {
-    mng->free = (MEMORY *) (mng + 1);
+    mng->free = (struct MEMORY *) (mng + 1);
     mng->max_free = max_free;
     mng->num_free = 0;
     mng->total_free = 0;
@@ -310,7 +313,7 @@ int mem_free(void *vp_vaddr)
     // ---- 8バイト単位メモリ管理
 
     // 割り当てサイズの取得
-    INFO_8BYTES *info = (INFO_8BYTES *) (vaddr - MEM_INFO_B);
+    struct INFO_8BYTES *info = (struct INFO_8BYTES *) (vaddr - MEM_INFO_B);
 
     // 「ここで管理されてます」という印はあるか？
     ASSERT(info->signature == MM_SIG, "not found the memory management signature");
@@ -319,7 +322,7 @@ int mem_free(void *vp_vaddr)
 }
 
 
-int mem_free_user(USER_PAGE *page)
+int mem_free_user(struct USER_PAGE *page)
 {
     ASSERT(page, "");
     ASSERT(page->vaddr, "");
@@ -340,14 +343,14 @@ int mem_free_user(USER_PAGE *page)
 }
 
 
-int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack)
+int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
 {
     new_stack &= ~0xFFF;
     new_stack -= 0x1000;  // ちょっと余裕をもたせる
 
     int size_B = stack->vaddr - new_stack;
 
-    USER_PAGE *new_stack_page = mem_alloc_user_page(new_stack, size_B, PTE_RW);
+    struct USER_PAGE *new_stack_page = mem_alloc_user_page(new_stack, size_B, PTE_RW);
     if (new_stack_page == 0) {
         ERROR("could not allocate pages");
         return -1;
@@ -418,7 +421,7 @@ int mem_free_maddr(void *vp_maddr)
 }
 
 
-static void dbg_mem_mng(MEM_MNG *mng);
+static void dbg_mem_mng(struct MEM_MNG *mng);
 
 void mem_dbg(void)
 {
@@ -431,12 +434,12 @@ void mem_dbg(void)
     dbgf("\n");
 }
 
-static void dbg_mem_mng(MEM_MNG *mng)
+static void dbg_mem_mng(struct MEM_MNG *mng)
 {
     int i;
 
     for (i = 0; i < mng->num_free; i++) {
-        MEMORY *mem = &mng->free[i];
+        struct MEMORY *mem = &mng->free[i];
 
         dbgf("%d : addr = %#X, size = %Z\n", i, mem->addr, mem->size * mng->unit);
     }
@@ -459,9 +462,9 @@ void *mem_alloc_str(const char *s)
 
 static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, bool set_mng_flg);
 
-USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
+struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags)
 {
-    USER_PAGE *page = (USER_PAGE *) mem_alloc(sizeof(USER_PAGE));
+    struct USER_PAGE *page = (struct USER_PAGE *) mem_alloc(sizeof(struct USER_PAGE));
     page->refs = 1;
 
     int fraction = vaddr & 0xFFF;
@@ -626,18 +629,16 @@ static int page_free_maddr(void *vp_vaddr)
 }
 
 
-static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
+static int mem_set_free(struct MEM_MNG *mng, void *vp_addr, unsigned int size)
 {
     char *addr = (char *) vp_addr;
 
-    if (size == 0) {
-        return -1;
-    }
+    ASSERT(size, "");
 
     // ---- 管理している空きメモリとまとめれるならまとめる
 
     int i;
-    MEMORY *next = 0;
+    struct MEMORY *next = 0;
 
     // 挿入位置または結合位置を検索
     for (i = 0; i < mng->num_free; i++) {
@@ -666,7 +667,7 @@ static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
 
     // 前があるか？
     if (i > 0) {
-        MEMORY *prev = &mng->free[i - 1];
+        struct MEMORY *prev = &mng->free[i - 1];
         char *prev_end_addr = (char *) prev->addr + (prev->size * mng->unit);
 
         // 前とまとめれるか？
@@ -724,7 +725,7 @@ static int mem_set_free(MEM_MNG *mng, void *vp_addr, unsigned int size)
 
 
 // 連続した空き領域を取得する
-static void *get_free_addr(MEM_MNG *mng, unsigned int size)
+static void *get_free_addr(struct MEM_MNG *mng, unsigned int size)
 {
     if (mng->total_free < size) {
         return 0;
@@ -734,14 +735,14 @@ static void *get_free_addr(MEM_MNG *mng, unsigned int size)
         if (mng->free[i].size >= size + mng->info_size) {
             // 空きが見つかった
 
-            MEMORY *mem = &mng->free[i];
+            struct MEMORY *mem = &mng->free[i];
 
             unsigned int addr = (unsigned int) mem->addr;
 
             if (mng->info_size > 0) {
                 // 割り当てサイズの記録。
                 // ここで管理していることを表す印も追加する。
-                INFO_8BYTES *info = (INFO_8BYTES *) addr;
+                struct INFO_8BYTES *info = (struct INFO_8BYTES *) addr;
                 info->signature = MM_SIG;
                 info->size = size + mng->info_size;
                 addr += mng->info_size * mng->unit;
@@ -781,6 +782,7 @@ unsigned int mem_total_mfree_B(void)
 {
     return l_mfree_B;
 }
+
 
 // 空き容量を取得
 unsigned int mem_total_vfree_B(void)

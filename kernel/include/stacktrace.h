@@ -7,8 +7,8 @@
 
 
 void init_func_names(void);
-void stacktrace(unsigned int max_frames, FILE_T *f);
-void stacktrace2(unsigned int max_frames, FILE_T *f, unsigned int *ebp);
+void stacktrace(unsigned int max_frames, struct FILE_T *f);
+void stacktrace2(unsigned int max_frames, struct FILE_T *f, unsigned int *ebp);
 char *get_func_name(unsigned int addr);
 
 

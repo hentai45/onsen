@@ -35,7 +35,7 @@
 #define DEFAULT_TIMESLICE_MS  (20)
 
 
-typedef struct TSS {
+struct TSS {
     // ---- レジスタ保存部
 
     short backlink; short f1;
@@ -62,36 +62,36 @@ typedef struct TSS {
     int timeslice_ms;
 
     // メモリ
-    USER_PAGE *code;
-    USER_PAGE *data;
-    USER_PAGE *stack;
+    struct USER_PAGE *code;
+    struct USER_PAGE *data;
+    struct USER_PAGE *stack;
     // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack0;
 
     // ファイルテーブル
-    FTE *file_tbl;
+    struct FILE_TABLE_ENTRY *file_tbl;
 
     bool is_os_task;  // TODO: フラグに移す
-} __attribute__ ((__packed__)) TSS;
+} __attribute__ ((__packed__));
 
 
-typedef struct TASK_MNG {
+struct TASK_MNG {
     // 記憶領域の確保用。
     // tss のインデックスと PID は同じ
-    TSS tss[TASK_MAX];
+    struct TSS tss[TASK_MAX];
 
     int num_running;
     int cur_run;  // 現在実行しているタスクの run でのインデックス
-    TSS *run[TASK_MAX];
-} TASK_MNG;
+    struct TSS *run[TASK_MAX];
+};
 
 
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-int  task_copy(API_REGISTERS *regs, int flg);
+int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
-int  task_exec(API_REGISTERS *regs, const char *fname);
+int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
 void task_switch(int ts_tid);
@@ -105,9 +105,9 @@ void task_dbg(void);
 int is_os_task(int pid);
 
 void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
-TSS *pid2tss(int pid);
+struct TSS *pid2tss(int pid);
 
-extern TSS *g_cur;
+extern struct TSS *g_cur;
 extern int g_pid;
 
 extern int g_root_pid;
@@ -151,18 +151,18 @@ static void idle_main(void);
 
 static void init_tss_seg(void);
 static void set_os_tss(int pid, void (*f)(void), unsigned long esp);
-static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
+static struct TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, unsigned long esp,
         int ss, unsigned long esp0, int ss0);
 
 
-TSS *g_cur;
+struct TSS *g_cur;
 int g_pid;
 
 int g_root_pid;
 int g_idle_pid;
 
-static TASK_MNG l_mng;
+static struct TASK_MNG l_mng;
 
 
 //=============================================================================
@@ -178,7 +178,7 @@ void task_init(void)
     l_mng.cur_run = 0;
 
     for (int pid = 0; pid < TASK_MAX; pid++) {
-        TSS *t = &l_mng.tss[pid];
+        struct TSS *t = &l_mng.tss[pid];
 
         t->pid = pid;
         t->flags = TASK_FLG_FREE;
@@ -228,7 +228,7 @@ static int create_root_task(void)
 int task_new(const char *name)
 {
     for (int pid = 0; pid < TASK_MAX; pid++) {
-        TSS *t = &l_mng.tss[pid];
+        struct TSS *t = &l_mng.tss[pid];
 
         if (t->flags == TASK_FLG_FREE) { // 未割り当て領域を発見
             msg_q_init(pid);
@@ -249,7 +249,7 @@ int task_new(const char *name)
 
 int task_free(int pid, int exit_status)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     ASSERT2(t && t->flags != TASK_FLG_FREE, "");
 
@@ -287,9 +287,9 @@ int task_free(int pid, int exit_status)
     t->flags = TASK_FLG_FREE;
 
     // 親タスクにメッセージで終了を通知
-    TSS *parent = pid2tss(t->ppid);
+    struct TSS *parent = pid2tss(t->ppid);
     if (parent != 0 && parent->flags != TASK_FLG_FREE) {
-        MSG msg;
+        struct MSG msg;
         msg.message = MSG_NOTIFY_CHILD_EXIT;
         msg.u_param = pid;
         msg.l_param = exit_status;
@@ -302,7 +302,7 @@ int task_free(int pid, int exit_status)
 
 
 /* 今実行されているタスクの複製を作る */
-int task_copy(API_REGISTERS *regs, int flg)
+int task_copy(struct API_REGISTERS *regs, int flg)
 {
     int pid = task_new(g_cur->name);
 
@@ -311,9 +311,9 @@ int task_copy(API_REGISTERS *regs, int flg)
         return ERROR_PID;
     }
 
-    TSS *tss = &l_mng.tss[pid];
+    struct TSS *tss = &l_mng.tss[pid];
 
-    memcpy(tss, g_cur, sizeof(TSS));
+    memcpy(tss, g_cur, sizeof(struct TSS));
 
     tss->flags = TASK_FLG_ALLOC;
     tss->pid   = pid;
@@ -336,7 +336,7 @@ int task_copy(API_REGISTERS *regs, int flg)
         PDE *src_pd = copy_pd();  // バックアップ
         paging_clear_pd_range(g_cur->stack->vaddr, VADDR_USER_ESP);
 
-        USER_PAGE *stack = mem_alloc_user_page(g_cur->stack->vaddr, size, PTE_RW);
+        struct USER_PAGE *stack = mem_alloc_user_page(g_cur->stack->vaddr, size, PTE_RW);
         memcpy((void *) stack->vaddr, (void *) temp_stack, size);
 
         tss->stack = stack;
@@ -366,7 +366,7 @@ int task_copy(API_REGISTERS *regs, int flg)
     tss->esp0 = esp0;
     tss->ss0  = KERNEL_DS;
 
-    API_REGISTERS *new_regs = (API_REGISTERS *) (esp0 - sizeof(API_REGISTERS));
+    struct API_REGISTERS *new_regs = (struct API_REGISTERS *) (esp0 - sizeof(struct API_REGISTERS));
     *new_regs = *regs;
 
     new_regs->eax = 0;  // 子の戻り値は0
@@ -422,9 +422,9 @@ int execve(const char *cmd, char **argv, char **envp)
 }
 
 
-int task_exec(API_REGISTERS *regs, const char *fname)
+int task_exec(struct API_REGISTERS *regs, const char *fname)
 {
-    FILEINFO *finfo = fat12_get_file_info();
+    struct FILEINFO *finfo = fat12_get_file_info();
     int i_fi = fat12_search_file(finfo, fname);
 
     if (i_fi < 0) {  // ファイルが見つからなかった
@@ -432,7 +432,7 @@ int task_exec(API_REGISTERS *regs, const char *fname)
         return -1;
     }
 
-    FILEINFO *fi = &finfo[i_fi];
+    struct FILEINFO *fi = &finfo[i_fi];
 
     char *p = (char *) mem_alloc(fi->size);
     fat12_load_file(fi->clustno, fi->size, p);
@@ -450,7 +450,7 @@ int task_exec(API_REGISTERS *regs, const char *fname)
 
         // スタックの準備
 
-        USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - DEFAULT_STACK0_SIZE, DEFAULT_STACK0_SIZE, PTE_RW);
+        struct USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - DEFAULT_STACK0_SIZE, DEFAULT_STACK0_SIZE, PTE_RW);
 
         g_cur->stack  = stack;
         g_cur->ss0    = KERNEL_DS;
@@ -481,7 +481,7 @@ int task_exec(API_REGISTERS *regs, const char *fname)
 
 void task_run(int pid)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     ASSERT2(t && t->flags != TASK_FLG_RUNNING, "");
 
@@ -501,7 +501,7 @@ int task_run_os(const char *name, void (*main)(void))
 
     set_os_tss(pid, main, esp0);
 
-    TSS *tss = &l_mng.tss[pid];
+    struct TSS *tss = &l_mng.tss[pid];
     tss->stack0 = stack0;
 
     task_run(pid);
@@ -534,7 +534,7 @@ void task_switch(int ts_tid)
 // 実行中タスクリスト(run)からタスクをはずす
 void task_sleep(int pid)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     if (t == 0 || (t->flags & TASK_FLG_RUNNING) == 0) {
         return;
@@ -587,7 +587,7 @@ void task_sleep(int pid)
 // タスクが寝てたら起こす
 void task_wakeup(int pid)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     if (t == 0 || t->flags != TASK_FLG_ALLOC) {
         return;
@@ -599,7 +599,7 @@ void task_wakeup(int pid)
 
 const char *task_get_name(int pid)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     if (t == 0) {
         return 0;
@@ -616,7 +616,7 @@ const char *task_get_name(int pid)
 void task_set_pt(int i_pd, PDE pt)
 {
     for (int pid = 0; pid < TASK_MAX; pid++) {
-        TSS *t = &l_mng.tss[pid];
+        struct TSS *t = &l_mng.tss[pid];
 
         if (t->flags != TASK_FLG_FREE && t->pd != 0) {
             t->pd[i_pd] = pt;
@@ -630,7 +630,7 @@ void task_dbg(void)
     dbgf("\nnum running : %d\n", l_mng.num_running);
 
     for (int pid = 0; pid < TASK_MAX; pid++) {
-        TSS *t = &l_mng.tss[pid];
+        struct TSS *t = &l_mng.tss[pid];
 
         if (t->flags != TASK_FLG_FREE) {
             dbgf("%d %s, pd : %p, cs : %X, ds : %X, ss : %X\n",
@@ -644,7 +644,7 @@ void task_dbg(void)
 
 int is_os_task(int pid)
 {
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
 
     if (t)
         return t->is_os_task;
@@ -674,7 +674,7 @@ static void init_tss_seg(void)
 
 static void set_os_tss(int pid, void (*f)(void), unsigned long esp)
 {
-    TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
+    struct TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
             EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
 
     tss->is_os_task = true;
@@ -686,7 +686,7 @@ void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsi
     PDE maddr_pd = (PDE) paging_get_maddr((void *) vaddr_pd);
 
     // | 3 は要求者特権レベルを3にするため
-    TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
+    struct TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
             EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
 
     tss->is_os_task = false;
@@ -694,7 +694,7 @@ void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsi
 
 
 
-static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
+static struct TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         void (*f)(void), unsigned long eflags, unsigned long esp,
         int ss, unsigned long esp0, int ss0)
 {
@@ -702,7 +702,7 @@ static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         return 0;
     }
 
-    TSS *tss = &l_mng.tss[pid];
+    struct TSS *tss = &l_mng.tss[pid];
     memset(tss, 0, TSS_REG_SIZE);
 
     tss->cr3 = cr3;
@@ -724,7 +724,7 @@ static TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
 }
 
 
-TSS *pid2tss(int pid)
+struct TSS *pid2tss(int pid)
 {
     if (pid < 0 || TASK_MAX <= pid) {
         return 0;

@@ -19,7 +19,7 @@ void main(void)
 
     draw_time(sid, hou, min, sec);
 
-    MSG msg;
+    struct MSG msg;
 
     while (get_message(&msg)) {
         if (msg.message == MSG_KEYDOWN) {

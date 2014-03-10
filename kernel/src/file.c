@@ -22,35 +22,35 @@
 #define O_WRONLY  (1)
 #define O_RDWR    (2)
 
-typedef struct _FILE_T {
+struct FILE_T {
     void *self;
     int refs;
     int (*close)(void *self);
     int (*read)(void *self, void *buf, int cnt);
     int (*write)(void *self, const void *buf, int cnt);
-} FILE_T;
+};
 
-typedef struct _FILE_TABLE_ENTRY {
+struct FILE_TABLE_ENTRY {
     int flags;
-    FILE_T *file;
-} FTE;
+    struct FILE_T *file;
+};
 
 
-FTE *create_file_tbl(void);
-int free_file_tbl(FTE *tbl);
-FILE_T *f_get_file(int fd);
-int f_set_file(int fd, FILE_T *f);
+struct FILE_TABLE_ENTRY *create_file_tbl(void);
+int free_file_tbl(struct FILE_TABLE_ENTRY *tbl);
+struct FILE_T *f_get_file(int fd);
+int f_set_file(int fd, struct FILE_T *f);
 
 int f_open(const char *name, int flags);
 int f_close(int fd);
 int f_read(int fd, void *buf, int cnt);
 int f_write(int fd, const void *buf, int cnt);
 
-extern FILE_T *f_keyboard;
+extern struct FILE_T *f_keyboard;
 
 #endif
 
-FILE_T *f_keyboard;
+struct FILE_T *f_keyboard;
 
 //=============================================================================
 // 非公開ヘッダ
@@ -92,7 +92,7 @@ int f_open(const char *name, int flags)
 
 int f_close(int fd)
 {
-    FILE_T *f = f_get_file(fd);
+    struct FILE_T *f = f_get_file(fd);
 
     if (f == 0)
         return -1;
@@ -108,7 +108,7 @@ int f_close(int fd)
 
 int f_read(int fd, void *buf, int cnt)
 {
-    FILE_T *f = f_get_file(fd);
+    struct FILE_T *f = f_get_file(fd);
 
     if (f == 0)
         return -1;
@@ -122,7 +122,7 @@ int f_read(int fd, void *buf, int cnt)
 
 int f_write(int fd, const void *buf, int cnt)
 {
-    FILE_T *f = f_get_file(fd);
+    struct FILE_T *f = f_get_file(fd);
 
     if (f == 0)
         return -1;
@@ -134,11 +134,11 @@ int f_write(int fd, const void *buf, int cnt)
 }
 
 
-FTE *create_file_tbl(void)
+struct FILE_TABLE_ENTRY *create_file_tbl(void)
 {
-    int size = sizeof(FTE) * FILE_TABLE_SIZE;
+    int size = sizeof(struct FILE_TABLE_ENTRY) * FILE_TABLE_SIZE;
 
-    FTE *tbl = (FTE *) mem_alloc(size);
+    struct FILE_TABLE_ENTRY *tbl = (struct FILE_TABLE_ENTRY *) mem_alloc(size);
 
     memset(tbl, 0, size);
 
@@ -146,13 +146,13 @@ FTE *create_file_tbl(void)
 }
 
 
-int free_file_tbl(FTE *tbl)
+int free_file_tbl(struct FILE_TABLE_ENTRY *tbl)
 {
     return mem_free(tbl);
 }
 
 
-FILE_T *f_get_file(int fd)
+struct FILE_T *f_get_file(int fd)
 {
     if (g_cur->file_tbl == 0)
         return 0;
@@ -166,7 +166,7 @@ FILE_T *f_get_file(int fd)
 }
 
 
-int f_set_file(int fd, FILE_T *f)
+int f_set_file(int fd, struct FILE_T *f)
 {
     if (g_cur->file_tbl == 0)
         return -1;
@@ -186,9 +186,6 @@ int f_set_file(int fd, FILE_T *f)
 
     return 0;
 }
-
-//=============================================================================
-// 非公開関数
 
 
 static int get_free_fd(void)

@@ -22,7 +22,8 @@ void new_task_start(void);
 
 
 # API(システムコール)を処理するトラップゲートから呼ばれる
-# C の onsen_api 関数を呼び出す
+# C の onsen_api 関数を呼び出す。
+# トラップゲートなので割り込み禁止に自動でならない。
 asm_api:
     pushl %es
     pushl %ds

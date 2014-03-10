@@ -7,20 +7,20 @@
 //-----------------------------------------------------------------------------
 // ページング
 
-#define PAGE_SIZE_B (4096)  // ページサイズ
-#define CUR_PD      (VADDR_PD_SELF)
+#define PAGE_SIZE_B  4096  // ページサイズ
+#define CUR_PD       (VADDR_PD_SELF)
 
-#define PTE_PRESENT (0x001)  // 1ならページがメモリ上に存在する
-#define PTE_RW      (0x002)  // 0なら特権レベル3では書き込めない
-#define PTE_US      (0x004)  // 0なら特権レベル3ではアクセスできない
-#define PTE_ACCESS  (0x020)  // このエントリのページをアクセスするとCPUが1にする
-#define PTE_DIRTY   (0x040)  // このエントリのページに書き込むとCPUが1にする
-#define PTE_4MB     (0x080)  // 4MBページ
+#define PTE_PRESENT  (0x001)  // 1ならページがメモリ上に存在する
+#define PTE_RW       (0x002)  // 0なら特権レベル3では書き込めない
+#define PTE_US       (0x004)  // 0なら特権レベル3ではアクセスできない
+#define PTE_ACCESS   (0x020)  // このエントリのページをアクセスするとCPUが1にする
+#define PTE_DIRTY    (0x040)  // このエントリのページに書き込むとCPUが1にする
+#define PTE_4MB      (0x080)  // 4MBページ
 
 /* メモリ管理用 */
-#define PTE_START   (0x200)  // 連続領域開始。カスタムフラグ
-#define PTE_CONT    (0x400)  // 連続領域続く。カスタムフラグ
-#define PTE_END     (0x800)  // 連続領域終了。カスタムフラグ
+#define PTE_START    (0x200)  // 連続領域開始。カスタムフラグ
+#define PTE_CONT     (0x400)  // 連続領域続く。カスタムフラグ
+#define PTE_END      (0x800)  // 連続領域終了。カスタムフラグ
 #define PTE_MNG_MASK (0xE00)  // カスタムフラグを取得するためのマスク
 
 #define IS_4KB_ALIGN(byte) (((unsigned long) (byte) & 0xFFF) == 0)  // 4KB 境界であるか確認

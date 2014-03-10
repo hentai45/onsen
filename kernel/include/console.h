@@ -7,6 +7,6 @@
 
 void console_main(void);
 
-extern FILE_T *f_console;
+extern struct FILE_T *f_console;
 
 #endif

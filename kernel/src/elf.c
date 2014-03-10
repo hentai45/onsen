@@ -25,7 +25,7 @@ typedef unsigned int    Elf32_Word;
 #define EI_NIDENT   (16)
 
 // ELF ヘッダ
-typedef struct Elf_Ehdr {
+struct Elf_Ehdr {
     unsigned char e_ident[EI_NIDENT];  // マジックナンバなど
     Elf32_Half    e_type;              // ファイルタイプ
     Elf32_Half    e_machine;           // マシンアーキテクチャ
@@ -40,12 +40,12 @@ typedef struct Elf_Ehdr {
     Elf32_Half    e_shentsize;         // セクションヘッダエントリのサイズ
     Elf32_Half    e_shnum;             // セクションヘッダエントリの数
     Elf32_Half    e_shstrndx;          // セクション名格納用セクション
-} Elf_Ehdr;
+};
 
 
 // ---- Elf_Ehdr.e_ident
 inline __attribute__ ((always_inline))
-bool is_elf(Elf_Ehdr *ehdr)
+bool is_elf(struct Elf_Ehdr *ehdr)
 {
     return (ehdr->e_ident[0] == 0x7F && ehdr->e_ident[1] == 'E' &&
             ehdr->e_ident[2] == 'L'  && ehdr->e_ident[3] == 'F');
@@ -59,7 +59,7 @@ bool is_elf(Elf_Ehdr *ehdr)
 //-----------------------------------------------------------------------------
 
 // プログラムヘッダ
-typedef struct Elf_Phdr {
+struct Elf_Phdr {
     Elf32_Word    p_type;
     Elf32_Off     p_offset;    // ファイル先頭からのセグメント位置
     Elf32_Addr    p_vaddr;     // ロード先の仮想アドレス
@@ -68,7 +68,7 @@ typedef struct Elf_Phdr {
     Elf32_Word    p_memsz;     // メモリ上でのセグメントのサイズ
     Elf32_Word    p_flags;
     Elf32_Word    p_align;
-} Elf_Phdr;
+};
 
 
 // ---- Elf_Phdr.p_type
@@ -84,7 +84,7 @@ typedef struct Elf_Phdr {
 //-----------------------------------------------------------------------------
 
 // セクションヘッダ
-typedef struct Elf_Shdr {
+struct Elf_Shdr {
     Elf32_Word    sh_name;        // セクション名の格納位置
     Elf32_Word    sh_type;
     Elf32_Word    sh_flags;
@@ -95,18 +95,18 @@ typedef struct Elf_Shdr {
     Elf32_Word    sh_info;
     Elf32_Word    sh_addralign;
     Elf32_Word    sh_entsize;
-} Elf_Shdr;
+};
 
 
 inline __attribute__ ((always_inline))
-bool has_section(Elf_Phdr *phdr, Elf_Shdr *shdr)
+bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
 {
     return (phdr->p_vaddr <= shdr->sh_addr &&
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
 int elf_load(void *p, unsigned int size, const char *name);
-int elf_load2(API_REGISTERS *regs, void *p, unsigned int size);
+int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size);
 
 #endif
 
@@ -122,7 +122,7 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size);
 #include "str.h"
 #include "task.h"
 
-static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name);
+static struct Elf_Shdr *search_shdr(struct Elf_Ehdr *ehdr, const char *name);
 
 
 //=============================================================================
@@ -131,7 +131,7 @@ static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name);
 int elf_load(void *p, unsigned int size, const char *name)
 {
     char *head = (char *) p;
-    Elf_Ehdr *ehdr = (Elf_Ehdr *) head;
+    struct Elf_Ehdr *ehdr = (struct Elf_Ehdr *) head;
 
     // ---- 形式チェック
 
@@ -151,10 +151,10 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     cli();
 
-    Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
-    Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
+    struct Elf_Phdr *phdr = (struct Elf_Phdr *) (head + ehdr->e_phoff);
+    struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
-    USER_PAGE *code = 0, *data = 0;
+    struct USER_PAGE *code = 0, *data = 0;
     int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
@@ -200,7 +200,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                 if (bss_shdr && has_section(phdr, bss_shdr)) {
                     if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
                         if (bss_shdr->sh_size == bss_size) {
-                            memset((void *) (data + phdr->p_filesz), 0, bss_size);
+                            memset((void *) (data->vaddr + phdr->p_filesz), 0, bss_size);
                         } else {
                             dbgf("bss size is different");
                         }
@@ -229,7 +229,7 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     // スタックの準備
 
-    USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
+    struct USER_PAGE *stack = mem_alloc_user_page(VADDR_USER_ESP - 0x8000, 0x8000, PTE_RW);
     unsigned long esp = stack->vaddr + 0x8000;
 
     unsigned long stack0 = (unsigned long) mem_alloc(8 * 1024);
@@ -247,7 +247,7 @@ int elf_load(void *p, unsigned int size, const char *name)
 
     sti();
 
-    TSS *t = pid2tss(pid);
+    struct TSS *t = pid2tss(pid);
     t->code   = code;
     t->data   = data;
     t->stack  = stack;
@@ -259,10 +259,10 @@ int elf_load(void *p, unsigned int size, const char *name)
 }
 
 
-int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
+int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
 {
     char *head = (char *) p;
-    Elf_Ehdr *ehdr = (Elf_Ehdr *) head;
+    struct Elf_Ehdr *ehdr = (struct Elf_Ehdr *) head;
 
     // ---- 形式チェック
 
@@ -278,10 +278,10 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
 
     // ---- ロード
 
-    Elf_Phdr *phdr = (Elf_Phdr *) (head + ehdr->e_phoff);
-    Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
+    struct Elf_Phdr *phdr = (struct Elf_Phdr *) (head + ehdr->e_phoff);
+    struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
-    USER_PAGE *code = 0, *data = 0;
+    struct USER_PAGE *code = 0, *data = 0;
     int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
@@ -327,7 +327,7 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
                 if (bss_shdr && has_section(phdr, bss_shdr)) {
                     if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
                         if (bss_shdr->sh_size == bss_size) {
-                            memset((void *) (data + phdr->p_filesz), 0, bss_size);
+                            memset((void *) (data->vaddr + phdr->p_filesz), 0, bss_size);
                         } else {
                             dbgf("bss size is different");
                         }
@@ -368,13 +368,13 @@ int elf_load2(API_REGISTERS *regs, void *p, unsigned int size)
 // 非公開関数
 
 
-static Elf_Shdr *search_shdr(Elf_Ehdr *ehdr, const char *name)
+static struct Elf_Shdr *search_shdr(struct Elf_Ehdr *ehdr, const char *name)
 {
     char *head = (char *) ehdr;
-    Elf_Shdr *shdr = (Elf_Shdr *) (head + ehdr->e_shoff);
+    struct Elf_Shdr *shdr = (struct Elf_Shdr *) (head + ehdr->e_shoff);
 
     // 名前格納用セクション
-    Elf_Shdr *name_shdr = (Elf_Shdr *) (shdr + ehdr->e_shstrndx);
+    struct Elf_Shdr *name_shdr = (struct Elf_Shdr *) (shdr + ehdr->e_shstrndx);
     char *name_sect = head + name_shdr->sh_offset;
 
     for (int i = 0; i < ehdr->e_shnum; i++, shdr++) {

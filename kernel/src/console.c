@@ -13,7 +13,7 @@
 
 void console_main(void);
 
-extern FILE_T *f_console;
+extern struct FILE_T *f_console;
 
 #endif
 
@@ -50,8 +50,8 @@ static bool l_active;
 
 int cons_write(void *self, const void *buf, int cnt);
 
-FILE_T l_f_console = { .write = cons_write };
-FILE_T *f_console = &l_f_console;
+struct FILE_T l_f_console = { .write = cons_write };
+struct FILE_T *f_console = &l_f_console;
 
 
 //-----------------------------------------------------------------------------
@@ -73,8 +73,8 @@ static void keychar_handler(int ch);
 
 #define MAX_LINE_CHAR 1024
 
-#define WIDTH_CH   (39)
-#define HEIGHT_CH  (28)
+#define WIDTH_CH   39
+#define HEIGHT_CH  28
 
 #define SCROLL_LINES  5
 
@@ -110,10 +110,6 @@ static void cmd_kill(int pid);
 static void cmd_dbg(char *name);
 static int  cmd_app(char *cmd_name, int bgp);
 
-void test_main(void)
-{
-    execve("b", 0, 0);
-}
 
 //=============================================================================
 // 関数
@@ -132,12 +128,9 @@ void console_main(void)
     fill_surface(l_sid, bg);
     update_surface(l_sid);
 
-    int pid = kernel_thread(test_main, 0);
-    dbgf("child pid is %d\n", pid);
-
     put_prompt();
 
-    MSG msg;
+    struct MSG msg;
 
     while (get_message(&msg)) {
         dispatch_message(&msg, console_proc);
@@ -370,7 +363,7 @@ static void run_cmd(char *cmd_name)
 
 void cmd_ls(void)
 {
-    FILEINFO *finfo = fat12_get_file_info();
+    struct FILEINFO *finfo = fat12_get_file_info();
     char s[30];
 
     for (int i = 0; i < 224; i++) {
@@ -413,7 +406,7 @@ static void cmd_clear(void)
 
 static void cmd_cat(char *fname)
 {
-    FILEINFO *finfo = fat12_get_file_info();
+    struct FILEINFO *finfo = fat12_get_file_info();
     int i = fat12_search_file(finfo, fname);
 
     if (i >= 0) {  // ファイルが見つかった
@@ -520,19 +513,19 @@ static int cmd_app(char *cmd_name, int bgp)
     }
     name[i_name] = 0;
 
-    FILEINFO *finfo = fat12_get_file_info();
+    struct FILEINFO *finfo = fat12_get_file_info();
     int i_fi = fat12_search_file(finfo, name);
 
     if (i_fi < 0) {  // ファイルが見つからなかった
         return -2;
     }
 
-    FILEINFO *fi = &finfo[i_fi];
+    struct FILEINFO *fi = &finfo[i_fi];
 
     char *p = (char *) mem_alloc(fi->size);
     fat12_load_file(fi->clustno, fi->size, p);
 
-    if (is_elf((Elf_Ehdr *) p)) {
+    if (is_elf((struct Elf_Ehdr *) p)) {
         child_pid = elf_load(p, fi->size, fi->name);
         //mem_free(p);
     } else {

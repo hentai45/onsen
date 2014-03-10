@@ -60,11 +60,11 @@ void set_pic1_mask(unsigned char mask);
 //-----------------------------------------------------------------------------
 // フォールト
 
-static void fault_handler(const char *msg, int no, INT_REGISTERS regs);
+static void fault_handler(const char *msg, int no, struct INT_REGISTERS regs);
 
-#define INT_HANDLER(no, msg) void int ## no ## _handler(INT_REGISTERS regs) \
-{                                                                           \
-    fault_handler("INT 0x" #no " : " msg, 0x ## no, regs);                  \
+#define INT_HANDLER(no, msg) void int ## no ## _handler(struct INT_REGISTERS regs) \
+{                                                                                  \
+    fault_handler("INT 0x" #no " : " msg, 0x ## no, regs);                         \
 }
 
 //=============================================================================
@@ -160,9 +160,9 @@ INT_HANDLER(0E, "page fault")
 //=============================================================================
 // 非公開関数
 
-static int page_fault_handler(INT_REGISTERS *regs);
+static int page_fault_handler(struct INT_REGISTERS *regs);
 
-static void fault_handler(const char *message, int no, INT_REGISTERS regs)
+static void fault_handler(const char *message, int no, struct INT_REGISTERS regs)
 {
     if (is_os_task(g_pid)) {
         dbg_fault(message, no, &regs);
@@ -184,7 +184,7 @@ static void fault_handler(const char *message, int no, INT_REGISTERS regs)
 
         dbg_fault(message, no, &regs);
 
-        MSG msg;
+        struct MSG msg;
         msg.message = MSG_REQUEST_EXIT;
         msg.u_param = g_pid;
         msg.l_param = -666;
@@ -198,7 +198,7 @@ static void fault_handler(const char *message, int no, INT_REGISTERS regs)
 }
 
 
-static int page_fault_handler(INT_REGISTERS *regs)
+static int page_fault_handler(struct INT_REGISTERS *regs)
 {
     unsigned long cr2;
 

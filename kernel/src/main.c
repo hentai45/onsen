@@ -40,13 +40,12 @@ static void main_proc(unsigned int message, unsigned long u_param,
 static void mouse_handler(unsigned long data);
 static void keydown_handler(unsigned long keycode);
 
-void (*g_func)(void);
 
 void OnSenMain(void)
 {
     init_onsen();
 
-    MSG msg;
+    struct MSG msg;
 
     while (get_message(&msg)) {
         dispatch_message(&msg, main_proc);
@@ -76,18 +75,13 @@ static void init_onsen(void)
     mouse_init();
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
 
-    init_gui();
+    // デスクトップを描画
+    fill_surface(g_dt_sid, 0x008484);
+    update_surface(g_dt_sid);
 
+    // OSタスクを起動
     task_run_os("debug", debug_main);
     task_run_os("console", console_main);
-}
-
-
-static void init_gui(void)
-{
-    fill_surface(g_dt_sid, 0x008484);
-
-    update_surface(g_dt_sid);
 }
 
 
@@ -138,13 +132,13 @@ static void mouse_handler(unsigned long data)
     if (active_win_pid <= 0)
         return;
 
-    MOUSE_DECODE *mdec = mouse_decode(data);
+    struct MOUSE_DECODE *mdec = mouse_decode(data);
 
     if (mdec == 0) {
         return;
     }
 
-    MSG msg;
+    struct MSG msg;
     msg.l_param = mdec->y << 16 | mdec->x;
 
     if (mdec->change_pos) {
@@ -247,7 +241,7 @@ static void keydown_handler(unsigned long keycode)
     }
 
     // 押下時だけメッセージを送る（離したときは0x80がプラスされた値になる）
-    MSG msg;
+    struct MSG msg;
     if (keycode < 0x80) {
         msg.message = MSG_KEYDOWN;
         msg.u_param = keycode;

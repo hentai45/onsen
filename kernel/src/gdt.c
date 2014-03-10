@@ -17,7 +17,7 @@
 #define SEG_TYPE_STACK      0x96
 #define SEG_TYPE_LDT        0x82
 #define SEG_TYPE_TSS        0x89
-// #define SEG_TYPE_TSS_BUSY   0x8B
+#define SEG_TYPE_TSS_BUSY   0x8B
 #define SEG_TYPE_CALL_GATE  0x84
 #define SEG_TYPE_INTR_GATE  0x8E
 #define SEG_TYPE_TRAP_GATE  0x8F
@@ -27,11 +27,11 @@
 // ---- セグメントの32ビット属性を表す数値
 // SEG32_BIG_SEGはset_gate_descで自動で設定する
 #define SEG32_BIG_SEG       0x80 // リミットの数値をページ単位(4KB)ととらえる
-// #define SEG32_SMALL_SEG     0x00
+#define SEG32_SMALL_SEG     0x00
 
 #define SEG32_CODE386       0x40
 #define SEG32_DATA386       0x40
-// #define SEG32_CODE286       0x00
+#define SEG32_CODE286       0x00
 
 
 #define KERNEL_DS  (1 << 3)  // 0x08 カーネルのデータセグメントのセレクタ値
@@ -60,33 +60,33 @@ void set_data_seg(int no, unsigned long addr, unsigned long limit, int dpl);
 #include "task.h"
 
 
-typedef struct SEG_DESC {
+struct SEG_DESC {
     unsigned short limit_low;
     unsigned short base_low;
     unsigned char  base_mid;
     unsigned char  type;
-    unsigned char  limit_high;  /// @attention 上位４ビットはtypeのつづき
+    unsigned char  limit_high;  // 上位４ビットはtypeのつづき
     unsigned char  base_high;
-} __attribute__ ((__packed__)) SEG_DESC;
+} __attribute__ ((__packed__));
 
 
-static SEG_DESC *gdt = (SEG_DESC *) VADDR_GDT;
+static struct SEG_DESC *gdt = (struct SEG_DESC *) VADDR_GDT;
 
 
-typedef struct {
+struct GDTR {
     unsigned short limit;
     unsigned long base;
-} __attribute__ ((__packed__)) GDTR;
+} __attribute__ ((__packed__));
 
 
-inline static void load_gdtr(GDTR *gdtr)
+inline static void load_gdtr(struct GDTR *gdtr)
 {
     __asm__ volatile("lgdt (%0)" : : "q" (gdtr));
 }
 
 
 //=============================================================================
-// 公開関数
+// 関数
 
 void gdt_init(void)
 {
@@ -100,7 +100,7 @@ void gdt_init(void)
     set_data_seg(USER_DS >> 3  , 0x00000000, 0xFFFFFFFF, /* dpl = */ 3);
     set_code_seg(USER_CS >> 3  , 0x00000000, 0xFFFFFFFF, /* dpl = */ 3);
 
-    GDTR gdtr;
+    struct GDTR gdtr;
     gdtr.limit = LIMIT_GDT;
     gdtr.base = VADDR_GDT;
     load_gdtr(&gdtr);
@@ -124,7 +124,7 @@ void set_data_seg(int no, unsigned long addr, unsigned long limit, int dpl)
 void set_seg_desc(int no, unsigned long addr,
         unsigned long limit, int segtype, int seg32type, int dpl)
 {
-    SEG_DESC *desc = gdt + no;
+    struct SEG_DESC *desc = gdt + no;
 
     if (limit > 0xFFFFF) {
         seg32type |= SEG32_BIG_SEG;
@@ -138,15 +138,10 @@ void set_seg_desc(int no, unsigned long addr,
 
     // セグメントのリミット値を２つのフィールドに分割して設定
     // 合わせて32ビット属性も設定
-    desc->limit_low = (unsigned int) (limit & 0xFFFF);
+    desc->limit_low  = (unsigned int) (limit & 0xFFFF);
     desc->limit_high = (unsigned char) ((limit >> 16) & 0x0F) + seg32type;
 
     // セグメントの属性と特権レベルを設定
     desc->type = segtype | (dpl << 5);
 }
-
-
-//=============================================================================
-// 非公開関数
-
 

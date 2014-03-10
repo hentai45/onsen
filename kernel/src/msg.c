@@ -9,11 +9,11 @@
 #ifndef HEADER_MSG
 #define HEADER_MSG
 
-typedef struct MSG {
+struct MSG {
     unsigned int message;
     unsigned long u_param;
     long l_param;
-} MSG;
+};
 
 
 //-----------------------------------------------------------------------------
@@ -21,9 +21,9 @@ typedef struct MSG {
 
 typedef void (*ONSEN_PROC) (unsigned int, unsigned long, long);
 
-int get_message(MSG *msg);
-int peek_message(MSG *msg);
-void dispatch_message(const MSG *msg, ONSEN_PROC proc);
+int get_message(struct MSG *msg);
+int peek_message(struct MSG *msg);
+void dispatch_message(const struct MSG *msg, ONSEN_PROC proc);
 
 //-----------------------------------------------------------------------------
 // メッセージ
@@ -103,7 +103,7 @@ void send_window_deactive_msg(int pid_recieve, int pid);
 //=============================================================================
 // 関数
 
-int get_message(MSG *msg)
+int get_message(struct MSG *msg)
 {
     int pid = g_pid;
 
@@ -122,7 +122,7 @@ int get_message(MSG *msg)
 }
 
 
-int peek_message(MSG *msg)
+int peek_message(struct MSG *msg)
 {
     int pid = g_pid;
 
@@ -140,7 +140,7 @@ int peek_message(MSG *msg)
     }
 }
 
-void dispatch_message(const MSG *msg, ONSEN_PROC proc)
+void dispatch_message(const struct MSG *msg, ONSEN_PROC proc)
 {
     proc(msg->message, msg->u_param, msg->l_param);
 }
@@ -148,7 +148,7 @@ void dispatch_message(const MSG *msg, ONSEN_PROC proc)
 
 void send_window_active_msg(int pid_recieve, int pid)
 {
-    MSG msg;
+    struct MSG msg;
     msg.message = MSG_WINDOW_ACTIVE;
     msg.u_param = pid;
     msg_q_put(pid_recieve, &msg);
@@ -157,7 +157,7 @@ void send_window_active_msg(int pid_recieve, int pid)
 
 void send_window_deactive_msg(int pid_recieve, int pid)
 {
-    MSG msg;
+    struct MSG msg;
     msg.message = MSG_WINDOW_DEACTIVE;
     msg.u_param = pid;
     msg_q_put(pid_recieve, &msg);

@@ -12,7 +12,7 @@
 #define SEG_TYPE_STACK      0x96
 #define SEG_TYPE_LDT        0x82
 #define SEG_TYPE_TSS        0x89
-// #define SEG_TYPE_TSS_BUSY   0x8B
+#define SEG_TYPE_TSS_BUSY   0x8B
 #define SEG_TYPE_CALL_GATE  0x84
 #define SEG_TYPE_INTR_GATE  0x8E
 #define SEG_TYPE_TRAP_GATE  0x8F
@@ -22,11 +22,11 @@
 // ---- セグメントの32ビット属性を表す数値
 // SEG32_BIG_SEGはset_gate_descで自動で設定する
 #define SEG32_BIG_SEG       0x80 // リミットの数値をページ単位(4KB)ととらえる
-// #define SEG32_SMALL_SEG     0x00
+#define SEG32_SMALL_SEG     0x00
 
 #define SEG32_CODE386       0x40
 #define SEG32_DATA386       0x40
-// #define SEG32_CODE286       0x00
+#define SEG32_CODE286       0x00
 
 
 #define KERNEL_DS  (1 << 3)  // 0x08 カーネルのデータセグメントのセレクタ値

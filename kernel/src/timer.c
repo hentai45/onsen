@@ -43,7 +43,7 @@ void timer_dbg(void);
 #define TIMER_FLG_USING  2   // タイマ作動中
 
 
-typedef struct TIMER {
+struct TIMER {
     int tid;    // TIMER ID
     int flags;
     int pid;    // このタイマを持っているプロセス ID
@@ -51,28 +51,28 @@ typedef struct TIMER {
     unsigned int timeout_10ms;
 
     struct TIMER *next_use;
-} TIMER;
+};
 
 
-typedef struct TIMER_MNG {
+struct TIMER_MNG {
     // 記憶領域の確保用。
     // timers のインデックスと TID は同じ
-    TIMER timers[TIMER_MAX];
+    struct TIMER timers[TIMER_MAX];
 
-    TIMER *head_use;  // 使用中のタイマを timeout_10ms の昇順に並べたリスト
+    struct TIMER *head_use;  // 使用中のタイマを timeout_10ms の昇順に並べたリスト
 
     unsigned int count_10ms;
     unsigned int next_timeout_10ms;
-} TIMER_MNG;
+};
 
 
-static TIMER_MNG l_mng;
-static TIMER *ts_timer;  // タスク切り替え用タイマ
+static struct TIMER_MNG l_mng;
+static struct TIMER *ts_timer;  // タスク切り替え用タイマ
 static int ts_tid;       // タスク切り替え用タイマの ID
 
 
 inline __attribute__ ((always_inline))
-static TIMER *tid2timer(int tid)
+static struct TIMER *tid2timer(int tid)
 {
     if (tid < 0 || TIMER_MAX <= tid) {
         return 0;
@@ -83,7 +83,7 @@ static TIMER *tid2timer(int tid)
 
 
 //=============================================================================
-// 公開関数
+// 関数
 
 void timer_init(void)
 {
@@ -99,7 +99,7 @@ void timer_init(void)
     l_mng.count_10ms = 0;
 
     for (int tid = 0; tid < TIMER_MAX; tid++) {
-        TIMER *t = &(l_mng.timers[tid]);
+        struct TIMER *t = &(l_mng.timers[tid]);
 
         t->tid = tid;
         t->flags = TIMER_FLG_FREE;
@@ -109,7 +109,7 @@ void timer_init(void)
     // ---- 番兵を追加
 
     int tid = timer_new();
-    TIMER *t = tid2timer(tid);
+    struct TIMER *t = tid2timer(tid);
     t->timeout_10ms = 0xFFFFFFFF;
     t->flags = TIMER_FLG_USING;
     t->next_use = 0;
@@ -150,7 +150,7 @@ void timer_free(int tid)
 {
     timer_stop(tid);
 
-    TIMER *t = tid2timer(tid);
+    struct TIMER *t = tid2timer(tid);
 
     if (t == 0) {
         return;
@@ -163,7 +163,7 @@ void timer_free(int tid)
 void free_task_timer(int pid)
 {
     for (int tid = 0; tid < TIMER_MAX; tid++) {
-        TIMER *t = tid2timer(tid);
+        struct TIMER *t = tid2timer(tid);
 
         if (t->pid != pid || t->flags == TIMER_FLG_FREE) {
             continue;
@@ -180,7 +180,7 @@ void free_task_timer(int pid)
 // 必要ならまた timer_start しないといけない。
 void timer_start(int tid, unsigned int timeout_ms)
 {
-    TIMER *t = tid2timer(tid);
+    struct TIMER *t = tid2timer(tid);
 
     if (t == 0) {
         return;
@@ -194,7 +194,7 @@ void timer_start(int tid, unsigned int timeout_ms)
 
     // ---- 昇順にならんだリストに timer を挿入する
 
-    TIMER *list = l_mng.head_use;
+    struct TIMER *list = l_mng.head_use;
 
     // 先頭に入れる場合の処理
     if (t->timeout_10ms <= list->timeout_10ms) {
@@ -206,7 +206,7 @@ void timer_start(int tid, unsigned int timeout_ms)
     }
 
     // prev と list の間に入れる場合の処理
-    TIMER *prev;
+    struct TIMER *prev;
     for (;;) {
         prev = list;
         list = list->next_use;
@@ -228,7 +228,7 @@ void timer_start(int tid, unsigned int timeout_ms)
 
 int timer_stop(int tid)
 {
-    TIMER *t = tid2timer(tid);
+    struct TIMER *t = tid2timer(tid);
 
     if (t == 0) {
         return 0;
@@ -243,11 +243,11 @@ int timer_stop(int tid)
 
     if (t == l_mng.head_use) {
         // 先頭だった場合の取り消し処理
-        TIMER *tmp = t->next_use;
+        struct TIMER *tmp = t->next_use;
         l_mng.head_use = tmp;
         l_mng.next_timeout_10ms = tmp->timeout_10ms;
     } else {
-        TIMER *list;
+        struct TIMER *list;
 
         for (list = l_mng.head_use; list->next_use != t; list = list->next_use) {
         }
@@ -282,7 +282,7 @@ void int20_handler(int *esp)
 
     char ts = 0;
 
-    TIMER *t;
+    struct TIMER *t;
     for (t = l_mng.head_use; t->timeout_10ms <= l_mng.count_10ms; t = t->next_use) {
         // タイムアウト
         t->flags = TIMER_FLG_ALLOC;
@@ -293,7 +293,7 @@ void int20_handler(int *esp)
             ts = 1;
         } else {
             // タイマメッセージをメッセージキューに入れる
-            MSG msg;
+            struct MSG msg;
             msg.message = MSG_TIMER;
             msg.u_param = t->tid;
 
@@ -311,7 +311,7 @@ void int20_handler(int *esp)
 }
 
 
-static void print_timer(TIMER *t);
+static void print_timer(struct TIMER *t);
 
 void timer_dbg(void)
 {
@@ -320,7 +320,7 @@ void timer_dbg(void)
 
     dbgf("count_10ms = %u\n\n", l_mng.count_10ms);
 
-    TIMER *t;
+    struct TIMER *t;
 
     dbgf("ALL TIMERS:\n");
     for (int i = 0; i < TIMER_MAX; i++) {
@@ -341,16 +341,8 @@ void timer_dbg(void)
 
 static char *status[] = { "free", "alloc", "using" };
 
-static void print_timer(TIMER *t)
+static void print_timer(struct TIMER *t)
 {
     dbgf("tid = %d, pid = %d, timeout_10ms = %u, status = %s\n",
             t->tid, t->pid, t->timeout_10ms, status[t->flags]);
 }
-
-
-//=============================================================================
-// 非公開関数
-
-
-
-

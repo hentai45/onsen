@@ -13,8 +13,8 @@
 
 
 void init_func_names(void);
-void stacktrace(unsigned int max_frames, FILE_T *f);
-void stacktrace2(unsigned int max_frames, FILE_T *f, unsigned int *ebp);
+void stacktrace(unsigned int max_frames, struct FILE_T *f);
+void stacktrace2(unsigned int max_frames, struct FILE_T *f, unsigned int *ebp);
 char *get_func_name(unsigned int addr);
 
 
@@ -30,13 +30,13 @@ char *get_func_name(unsigned int addr);
 
 #define FNAMES_FILE_NAME  "fnames.bin"
 
-typedef struct _FUNC_NAME {
+struct FUNC_NAME {
     unsigned int addr;
     char name[32];
-} FUNC_NAME;
+};
 
 
-static FUNC_NAME *l_func_names = 0;
+static struct FUNC_NAME *l_func_names = 0;
 static int l_num_fnames = 0;
 
 
@@ -45,27 +45,27 @@ static int l_num_fnames = 0;
 
 void init_func_names(void)
 {
-    FILEINFO *finfo = fat12_get_file_info();
+    struct FILEINFO *finfo = fat12_get_file_info();
     int i = fat12_search_file(finfo, FNAMES_FILE_NAME);
 
     if (i < 0)
         return;
 
-    l_num_fnames = finfo[i].size / sizeof(FUNC_NAME);
-    l_func_names = (FUNC_NAME *) mem_alloc(finfo[i].size);
+    l_num_fnames = finfo[i].size / sizeof(struct FUNC_NAME);
+    l_func_names = (struct FUNC_NAME *) mem_alloc(finfo[i].size);
     fat12_load_file(finfo[i].clustno, finfo[i].size, (char *) l_func_names);
 }
 
 
 // http://wiki.osdev.org/Stack_Trace
-void stacktrace(unsigned int max_frames, FILE_T *f)
+void stacktrace(unsigned int max_frames, struct FILE_T *f)
 {
     unsigned int *ebp = &max_frames - 2;
     stacktrace2(max_frames, f, ebp);
 }
 
 
-void stacktrace2(unsigned int max_frames, FILE_T *f, unsigned int *ebp)
+void stacktrace2(unsigned int max_frames, struct FILE_T *f, unsigned int *ebp)
 {
     fprintf(f, "stack trace:\n");
     for(unsigned int frame = 0; frame < max_frames; ++frame)

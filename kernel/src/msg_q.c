@@ -29,33 +29,33 @@ int  msg_q_size(int pid);
 
 
 // メッセージキュー
-typedef struct MSG_Q {
+struct MSG_Q {
     int capacity;
-    MSG *buf;
+    struct MSG *buf;
     int free;
     int i_w;
     int i_r;
-} MSG_Q;
+};
 
 
-typedef struct MSG_Q_MNG {
-    MSG_Q msg_q[TASK_MAX];
-    MSG msg_q_buf[TASK_MAX][MSG_Q_MAX];
-} MSG_Q_MNG;
+struct MSG_Q_MNG {
+    struct MSG_Q msg_q[TASK_MAX];
+    struct MSG msg_q_buf[TASK_MAX][MSG_Q_MAX];
+};
 
 
-static MSG_Q_MNG s_mng;
+static struct MSG_Q_MNG s_mng;
 
 
-static MSG_Q *get_msg_q(int pid);
+static struct MSG_Q *get_msg_q(int pid);
 
 
 //=============================================================================
-// 公開関数
+// 関数
 
 void msg_q_init(int pid)
 {
-    MSG_Q *q = get_msg_q(pid);
+    struct MSG_Q *q = get_msg_q(pid);
 
     if (q == 0) {
         return;
@@ -69,9 +69,9 @@ void msg_q_init(int pid)
 }
 
 
-int msg_q_put(int pid, MSG *msg)
+int msg_q_put(int pid, struct MSG *msg)
 {
-    MSG_Q *q = get_msg_q(pid);
+    struct MSG_Q *q = get_msg_q(pid);
 
     if (q == 0) {
         return -1;
@@ -94,9 +94,9 @@ int msg_q_put(int pid, MSG *msg)
 }
 
 
-int msg_q_get(int pid, MSG *msg)
+int msg_q_get(int pid, struct MSG *msg)
 {
-    MSG_Q *q = get_msg_q(pid);
+    struct MSG_Q *q = get_msg_q(pid);
 
     if (q == 0) {
         return -1;
@@ -118,7 +118,7 @@ int msg_q_get(int pid, MSG *msg)
 
 int msg_q_size(int pid)
 {
-    MSG_Q *q = get_msg_q(pid);
+    struct MSG_Q *q = get_msg_q(pid);
 
     if (q == 0) {
         return 0;
@@ -128,10 +128,7 @@ int msg_q_size(int pid)
 }
 
 
-//=============================================================================
-// 非公開関数
-
-static MSG_Q *get_msg_q(int pid)
+static struct MSG_Q *get_msg_q(int pid)
 {
     if (pid < 0 || TASK_MAX <= pid) {
         return 0;

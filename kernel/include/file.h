@@ -16,30 +16,30 @@
 #define O_WRONLY  (1)
 #define O_RDWR    (2)
 
-typedef struct _FILE_T {
+struct FILE_T {
     void *self;
     int refs;
     int (*close)(void *self);
     int (*read)(void *self, void *buf, int cnt);
     int (*write)(void *self, const void *buf, int cnt);
-} FILE_T;
+};
 
-typedef struct _FILE_TABLE_ENTRY {
+struct FILE_TABLE_ENTRY {
     int flags;
-    FILE_T *file;
-} FTE;
+    struct FILE_T *file;
+};
 
 
-FTE *create_file_tbl(void);
-int free_file_tbl(FTE *tbl);
-FILE_T *f_get_file(int fd);
-int f_set_file(int fd, FILE_T *f);
+struct FILE_TABLE_ENTRY *create_file_tbl(void);
+int free_file_tbl(struct FILE_TABLE_ENTRY *tbl);
+struct FILE_T *f_get_file(int fd);
+int f_set_file(int fd, struct FILE_T *f);
 
 int f_open(const char *name, int flags);
 int f_close(int fd);
 int f_read(int fd, void *buf, int cnt);
 int f_write(int fd, const void *buf, int cnt);
 
-extern FILE_T *f_keyboard;
+extern struct FILE_T *f_keyboard;
 
 #endif

@@ -11,26 +11,28 @@
 #include <stdbool.h>
 
 
-typedef struct MOUSE_DECODE {
+struct MOUSE_DECODE {
     // ---- デコード結果
-    int x;   ///< マウス位置X
-    int y;   ///< マウス位置Y
+
+    int x;  // マウス位置X
+    int y;  // マウス位置Y
     bool btn_left;
     bool btn_right;
     bool btn_center;
     bool change_pos;
 
     // ---- デコード処理用
+
     int phase;
     unsigned char buf[3];
-    int dx;  ///< マウス位置の変化分X
-    int dy;  ///< マウス位置の変化分Y
-} MOUSE_DECODE;
+    int dx;  // マウス位置の変化分X
+    int dy;  // マウス位置の変化分Y
+};
 
 
 void mouse_init(void);
 void int2C_handler(int *esp);
-MOUSE_DECODE *mouse_decode(unsigned char data);
+struct MOUSE_DECODE *mouse_decode(unsigned char data);
 
 #endif
 
@@ -55,13 +57,14 @@ MOUSE_DECODE *mouse_decode(unsigned char data);
 #define MAXMIN(A, B, C) MAX(A, MIN(B, C))
 
 
-static MOUSE_DECODE l_mdec;
+static struct MOUSE_DECODE l_mdec;
 
 static unsigned int l_w;
 static unsigned int l_h;
 
+
 //=============================================================================
-// 公開関数
+// 関数
 
 void mouse_init(void)
 {
@@ -100,7 +103,7 @@ void int2C_handler(int *esp)
     unsigned char data = inb(PORT_RW_KBC_DATA);
 
     // データをメッセージキューに入れる
-    MSG msg;
+    struct MSG msg;
     msg.message = MSG_RAW_MOUSE;
     msg.u_param = data;
 
@@ -108,7 +111,7 @@ void int2C_handler(int *esp)
 }
 
 
-MOUSE_DECODE *mouse_decode(unsigned char data)
+struct MOUSE_DECODE *mouse_decode(unsigned char data)
 {
     // マウスデータは３バイトで１つのデータになる
 
@@ -172,10 +175,3 @@ MOUSE_DECODE *mouse_decode(unsigned char data)
 
     return 0;
 }
-
-
-//=============================================================================
-// 非公開関数
-
-
-

@@ -39,27 +39,30 @@
 #define MADDR_FREE_START    (0x00400000)
 
 
-extern SYSTEM_INFO *g_sys_info;
+extern struct SYSTEM_INFO *g_sys_info;
 
 
 //-----------------------------------------------------------------------------
 // メモリ管理
 
-typedef struct _USER_PAGE {
+struct USER_PAGE {
     unsigned long vaddr;
     int refs;
-} USER_PAGE;
+};
 
 
 void  mem_init(void);
+
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
-USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
-int mem_expand_stack(USER_PAGE *stack, unsigned long new_stack);
+struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int   mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
-int   mem_free(void *vp_vaddr);
-int   mem_free_user(USER_PAGE *page);
-int   mem_free_maddr(void *vp_maddr);
+
+int mem_free(void *vp_vaddr);
+int mem_free_user(struct USER_PAGE *page);
+int mem_free_maddr(void *vp_maddr);
+
 void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------

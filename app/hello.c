@@ -20,7 +20,7 @@ void main(void)
     int tid = timer_new();
     timer_start(tid, TIME_MS);
 
-    MSG msg;
+    struct MSG msg;
 
     while (get_message(&msg)) {
         if (msg.message == MSG_KEYDOWN) {

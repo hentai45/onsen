@@ -39,17 +39,17 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
 
 
 // ファイルヘッダ
-typedef struct BMP_FILE_HDR {
+struct BMP_FILE_HDR {
     unsigned short type;         // ファイルタイプ。'BM'
     unsigned long size_B;        // ファイルサイズ
     unsigned short reserved1;
     unsigned short reserved2;
     unsigned long offbits;       // ファイル先頭から画像データまでのオフセット
-} __attribute__ ((__packed__)) BMP_FILE_HDR;
+} __attribute__ ((__packed__));
 
 
 // 情報ヘッダ
-typedef struct BMP_INFO_HDR {
+struct BMP_INFO_HDR {
     unsigned long size_B;        // 情報ヘッダのサイズ
     long width_px;               // 画像の幅
     long height_px;              // 画像の高さ
@@ -62,7 +62,7 @@ typedef struct BMP_INFO_HDR {
     long y_px_per_meter;         // 縦方向解像度
     unsigned long color_used;    // 格納されているパレット数（使用色数）
     unsigned long clr_important; // 重要なパレットのインデックス
-} __attribute__ ((__packed__)) BMP_INFO_HDR;
+} __attribute__ ((__packed__));
 
 
 
@@ -90,13 +90,13 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
     // ---- ファイルヘッダ
 
     // サイズチェック
-    int cur_size_B = sizeof (BMP_FILE_HDR) + sizeof (BMP_INFO_HDR);
+    int cur_size_B = sizeof (struct BMP_FILE_HDR) + sizeof (struct BMP_INFO_HDR);
     if (size_B <= cur_size_B) {
         DBGF("file size error");
         return false;
     }
 
-    BMP_FILE_HDR *f_hdr = (BMP_FILE_HDR *) p;
+    struct BMP_FILE_HDR *f_hdr = (struct BMP_FILE_HDR *) p;
 
     if (f_hdr->type != TYPE_BMP) {
         DBGF("[header] type error");
@@ -106,11 +106,11 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
 
     // ---- 情報ヘッダ
 
-    BMP_INFO_HDR *i_hdr = (BMP_INFO_HDR *) (f_hdr + 1);
+    struct BMP_INFO_HDR *i_hdr = (struct BMP_INFO_HDR *) (f_hdr + 1);
 
-    if (i_hdr->size_B != sizeof (BMP_INFO_HDR)) {
+    if (i_hdr->size_B != sizeof (struct BMP_INFO_HDR)) {
         DBGF("[header] info size error");
-        dbgf("expect: %d\n", sizeof(BMP_INFO_HDR));
+        dbgf("expect: %d\n", sizeof(struct BMP_INFO_HDR));
         dbgf("passed: %d\n", i_hdr->size_B);
 
         return false;
@@ -162,7 +162,7 @@ static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
         return sid;
     }
 
-    unsigned char *p = p_file + sizeof (BMP_FILE_HDR) + sizeof (BMP_INFO_HDR);
+    unsigned char *p = p_file + sizeof (struct BMP_FILE_HDR) + sizeof (struct BMP_INFO_HDR);
     unsigned char r, g, b;
 
     for (int y = h - 1; y >= 0; y--) {

@@ -3,7 +3,7 @@
 #ifndef HEADER_IDT
 #define HEADER_IDT
 
-// API(システムコール)を呼び出すときの割り込み番号。44は大分県の都道府県コード
+// API(システムコール)を呼び出すときの割り込み番号
 #define IDT_API_NO  (0x44)
 
 

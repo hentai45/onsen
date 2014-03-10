@@ -17,7 +17,7 @@ void debug_main(void);
 //-----------------------------------------------------------------------------
 // 画面出力
 
-typedef struct _INT_REGISTERS {
+struct INT_REGISTERS {
     // asm_inthander.S で積まれたスタックの内容
     unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;  // pushal
     unsigned int ds, es;
@@ -25,7 +25,7 @@ typedef struct _INT_REGISTERS {
     // 以下は、例外発生時にCPUが自動でpushしたもの
     unsigned int err_code;
     unsigned int eip, cs, eflags, app_esp, app_ss;
-} INT_REGISTERS;
+};
 
 
 void temp_dbgf(const char *fmt, ...);
@@ -36,10 +36,10 @@ void dbg_seg(void);
 void blue_screen(void);
 void blue_screen_f(int line_no, const char *fmt, ...);
 
-void dbg_fault(const char *msg, int no, INT_REGISTERS *regs);
+void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs);
 
-extern FILE_T *f_debug;
-extern FILE_T *f_dbg_temp;
+extern struct FILE_T *f_debug;
+extern struct FILE_T *f_dbg_temp;
 
 extern int g_dbg_temp_flg;
 

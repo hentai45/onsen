@@ -67,6 +67,7 @@ void asm_int2C_handler(void);
 # 特権レベル３（アプリ）から呼び出される場合、cs レジスタは特権レベル０(OS)に
 # 変わるけど、ds, es はそのままになっている。
 # なので、ss（OS のデータセグメントになっている）を ds, es に代入している。
+# 自動で割り込み禁止になっている。
 .macro asm_int_handler  c_int_handler
     pushl %es
     pushl %ds
