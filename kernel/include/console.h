@@ -5,7 +5,7 @@
 
 #include "file.h"
 
-void console_main(void);
+int console_main(void);
 
 extern struct FILE_T *f_console;
 

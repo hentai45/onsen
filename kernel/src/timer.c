@@ -28,6 +28,8 @@ void timer_dbg(void);
 //=============================================================================
 // 非公開ヘッダ
 
+#include <stdbool.h>
+
 #include "asmfunc.h"
 #include "debug.h"
 #include "intr.h"
@@ -280,7 +282,7 @@ void int20_handler(int *esp)
         return;
     }
 
-    char ts = 0;
+    bool ts = false;
 
     struct TIMER *t;
     for (t = l_mng.head_use; t->timeout_10ms <= l_mng.count_10ms; t = t->next_use) {
@@ -289,8 +291,9 @@ void int20_handler(int *esp)
 
         if (t == ts_timer) {
             // ここで task_switch してはダメ
+            // task_switchするとIF(割り込み許可フラグ)が変化して、
             // 割込み処理が終わってないうちに次の割込みが来るかもしれないから
-            ts = 1;
+            ts = true;
         } else {
             // タイマメッセージをメッセージキューに入れる
             struct MSG msg;
@@ -305,8 +308,8 @@ void int20_handler(int *esp)
     l_mng.head_use = t;
     l_mng.next_timeout_10ms = t->timeout_10ms;
 
-    if (ts == 1) {
-        task_switch(ts_tid);
+    if (ts) {
+        task_switch();
     }
 }
 

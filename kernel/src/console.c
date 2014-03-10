@@ -11,7 +11,7 @@
 
 #include "file.h"
 
-void console_main(void);
+int console_main(void);
 
 extern struct FILE_T *f_console;
 
@@ -21,7 +21,6 @@ extern struct FILE_T *f_console;
 #include <stdbool.h>
 
 #include "asmfunc.h"
-#include "bitmap.h"
 #include "debug.h"
 #include "elf.h"
 #include "fat12.h"
@@ -96,9 +95,6 @@ static void put_prompt(void);
 //-----------------------------------------------------------------------------
 // コマンド
 
-static int child_pid = 0;
-
-
 static void run_cmd(char *cmd_name);
 
 static void cmd_ls(void);
@@ -111,14 +107,19 @@ static void cmd_dbg(char *name);
 static int  cmd_app(char *cmd_name, int bgp);
 
 
+static int child_pid = 0;
+
+
 //=============================================================================
 // 関数
 
 //-----------------------------------------------------------------------------
 // メイン
 
-void console_main(void)
+int console_main(void)
 {
+    task_set_name("console");
+
     cursor_tid = timer_new();
     timer_start(cursor_tid, CURSOR_INTERVAL_MS);
 
@@ -135,6 +136,8 @@ void console_main(void)
     while (get_message(&msg)) {
         dispatch_message(&msg, console_proc);
     }
+
+    return 0;
 }
 
 

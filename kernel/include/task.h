@@ -82,12 +82,13 @@ struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
+void task_set_name(const char *name);
 int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
 int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
-void task_switch(int ts_tid);
+void task_switch(void);
 void task_sleep(int pid);
 void task_wakeup(int pid);
 const char *task_get_name(int pid);

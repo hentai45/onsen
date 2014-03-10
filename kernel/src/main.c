@@ -33,7 +33,6 @@ static bool is_ctrl_on  = false;
 
 
 static void init_onsen(void);
-static void init_gui(void);
 static void main_proc(unsigned int message, unsigned long u_param,
         long l_param);
 
@@ -80,8 +79,8 @@ static void init_onsen(void)
     update_surface(g_dt_sid);
 
     // OSタスクを起動
-    task_run_os("debug", debug_main);
-    task_run_os("console", console_main);
+    kernel_thread(debug_main, 0);
+    kernel_thread(console_main, 0);
 }
 
 

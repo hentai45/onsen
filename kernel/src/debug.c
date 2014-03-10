@@ -17,7 +17,7 @@
 //-----------------------------------------------------------------------------
 // メイン
 
-void debug_main(void);
+int debug_main(void);
 
 
 //-----------------------------------------------------------------------------
@@ -145,8 +145,10 @@ struct FILE_T *f_dbg_temp = &l_f_dbg_temp;
 
 static void update_all(void);
 
-void debug_main(void)
+int debug_main(void)
 {
+    task_set_name("debug");
+
     int w = WIDTH_CH * HANKAKU_W;
     int h = HEIGHT_CH * HANKAKU_H;
     l_sid = new_window(20, 280, w, h, "debug");
@@ -160,6 +162,8 @@ void debug_main(void)
     while (get_message(&msg)) {
         dispatch_message(&msg, debug_proc);
     }
+
+    return 0;
 }
 
 //-----------------------------------------------------------------------------

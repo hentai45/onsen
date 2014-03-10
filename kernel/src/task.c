@@ -89,12 +89,13 @@ struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
+void task_set_name(const char *name);
 int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
 int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
 int  task_run_os(const char *name, void (*main)(void));
-void task_switch(int ts_tid);
+void task_switch(void);
 void task_sleep(int pid);
 void task_wakeup(int pid);
 const char *task_get_name(int pid);
@@ -114,6 +115,13 @@ extern int g_root_pid;
 extern int g_idle_pid;
 
 #endif
+
+
+struct TSS *g_cur;
+int g_pid;
+
+int g_root_pid;
+int g_idle_pid;
 
 
 //=============================================================================
@@ -156,13 +164,9 @@ static struct TSS *set_tss(int pid, int cs, int ds, PDE cr3, PDE pd,
         int ss, unsigned long esp0, int ss0);
 
 
-struct TSS *g_cur;
-int g_pid;
-
-int g_root_pid;
-int g_idle_pid;
-
 static struct TASK_MNG l_mng;
+
+static int l_ts_tid;  // タスクスイッチ用タイマID
 
 
 //=============================================================================
@@ -205,10 +209,11 @@ void task_init(void)
 
     ltr(pid2tss_sel(g_root_pid));
 
-    // ---- タスク切り替え用タイマをスタート
 
-    int ts_tid = timer_ts_tid();
-    timer_start(ts_tid, DEFAULT_TIMESLICE_MS);
+    // ---- タスク切り替えをしてg_curに値を設定する
+
+    l_ts_tid = timer_ts_tid();
+    task_switch();
 }
 
 
@@ -233,7 +238,8 @@ int task_new(const char *name)
         if (t->flags == TASK_FLG_FREE) { // 未割り当て領域を発見
             msg_q_init(pid);
 
-            memcpy(t->name, name, TASK_NAME_MAX - 1);
+            strncpy(t->name, name, TASK_NAME_MAX - 1);
+            t->name[TASK_NAME_MAX - 1] = 0;
             t->flags = TASK_FLG_ALLOC;
             t->ppid = g_pid;
 
@@ -298,6 +304,13 @@ int task_free(int pid, int exit_status)
     }
 
     return 0;
+}
+
+
+void task_set_name(const char *name)
+{
+    strncpy(g_cur->name, name, TASK_NAME_MAX - 1);
+    g_cur->name[TASK_NAME_MAX - 1] = 0;
 }
 
 
@@ -468,8 +481,8 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
         paging_clear_pd_range(0, g_cur->stack->vaddr - 0x400000);  // １つ前のPDEを指すために4MB引く
     }
 
-    memcpy(g_cur->name, fi->name, 8);
-    g_cur->name[8] = 0;
+    strncpy(g_cur->name, fi->name, TASK_NAME_MAX - 1);
+    g_cur->name[TASK_NAME_MAX - 1] = 0;
 
     int ret = elf_load2(regs, p, fi->size);
 
@@ -510,11 +523,11 @@ int task_run_os(const char *name, void (*main)(void))
 }
 
 
-void task_switch(int ts_tid)
+void task_switch(void)
 {
     if (l_mng.num_running <= 1) {
         // idle プロセスのみ
-        timer_start(ts_tid, DEFAULT_TIMESLICE_MS);
+        timer_start(l_ts_tid, DEFAULT_TIMESLICE_MS);
     } else {
         l_mng.cur_run++;
         if (l_mng.cur_run >= l_mng.num_running) {
@@ -524,7 +537,7 @@ void task_switch(int ts_tid)
         g_cur = l_mng.run[l_mng.cur_run];
         g_pid = g_cur->pid;
 
-        timer_start(ts_tid, g_cur->timeslice_ms);
+        timer_start(l_ts_tid, g_cur->timeslice_ms);
 
         far_jmp(pid2tss_sel(g_pid), 0);
     }

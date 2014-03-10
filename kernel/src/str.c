@@ -11,6 +11,7 @@
 
 int  strlen(const char *s);
 char *strcpy(char *s, const char *t);
+char *strncpy(char *s, const char *t, int n);
 char *strcat(char *s, const char *t);
 int  strcmp(const char *s, const char *t);
 int  strncmp(const char *s, const char *t, int n);
@@ -56,6 +57,14 @@ char *strcpy(char *s, const char *t)
 {
     while ((*s++ = *t++) != 0)
         ;
+
+    return s;
+}
+
+char *strncpy(char *s, const char *t, int n)
+{
+    while (n > 0 && (*s++ = *t++) != 0)
+        n--;
 
     return s;
 }
