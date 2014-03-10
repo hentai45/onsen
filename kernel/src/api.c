@@ -107,8 +107,23 @@ int onsen_api(struct API_REGISTERS regs)
         update_surface(arg1);
         break;
 
+    case API_UPDATE_CHAR:
+        update_char(arg1, arg2, arg3);
+        break;
+
     case API_FILL_SURFACE:
         fill_surface(arg1, arg2);
+        break;
+
+    case API_FILL_RECT:
+        {
+            struct RECT *r = (struct RECT *) arg2;
+            fill_rect(arg1, r->x, r->y, r->w, r->h, arg3);
+        }
+        break;
+
+    case API_SCROLL_SURFACE:
+        scroll_surface(arg1, arg2, arg3);
         break;
 
     case API_DRAW_PIXEL:
@@ -125,6 +140,21 @@ int onsen_api(struct API_REGISTERS regs)
 
     case API_DRAW_TEXT:
         draw_text(arg1, arg2, arg3, arg4, (char *) arg5);
+        break;
+
+    case API_DRAW_TEXT_BG:
+        {
+            struct POINT *pt = (struct POINT *) arg2;
+            draw_text_bg(arg1, pt->x, pt->y, arg3, arg4, (char *) arg5);
+        }
+        break;
+
+    case API_ERASE_CHAR:
+        {
+            bool update = (arg5) ? true : false;
+
+            erase_char(arg1, arg2, arg3, arg4, update);
+        }
         break;
 
     case API_GETKEY:

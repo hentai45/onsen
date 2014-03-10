@@ -24,7 +24,7 @@ static unsigned int l_color_tbl[] = {
 
 void main(void)
 {
-    static POINT tbl[16] = {
+    static int tbl[16][2] = {
         { 196, 101 }, { 187,  62 }, { 164,  30 }, { 129,  10 }, {  90,   6 },
         {  53,  18 }, {  23,  45 }, {   7,  82 }, {   7, 120 }, {  23, 157 },
         {  53, 184 }, {  90, 196 }, { 129, 192 }, { 164, 172 }, { 187, 140 },
@@ -44,7 +44,7 @@ void main(void)
             }
 
             if (dist != 0) {
-                draw_line(sid, &tbl[i], &tbl[j], l_color_tbl[8 - dist]);
+                draw_line(sid, tbl[i][0], tbl[i][1], tbl[j][0], tbl[j][1], l_color_tbl[8 - dist]);
             }
         }
     }

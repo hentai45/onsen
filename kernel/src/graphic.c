@@ -57,6 +57,13 @@ struct POINT {
     int y;
 };
 
+struct RECT {
+    int x;
+    int y;
+    int w;
+    int h;
+};
+
 extern int g_vram_sid;
 extern int g_dt_sid;
 
