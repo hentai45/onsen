@@ -166,6 +166,9 @@ static struct MEM_MNG *l_mng_b = (struct MEM_MNG *) VADDR_BMEM_MNG;
 // 指定した物理アドレスが空いているなら0以外
 #define IS_FREE_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] & MADDR2BIT(maddr))
 
+// 指定した物理アドレスが使用中なら0以外
+#define IS_USED_MADDR(maddr) ( ! (l_bitmap[MADDR2IDX(maddr)] & MADDR2BIT(maddr)))
+
 // 指定した物理アドレスを空きにする
 #define SET_FREE_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] |= MADDR2BIT(maddr))
 
@@ -343,6 +346,22 @@ int mem_free_user(struct USER_PAGE *page)
 }
 
 
+/**
+ * mem_alloc_maddrで取得した物理アドレスを解放する
+ */
+int mem_free_maddr(void *vp_maddr)
+{
+    unsigned long maddr = (unsigned long) vp_maddr;
+    ASSERT(maddr >= 0x1000, "maddr = %p", vp_maddr);
+    ASSERT(maddr <= g_sys_info->end_free_maddr, "maddr = %p", vp_maddr);
+    ASSERT(IS_USED_MADDR(vp_maddr), "vp_maddr = %p", vp_maddr);
+
+    SET_FREE_MADDR(vp_maddr & ~0xFFF);
+    l_mfree_B += PAGE_SIZE_B;
+    return 0;
+}
+
+
 int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
 {
     new_stack &= ~0xFFF;
@@ -378,6 +397,8 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     }
     paging_set_flags((void *) stack->vaddr, flg);
 
+    dbgf("expanded stack. %#X => %#X\n", stack->vaddr, new_stack);
+
     // 更新
     stack->vaddr = new_stack;
 
@@ -407,16 +428,6 @@ void *mem_alloc_maddr(void)
 
     /* 物理アドレスが足りない */
     ERROR("no remaining maddr");
-    return 0;
-}
-
-
-/**
- * mem_alloc_maddrで取得した物理アドレスを解放する
- */
-int mem_free_maddr(void *vp_maddr)
-{
-    SET_FREE_MADDR(vp_maddr & ~0xFFF);
     return 0;
 }
 
@@ -613,19 +624,7 @@ static int page_free_maddr(void *vp_vaddr)
 {
     void *vp_maddr = paging_get_maddr(vp_vaddr);
 
-    if (vp_maddr == 0) {
-        ERROR("could not get free maddr");
-        return -1;
-    }
-
-    if (IS_FREE_MADDR(vp_maddr)) {
-        ERROR("maddr is already free");
-        return -1;
-    }
-
-    SET_FREE_MADDR(vp_maddr);
-
-    return 0;
+    return mem_free_maddr(vp_maddr);
 }
 
 

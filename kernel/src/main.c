@@ -21,9 +21,28 @@
 #include "msg_q.h"
 #include "paging.h"
 #include "stacktrace.h"
+#include "str.h"
 #include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
+
+
+#define UPDATE_INTERVAL_MS  1000
+
+#define INFO_X  930
+#define INFO_Y  10
+#define INFO_W  (10 * HANKAKU_W)
+#define INFO_H  (5 * HANKAKU_H)
+#define INFO_BG COL_BLACK
+
+static void init_onsen(void);
+static void init_gui(void);
+static void main_proc(unsigned int message, unsigned long u_param,
+        long l_param);
+
+static void timer_handler(void);
+static void mouse_handler(unsigned long data);
+static void keydown_handler(unsigned long keycode);
 
 
 static int active_win_pid = ERROR_PID;
@@ -31,13 +50,10 @@ static int active_win_pid = ERROR_PID;
 static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
 
-
-static void init_onsen(void);
-static void main_proc(unsigned int message, unsigned long u_param,
-        long l_param);
-
-static void mouse_handler(unsigned long data);
-static void keydown_handler(unsigned long keycode);
+static COLOR32 bg = 0x008484;
+static int l_info_bg_sid;
+static int l_info_sid;
+static int l_update_tid;
 
 
 void OnSenMain(void)
@@ -74,9 +90,10 @@ static void init_onsen(void)
     mouse_init();
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
 
-    // デスクトップを描画
-    fill_surface(g_dt_sid, 0x008484);
-    update_surface(g_dt_sid);
+    init_gui();
+
+    l_update_tid = timer_new();
+    timer_handler();
 
     // OSタスクを起動
     kernel_thread(debug_main, 0);
@@ -84,9 +101,37 @@ static void init_onsen(void)
 }
 
 
+static void init_gui(void)
+{
+    // desk top
+    fill_surface(g_dt_sid, bg);
+    update_surface(g_dt_sid);
+
+    l_info_bg_sid = new_surface(NO_PARENT_SID, INFO_W, INFO_H);
+    set_alpha(l_info_bg_sid, 60);
+    fill_surface(l_info_bg_sid, INFO_BG);
+
+    l_info_sid = new_surface(NO_PARENT_SID, INFO_W, INFO_H);
+    set_colorkey(l_info_sid, COL_BLUE);
+    fill_surface(l_info_sid, COL_BLUE);
+}
+
+
 static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 {
     switch (message) {
+    case MSG_TIMER:
+        timer_handler();
+        break;
+
+    case MSG_RAW_MOUSE:
+        mouse_handler(/* data */ u_param);
+        break;
+
+    case MSG_KEYDOWN:
+        keydown_handler(/* keycode = */ u_param);
+        break;
+
     case MSG_REQUEST_EXIT:
         //dbgf("request exit: pid=%d %s\n", u_param, task_get_name(u_param));
         task_free(/* exit app pid =  */ u_param, /* exit status =  */ l_param);
@@ -110,15 +155,30 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
             update_window(u_param);
         }
         break;
-
-    case MSG_RAW_MOUSE:
-        mouse_handler(/* data */ u_param);
-        break;
-
-    case MSG_KEYDOWN:
-        keydown_handler(/* keycode = */ u_param);
-        break;
     }
+}
+
+
+#define L_TIMER_TMP_SIZE  32
+static char l_timer_tmp[L_TIMER_TMP_SIZE];
+
+static void timer_handler(void)
+{
+    fill_surface(l_info_bg_sid, INFO_BG);
+    fill_surface(l_info_sid, COL_BLUE);
+
+    // userd memory
+    int used_mem_percent = (mem_total_mfree_B() * 100) /  mem_total_B();
+    snprintf(l_timer_tmp, L_TIMER_TMP_SIZE, "mem: %d%%", used_mem_percent);
+    draw_text(l_info_sid, 5, 5, COL_WHITE, l_timer_tmp);
+
+    fill_rect(g_dt_sid, INFO_X, INFO_Y, INFO_W, INFO_H, bg);
+    draw_surface(l_info_bg_sid, g_dt_sid, INFO_X, INFO_Y, OP_SRC_COPY);
+    draw_surface(l_info_sid, g_dt_sid, INFO_X, INFO_Y, OP_SRC_COPY);
+
+    update_rect(g_dt_sid, INFO_X, INFO_Y, INFO_W, INFO_H);
+
+    timer_start(l_update_tid, UPDATE_INTERVAL_MS);
 }
 
 

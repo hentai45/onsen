@@ -23,6 +23,7 @@
 #define TASK_FLG_FREE     (0)   // 割り当てなし
 #define TASK_FLG_ALLOC    (1)   // 割り当て済み
 #define TASK_FLG_RUNNING  (2)   // 動作中
+#define TASK_FLG_KERNEL   (16)  // カーネルタスク
 
 #define TSS_REG_SIZE (104)  // TSS のレジスタ保存部のサイズ
 
@@ -70,8 +71,6 @@ struct TSS {
 
     // ファイルテーブル
     struct FILE_TABLE_ENTRY *file_tbl;
-
-    bool is_os_task;  // TODO: フラグに移す
 } __attribute__ ((__packed__));
 
 
@@ -89,21 +88,21 @@ struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-void task_set_name(const char *name);
 int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
 int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
-int  task_run_os(const char *name, void (*main)(void));
 void task_switch(void);
 void task_sleep(int pid);
 void task_wakeup(int pid);
-const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
+
+const char *task_get_name(int pid);
+void task_set_name(const char *name);
 
 void task_dbg(void);
 
-int is_os_task(int pid);
+bool is_os_task(int pid);
 
 void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
 struct TSS *pid2tss(int pid);
@@ -151,9 +150,23 @@ int g_idle_pid;
 } while (0)
 
 
+// フラグ操作
+#define TASK_IS_FREE(tss)      ((tss)->flags == TASK_FLG_FREE)
+#define TASK_IS_NOT_FREE(tss)  ((tss)->flags != TASK_FLG_FREE)
+#define TASK_IS_ALLOC(tss)     ((tss)->flags & TASK_FLG_ALLOC)
+#define TASK_IS_RUNNING(tss)   ((tss)->flags & TASK_FLG_RUNNING)
+#define TASK_IS_KERNEL(tss)    ((tss)->flags & TASK_FLG_KERNEL)
+
+#define TASK_SET_FREE(tss)     ((tss)->flags = TASK_FLG_FREE)
+#define TASK_SET_ALLOC(tss)    ((tss)->flags = (((tss)->flags & ~0xF) | TASK_FLG_ALLOC))
+#define TASK_SET_RUNNING(tss)  ((tss)->flags = (((tss)->flags & ~0xF) | TASK_FLG_RUNNING))
+#define TASK_SET_KERNEL(tss)   ((tss)->flags |= TASK_FLG_KERNEL)
+#define TASK_UNSET_KERNEL(tss) ((tss)->flags &= ~TASK_FLG_KERNEL)
+
+
 static int pid2tss_sel(int pid);
 
-extern int timer_ts_tid(void);
+int timer_ts_tid(void);
 
 static void idle_main(void);
 
@@ -173,6 +186,8 @@ static int l_ts_tid;  // タスクスイッチ用タイマID
 // 関数
 
 static int create_root_task(void);
+static int create_idle_task(void);
+static void set_os_tss(int pid, void (*f)(void), unsigned long esp);
 
 void task_init(void)
 {
@@ -184,8 +199,8 @@ void task_init(void)
     for (int pid = 0; pid < TASK_MAX; pid++) {
         struct TSS *t = &l_mng.tss[pid];
 
+        TASK_SET_FREE(t);
         t->pid = pid;
-        t->flags = TASK_FLG_FREE;
         t->ppid = 0;
         memset(t->name, 0, TASK_NAME_MAX);
 
@@ -205,7 +220,7 @@ void task_init(void)
     init_tss_seg();
 
     g_root_pid = create_root_task();
-    g_idle_pid = task_run_os("idle", idle_main);
+    g_idle_pid = create_idle_task();
 
     ltr(pid2tss_sel(g_root_pid));
 
@@ -230,12 +245,39 @@ static int create_root_task(void)
 }
 
 
+static int create_idle_task(void)
+{
+    int pid = task_new("idle");
+
+    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
+    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
+
+    set_os_tss(pid, idle_main, esp0);
+
+    struct TSS *tss = &l_mng.tss[pid];
+    tss->stack0 = stack0;
+
+    task_run(pid);
+
+    return pid;
+}
+
+
+static void set_os_tss(int pid, void (*f)(void), unsigned long esp)
+{
+    struct TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
+            EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
+
+    TASK_SET_KERNEL(tss);
+}
+
+
 int task_new(const char *name)
 {
     for (int pid = 0; pid < TASK_MAX; pid++) {
         struct TSS *t = &l_mng.tss[pid];
 
-        if (t->flags == TASK_FLG_FREE) { // 未割り当て領域を発見
+        if (TASK_IS_FREE(t)) { // 未割り当て領域を発見
             msg_q_init(pid);
 
             strncpy(t->name, name, TASK_NAME_MAX - 1);
@@ -257,7 +299,7 @@ int task_free(int pid, int exit_status)
 {
     struct TSS *t = pid2tss(pid);
 
-    ASSERT2(t && t->flags != TASK_FLG_FREE, "");
+    ASSERT2(t && TASK_IS_NOT_FREE(t), "");
 
     task_sleep(pid);
 
@@ -290,11 +332,11 @@ int task_free(int pid, int exit_status)
         app_area_clear();
     }
 
-    t->flags = TASK_FLG_FREE;
+    TASK_SET_FREE(t);
 
     // 親タスクにメッセージで終了を通知
     struct TSS *parent = pid2tss(t->ppid);
-    if (parent != 0 && parent->flags != TASK_FLG_FREE) {
+    if (parent != 0 && TASK_IS_NOT_FREE(parent)) {
         struct MSG msg;
         msg.message = MSG_NOTIFY_CHILD_EXIT;
         msg.u_param = pid;
@@ -304,13 +346,6 @@ int task_free(int pid, int exit_status)
     }
 
     return 0;
-}
-
-
-void task_set_name(const char *name)
-{
-    strncpy(g_cur->name, name, TASK_NAME_MAX - 1);
-    g_cur->name[TASK_NAME_MAX - 1] = 0;
 }
 
 
@@ -328,11 +363,11 @@ int task_copy(struct API_REGISTERS *regs, int flg)
 
     memcpy(tss, g_cur, sizeof(struct TSS));
 
-    tss->flags = TASK_FLG_ALLOC;
+    TASK_SET_ALLOC(tss);
     tss->pid   = pid;
-    tss->ppid  = g_cur->pid;
+    tss->ppid  = g_pid;
 
-    if ( ! g_cur->is_os_task) {
+    if ( ! is_os_task(g_pid)) {
         cli();
 
         // ---- 共有しているページのリファレンス数を増やす
@@ -450,7 +485,7 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
     char *p = (char *) mem_alloc(fi->size);
     fat12_load_file(fi->clustno, fi->size, p);
 
-    if (g_cur->is_os_task) {
+    if (is_os_task(g_pid)) {
         cli();
 
         PDE *pd = create_user_pd();
@@ -467,7 +502,7 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
 
         g_cur->stack  = stack;
         g_cur->ss0    = KERNEL_DS;
-        g_cur->is_os_task = false;
+        TASK_SET_KERNEL(g_cur);
 
         // regsのcsをユーザ用CSにすることで
         // asm_apiのiret時(スタックからEIP,CS,ELFAGSをポップする)に
@@ -501,30 +536,12 @@ void task_run(int pid)
 {
     struct TSS *t = pid2tss(pid);
 
-    ASSERT2(t && t->flags != TASK_FLG_RUNNING, "");
+    ASSERT2(t && TASK_IS_RUNNING(t) == 0, "");
 
-    t->flags = TASK_FLG_RUNNING;
+    TASK_SET_RUNNING(t);
     t->timeslice_ms = DEFAULT_TIMESLICE_MS;
     l_mng.run[l_mng.num_running] = t;
     l_mng.num_running++;
-}
-
-
-int task_run_os(const char *name, void (*main)(void))
-{
-    int pid = task_new(name);
-
-    unsigned long stack0 = (unsigned long) mem_alloc(DEFAULT_STACK0_SIZE);
-    unsigned long esp0 = stack0 + DEFAULT_STACK0_SIZE;
-
-    set_os_tss(pid, main, esp0);
-
-    struct TSS *tss = &l_mng.tss[pid];
-    tss->stack0 = stack0;
-
-    task_run(pid);
-
-    return pid;
 }
 
 
@@ -554,7 +571,7 @@ void task_sleep(int pid)
 {
     struct TSS *t = pid2tss(pid);
 
-    if (t == 0 || (t->flags & TASK_FLG_RUNNING) == 0) {
+    if (t == 0 || TASK_IS_RUNNING(t) == 0) {
         return;
     }
 
@@ -585,7 +602,7 @@ void task_sleep(int pid)
         l_mng.run[i_rt] = l_mng.run[i_rt + 1];
     }
 
-    t->flags = TASK_FLG_ALLOC;
+    TASK_SET_ALLOC(t);
 
     if (ts == 1) {
         // **** タスクスイッチする
@@ -607,11 +624,23 @@ void task_wakeup(int pid)
 {
     struct TSS *t = pid2tss(pid);
 
-    if (t == 0 || t->flags != TASK_FLG_ALLOC) {
+    if (t == 0 || TASK_IS_ALLOC(t) == 0) {
         return;
     }
 
     task_run(pid);
+}
+
+
+void task_set_pt(int i_pd, PDE pt)
+{
+    for (int pid = 0; pid < TASK_MAX; pid++) {
+        struct TSS *t = &l_mng.tss[pid];
+
+        if (TASK_IS_NOT_FREE(t) && t->pd != 0) {
+            t->pd[i_pd] = pt;
+        }
+    }
 }
 
 
@@ -623,23 +652,19 @@ const char *task_get_name(int pid)
         return 0;
     }
 
-    if (t->flags == TASK_FLG_FREE) {
+    if (TASK_IS_FREE(t)) {
         return 0;
     }
+
 
     return t->name;
 }
 
 
-void task_set_pt(int i_pd, PDE pt)
+void task_set_name(const char *name)
 {
-    for (int pid = 0; pid < TASK_MAX; pid++) {
-        struct TSS *t = &l_mng.tss[pid];
-
-        if (t->flags != TASK_FLG_FREE && t->pd != 0) {
-            t->pd[i_pd] = pt;
-        }
-    }
+    strncpy(g_cur->name, name, TASK_NAME_MAX - 1);
+    g_cur->name[TASK_NAME_MAX - 1] = 0;
 }
 
 
@@ -650,7 +675,7 @@ void task_dbg(void)
     for (int pid = 0; pid < TASK_MAX; pid++) {
         struct TSS *t = &l_mng.tss[pid];
 
-        if (t->flags != TASK_FLG_FREE) {
+        if (TASK_IS_NOT_FREE(t)) {
             dbgf("%d %s, pd : %p, cs : %X, ds : %X, ss : %X\n",
                     pid, t->name, t->pd, t->cs, t->ds, t->ss);
         }
@@ -660,14 +685,14 @@ void task_dbg(void)
 }
 
 
-int is_os_task(int pid)
+bool is_os_task(int pid)
 {
-    struct TSS *t = pid2tss(pid);
+    struct TSS *tss = pid2tss(pid);
 
-    if (t)
-        return t->is_os_task;
+    if (tss)
+        return TASK_IS_KERNEL(tss);
     else
-        return 0;
+        return false;
 }
 
 
@@ -690,15 +715,6 @@ static void init_tss_seg(void)
 }
 
 
-static void set_os_tss(int pid, void (*f)(void), unsigned long esp)
-{
-    struct TSS *tss = set_tss(pid, KERNEL_CS, KERNEL_DS, MADDR_OS_PDT, VADDR_OS_PDT, f,
-            EFLAGS_INT_ENABLE, esp, KERNEL_DS, 0, 0);
-
-    tss->is_os_task = true;
-}
-
-
 void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0)
 {
     PDE maddr_pd = (PDE) paging_get_maddr((void *) vaddr_pd);
@@ -706,8 +722,6 @@ void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsi
     // | 3 は要求者特権レベルを3にするため
     struct TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
             EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
-
-    tss->is_os_task = false;
 }
 
 

@@ -389,7 +389,7 @@ void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs)
     dbgf("APP ESP = %X", regs->app_esp);
     dbgf(", APP SS = %d * 8 + %d\n\n", regs->app_ss >> 3, regs->app_ss & 0x07);
 
-    if (g_cur->is_os_task) {
+    if (is_os_task(g_pid)) {
         stacktrace2(5, f_debug, (unsigned int *) regs->ebp);
     }
 

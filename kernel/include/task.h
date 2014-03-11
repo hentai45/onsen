@@ -16,6 +16,7 @@
 #define TASK_FLG_FREE     (0)   // 割り当てなし
 #define TASK_FLG_ALLOC    (1)   // 割り当て済み
 #define TASK_FLG_RUNNING  (2)   // 動作中
+#define TASK_FLG_KERNEL   (16)  // カーネルタスク
 
 #define TSS_REG_SIZE (104)  // TSS のレジスタ保存部のサイズ
 
@@ -63,8 +64,6 @@ struct TSS {
 
     // ファイルテーブル
     struct FILE_TABLE_ENTRY *file_tbl;
-
-    bool is_os_task;  // TODO: フラグに移す
 } __attribute__ ((__packed__));
 
 
@@ -82,21 +81,21 @@ struct TASK_MNG {
 void task_init(void);
 int  task_new(const char *name);
 int  task_free(int pid, int exit_status);
-void task_set_name(const char *name);
 int  task_copy(struct API_REGISTERS *regs, int flg);
 int  kernel_thread(int (*fn)(void), int flg);
 int  task_exec(struct API_REGISTERS *regs, const char *fname);
 void task_run(int pid);
-int  task_run_os(const char *name, void (*main)(void));
 void task_switch(void);
 void task_sleep(int pid);
 void task_wakeup(int pid);
-const char *task_get_name(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
+
+const char *task_get_name(int pid);
+void task_set_name(const char *name);
 
 void task_dbg(void);
 
-int is_os_task(int pid);
+bool is_os_task(int pid);
 
 void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsigned long esp0);
 struct TSS *pid2tss(int pid);
