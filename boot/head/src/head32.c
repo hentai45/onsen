@@ -13,8 +13,6 @@
 struct SYSTEM_INFO *g_sys_info = (struct SYSTEM_INFO *) ADDR_SYS_INFO;
 
 
-unsigned int memtest(unsigned int start, unsigned int end);
-
 static void move_disk_data(void);
 static void move_onsensys(void);
 void paging_init(void);
@@ -25,7 +23,6 @@ static void run_onsensys(void);
  */
 void head32_main(void)
 {
-    g_sys_info->end_free_maddr = memtest(MADDR_MEMTEST_START, MADDR_MEMTEST_END);
     move_disk_data();  /* ディスクデータをキャッシュへ転送 */
     move_onsensys();   /* onsen.sysを転送 */
     paging_init();     /* 仮のページングを設定 */

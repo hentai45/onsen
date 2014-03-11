@@ -9,6 +9,7 @@ __asm__ (".code16gcc\n");
 
 void set_video_mode(void);
 static void disable_interrupts(void);
+void detect_memory(void);
 static void enable_a20(void);
 
 /**
@@ -16,8 +17,9 @@ static void enable_a20(void);
  */
 void head16_main(void)
 {
-    set_video_mode();      /* 画面モードの設定 */
     disable_interrupts();  /* 割り込みを受け付けないようにする */
+    set_video_mode();      /* 画面モードの設定 */
+    detect_memory();       /* 使用可能メモリ領域を調べる */
     enable_a20();          /* 1MB以上のメモリにアクセスできるようにする */
 }
 

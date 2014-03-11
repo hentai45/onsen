@@ -9,6 +9,7 @@
 #ifndef HEADER_MEMORY
 #define HEADER_MEMORY
 
+#include <stdint.h>
 #include "sysinfo.h"
 
 //-----------------------------------------------------------------------------
@@ -20,11 +21,12 @@
 
 #define VADDR_USER_ESP      (0xBFFFF000)
 
-#define VADDR_SYS_INFO      (0xC0000A00)  // システム情報が格納されているアドレス
 /* FREE START               (0x00001000) */
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
 #define MADDR_OS_PDT        (0x00001000)  // 4KB(0x1000)境界であること
 #define VADDR_OS_PDT        (0xC0001000)  // 4KB(0x1000)境界であること
+#define VADDR_SYS_INFO      (0xC0002000)  // システム情報が格納されているアドレス
+#define VADDR_MMAP_TBL      (0xC0003000)  // 使用可能メモリ情報のテーブル
 #define VADDR_BITMAP_START  (0xC0010000)  // 物理アドレス管理用ビットマップ
 #define VADDR_BITMAP_END    (0xC0030000)
 #define VADDR_BMEM_MNG      (VADDR_BITMAP_END)
@@ -41,7 +43,6 @@
 #define VADDR_MEM_END       (VADDR_VRAM)
 #define VADDR_PD_SELF       (0xFFFFF000)
 
-/* 0x4000境界であること。bitmapの初期化がそのことを前提に書かれているから */
 #define MADDR_FREE_START    (0x00400000)
 
 
@@ -73,6 +74,16 @@ void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
 // メモリ容量確認
+
+struct MEMORY_MAP_ENTRY {
+    uint32_t base_low;     // base address QWORD
+    uint32_t base_high;
+    uint32_t length_low;   // length QWORD
+    uint32_t length_high;
+    uint16_t type;         // entry Ttpe
+    uint16_t acpi;         // exteded
+} __attribute__ ((packed));
+
 
 unsigned int mem_total_B(void);
 unsigned int mem_total_mfree_B(void);
@@ -143,6 +154,7 @@ static struct MEM_MNG *l_mng_b = (struct MEM_MNG *) VADDR_BMEM_MNG;
 //-----------------------------------------------------------------------------
 // ページ単位メモリ管理
 
+#define MAX(x,y)  (((x) > (y)) ? (x) : (y))
 
 #define PAGE_MEM_MNG_MAX   4096
 
@@ -160,6 +172,9 @@ static struct MEM_MNG *l_mng_b = (struct MEM_MNG *) VADDR_BMEM_MNG;
 // 物理アドレスからビットマップのビット位置に変換
 #define MADDR2BIT(maddr)  (1 << (31 - ((((unsigned long) maddr) >> 12) & 0x1F)))
 
+// 物理アドレスからビットマップのビット番号に変換
+#define MADDR2BIT_NO(maddr)  (31 - ((((unsigned long) maddr) >> 12) & 0x1F))
+
 // インデックスとビット番号から物理アドレスに変換
 #define IDX2MADDR(idx, bits)  ((void *) (((idx) << 17) | ((31 - (bits)) << 12)))
 
@@ -175,21 +190,26 @@ static struct MEM_MNG *l_mng_b = (struct MEM_MNG *) VADDR_BMEM_MNG;
 // 指定した物理アドレスを使用中にする
 #define SET_USED_MADDR(maddr) (l_bitmap[MADDR2IDX(maddr)] &= ~MADDR2BIT(maddr))
 
-#define BITMAP_ST MADDR2IDX(MADDR_FREE_START)
+
+static void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg);
+static int page_free(void *vp_vaddr, bool is_only_maddr);
+
 
 static struct MEM_MNG *l_mng_v = (struct MEM_MNG *) VADDR_VMEM_MNG;
 
 // 物理アドレスを管理するためのビットマップ。使用中なら0、空きなら1
 static unsigned long *l_bitmap = (unsigned long *) VADDR_BITMAP_START;
 
+// ビットマップの最初のインデックス
+static int l_bitmap_start_i;
+
 // ビットマップの最後のインデックス
-static int l_bitmap_end;
+static int l_bitmap_end_i;
 
 static unsigned long l_mfree_B;
 
+static unsigned long l_end_free_maddr;
 
-static void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg);
-static int page_free(void *vp_vaddr, bool is_only_maddr);
 
 //=============================================================================
 // 関数
@@ -213,19 +233,103 @@ void mem_init(void)
 
 /**
  * ページ単位メモリ管理（物理アドレス）の初期化
+ * BIOSで得た情報をもとに空き領域を設定する。
  */
 static void init_mpage_mem(void)
 {
     /* ビットマップを使用中で初期化 */
+
     unsigned long size_B = VADDR_BITMAP_END - VADDR_BITMAP_START;
     memset(l_bitmap, 0, size_B);
 
     /* 空き領域を設定 */
-    l_bitmap_end = MADDR2IDX(g_sys_info->end_free_maddr) + 1;
-    size_B = (unsigned long) &l_bitmap[l_bitmap_end - 1] - (unsigned long) &l_bitmap[BITMAP_ST];
-    memset(&l_bitmap[BITMAP_ST], 0xFF, size_B);
 
-    l_mfree_B = g_sys_info->end_free_maddr - MADDR_FREE_START;
+    struct MEMORY_MAP_ENTRY *ent = (struct MEMORY_MAP_ENTRY *) VADDR_MMAP_TBL;
+
+    unsigned long min_start = 0xFFFFFFFF;
+    unsigned long max_end   = 0;
+
+    l_mfree_B = 0;
+
+    for (int i = 0; i < g_sys_info->mmap_entries; i++, ent++) {
+        if (ent->type != 1)  // 使用可能じゃなければ飛ばす
+            continue;
+
+        if (ent->base_high != 0) {
+            dbgf("ignore above 4GB");
+            continue;
+        }
+
+        //dbgf("addr = %X, len = %X\n", ent->base_low, ent->length_low);
+
+        unsigned long start = MAX(ent->base_low, MADDR_FREE_START);
+        unsigned long end   = ent->base_low + ent->length_low;
+
+        // 4KB単位で管理するための調整
+        if (start & 0xFFF)
+            start = (start + 0xFFF) & ~0xFFF;  // 切り上げ
+
+        if (end & 0xFFF)
+            end = (end - 0xFFF) & ~0xFFF;  // 切り下げ
+
+        if (ent->length_high != 0) {
+            end = 0xFFFFF000;
+        }
+
+        if (start >= end)
+            continue;
+
+        int i_start = MADDR2IDX(start);
+        int i_end   = MADDR2IDX(end);
+
+        int b_start = MADDR2BIT_NO(start);
+        int b_end   = MADDR2BIT_NO(end);
+
+        //dbgf("start %#X (%d,%d), end %#X (%d,%d)\n", start, i_start, b_start, end, i_end, b_end);
+
+        if (start < min_start) {
+            min_start = start;
+        }
+
+        if (max_end < end) {
+            max_end = end;
+        }
+
+        // intに綺麗に収まらない部分のビットを設定しておく
+        for (int b = b_start; b >= 0; b--) {
+            unsigned long maddr = (unsigned long) IDX2MADDR(i_start, b);
+
+            if (maddr > end)
+                break;
+
+            SET_FREE_MADDR(maddr);
+        }
+
+        i_start++;
+
+        // intに綺麗に収まらない部分のビットを設定しておく
+        for (int b = 31; b >= b_end; b--) {
+            unsigned long maddr = (unsigned long) IDX2MADDR(i_end, b);
+
+            if (maddr < start)
+                continue;
+
+            SET_FREE_MADDR(maddr);
+        }
+
+        i_end--;
+
+        // 残りは一気にやっちゃいましょう
+        size_B = (unsigned long) (&l_bitmap[i_end] - &l_bitmap[i_start]);
+        size_B = (size_B + 1) * 4;  // int(4バイト)で管理しているので4倍する
+        memset(&l_bitmap[i_start], 0xFF, size_B);
+
+        l_mfree_B += end - start;
+    }
+
+    l_end_free_maddr = max_end;
+    l_bitmap_start_i = MADDR2IDX(min_start);
+    l_bitmap_end_i = MADDR2IDX(max_end);
 }
 
 
@@ -413,7 +517,7 @@ void *mem_alloc_maddr(void)
 {
     int i, j;
     void *maddr;
-    for (i = BITMAP_ST; i < l_bitmap_end; i++) {
+    for (i = l_bitmap_start_i; i < l_bitmap_end_i; i++) {
         if (l_bitmap[i] != 0) {
             for (j = 31; j >= 0; j--) {
                 if (l_bitmap[i] & (1 << j)) {
@@ -522,7 +626,7 @@ static int mem_alloc_page_sub(unsigned long vaddr, int num_pages, int flags, boo
     void *vp_maddr;
     bool first = true;
 
-    for (int i = BITMAP_ST; i < l_bitmap_end; i++) {
+    for (int i = l_bitmap_start_i; i < l_bitmap_end_i; i++) {
         if (l_bitmap[i] != 0) {
             for (int j = 31; j >= 0; j--) {
                 if (l_bitmap[i] & (1 << j)) {
@@ -773,7 +877,7 @@ static void *get_free_addr(struct MEM_MNG *mng, unsigned int size)
 
 unsigned int mem_total_B(void)
 {
-    return g_sys_info->end_free_maddr;
+    return l_end_free_maddr;
 }
 
 

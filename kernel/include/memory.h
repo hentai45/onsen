@@ -3,6 +3,7 @@
 #ifndef HEADER_MEMORY
 #define HEADER_MEMORY
 
+#include <stdint.h>
 #include "sysinfo.h"
 
 //-----------------------------------------------------------------------------
@@ -14,11 +15,12 @@
 
 #define VADDR_USER_ESP      (0xBFFFF000)
 
-#define VADDR_SYS_INFO      (0xC0000A00)  // システム情報が格納されているアドレス
 /* FREE START               (0x00001000) */
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
 #define MADDR_OS_PDT        (0x00001000)  // 4KB(0x1000)境界であること
 #define VADDR_OS_PDT        (0xC0001000)  // 4KB(0x1000)境界であること
+#define VADDR_SYS_INFO      (0xC0002000)  // システム情報が格納されているアドレス
+#define VADDR_MMAP_TBL      (0xC0003000)  // 使用可能メモリ情報のテーブル
 #define VADDR_BITMAP_START  (0xC0010000)  // 物理アドレス管理用ビットマップ
 #define VADDR_BITMAP_END    (0xC0030000)
 #define VADDR_BMEM_MNG      (VADDR_BITMAP_END)
@@ -35,7 +37,6 @@
 #define VADDR_MEM_END       (VADDR_VRAM)
 #define VADDR_PD_SELF       (0xFFFFF000)
 
-/* 0x4000境界であること。bitmapの初期化がそのことを前提に書かれているから */
 #define MADDR_FREE_START    (0x00400000)
 
 
@@ -67,6 +68,16 @@ void  mem_dbg(void);
 
 //-----------------------------------------------------------------------------
 // メモリ容量確認
+
+struct MEMORY_MAP_ENTRY {
+    uint32_t base_low;     // base address QWORD
+    uint32_t base_high;
+    uint32_t length_low;   // length QWORD
+    uint32_t length_high;
+    uint16_t type;         // entry Ttpe
+    uint16_t acpi;         // exteded
+} __attribute__ ((packed));
+
 
 unsigned int mem_total_B(void);
 unsigned int mem_total_mfree_B(void);

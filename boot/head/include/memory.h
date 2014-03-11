@@ -3,8 +3,9 @@
 
 #define VADDR_BASE          (0xC0000000)
 
-#define ADDR_SYS_INFO       (0x00000A00)  // システム情報が格納されているアドレス
 #define MADDR_OS_PDT        (0x00001000)  // 必ず4KB境界であること
+#define ADDR_SYS_INFO       (0x00002000)  // システム情報が格納されているアドレス
+#define ADDR_MMAP_TBL       (0x00003000)  // 使用可能メモリ情報のテーブル
 #define ADDR_IPL            (0x00007C00)  // IPLが読み込まれている場所
 #define ADDR_DISK_SRC       (0x00008000)  // ディスクキャッシュの場所（リアルモード）
 #define ADDR_DISK_DST       (0x00100000)  // ディスクキャッシュの場所
