@@ -46,12 +46,13 @@ extern int g_dbg_temp_flg;
 
 #define ASSERT(cond, fmt, ...) do {                                           \
     if (!(cond)) {                                                            \
+        cli();                                                                \
         dbgf("**** ASSERT ****\n");                                           \
         dbgf("FILE: %s, FUNC: %s, LINE: %d\n", __FILE__, __func__, __LINE__); \
         dbgf("COND: %s\n", #cond);                                            \
         dbgf(fmt "\n", ##__VA_ARGS__);                                        \
         stacktrace(5, f_debug);                                               \
-        cli(); hlt();                                                         \
+        hlt();                                                                \
     }                                                                         \
 } while (0)
 
@@ -59,22 +60,24 @@ extern int g_dbg_temp_flg;
 // graphic_init前でも使えるASSERT
 #define ASSERT2(cond, fmt, ...) do {                                                    \
     if (!(cond)) {                                                                      \
+        cli();                                                                          \
         blue_screen();                                                                  \
         blue_screen_f(0, "**** ASSERT ****");                                           \
         blue_screen_f(1, "FILE: %s, FUNC: %s, LINE: %d", __FILE__, __func__, __LINE__); \
         blue_screen_f(2, "COND: %s", #cond);                                            \
         blue_screen_f(3, fmt, ##__VA_ARGS__);                                           \
-        cli(); hlt();                                                                   \
+        hlt();                                                                          \
     }                                                                                   \
 } while (0)
 
 
 #define ERROR(fmt, ...) do {                                              \
+    cli();                                                                \
     dbgf("**** ERROR ****\n");                                            \
     dbgf("FILE: %s, FUNC: %s, LINE: %d\n", __FILE__, __func__, __LINE__); \
     dbgf(fmt "\n", ##__VA_ARGS__);                                        \
     stacktrace(5, f_debug);                                               \
-    for (;;) { hlt(); }                                                   \
+    hlt();                                                                \
 } while (0)
 
 

@@ -720,7 +720,7 @@ void set_app_tss(int pid, PDE vaddr_pd, void (*f)(void), unsigned long esp, unsi
     PDE maddr_pd = (PDE) paging_get_maddr((void *) vaddr_pd);
 
     // | 3 は要求者特権レベルを3にするため
-    struct TSS *tss = set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
+    set_tss(pid, USER_CS | 3, USER_DS | 3, maddr_pd, vaddr_pd, f,
             EFLAGS_INT_ENABLE, esp, USER_DS | 3, esp0, KERNEL_DS);
 }
 

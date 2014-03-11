@@ -10,7 +10,7 @@
 /* IPLが読み込んだシリンダ数 */
 #define CYLS (33)
 
-SYSTEM_INFO *g_sys_info = (SYSTEM_INFO *) ADDR_SYS_INFO;
+struct SYSTEM_INFO *g_sys_info = (struct SYSTEM_INFO *) ADDR_SYS_INFO;
 
 
 unsigned int memtest(unsigned int start, unsigned int end);
@@ -69,7 +69,7 @@ static void move_onsensys(void)
     memcopy(dst, src, num_bytes);
 
     /* .dataを読み書き可能セグメントへ転送 */
-    HRB_HEADER *hdr = (HRB_HEADER *) &OnSenMain;
+    struct HRB_HEADER *hdr = (struct HRB_HEADER *) &OnSenMain;
     num_bytes = hdr->data_size;
     if (num_bytes != 0) {
         src = (char *) hdr->src_data;
@@ -95,7 +95,7 @@ static void memcopy(char *dst, char *src, int num_bytes)
  */
 static void run_onsensys(void)
 {
-    HRB_HEADER *hdr = (HRB_HEADER *) &OnSenMain;
+    struct HRB_HEADER *hdr = (struct HRB_HEADER *) &OnSenMain;
 
     __asm__ __volatile__ (
         "movl %0, %%esp\n"

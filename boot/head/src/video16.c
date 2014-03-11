@@ -20,7 +20,7 @@ __asm__ (".code16gcc\n");
 
 
 /* SuperVGA 情報 */
-typedef struct _SVGA_INFO {
+struct SVGA_INFO {
     unsigned long  signature;   /* シグネチャ 'VESA' */
     unsigned short version;     /* VESAのバージョン（例：1.02なら0x0102） */
     unsigned long  p_oem_name;  /* OEM名ストリングへのポインタ(ASCIZ) */
@@ -28,11 +28,11 @@ typedef struct _SVGA_INFO {
     unsigned long  p_mode_list; /* ビデオモード列挙配列へのポインタ、word配列、終端は0xffff */
     unsigned short vram_size;   /* VESAがサポートするVRAM容量 */
     char  reserved[236];        /* 予約 */
-} __attribute__ ((__packed__)) SVGA_INFO;
+} __attribute__ ((__packed__));
 
 
 /* SuperVGA モード情報 */
-typedef struct _SVGA_MODE_INFO {
+struct SVGA_MODE_INFO {
     unsigned short mode_attr;   /* モード属性 */
     char skip0[16];
     unsigned short w;           /* Xの解像度 */
@@ -44,11 +44,11 @@ typedef struct _SVGA_MODE_INFO {
     char skip3[12];
     unsigned long  vram;        /* VRAMベースアドレス */
     char skip4[212];
-} __attribute__ ((__packed__)) SVGA_MODE_INFO;
+} __attribute__ ((__packed__));
 
 
-static int get_svga_info(SVGA_INFO *svga);
-static int get_svga_mode_info(SVGA_MODE_INFO *svga_mode);
+static int get_svga_info(struct SVGA_INFO *svga);
+static int get_svga_mode_info(struct SVGA_MODE_INFO *svga_mode);
 static void set_svga_mode(void);
 static void screen320x200(void);
 
@@ -57,8 +57,8 @@ static void screen320x200(void);
  */
 void set_video_mode(void)
 {
-    SVGA_INFO svga;
-    SVGA_MODE_INFO svga_mode;
+    struct SVGA_INFO svga;
+    struct SVGA_MODE_INFO svga_mode;
 
     if (get_svga_info(&svga) < 0) {
         screen320x200();
@@ -89,7 +89,7 @@ void set_video_mode(void)
  * SuperVGA 情報を取得する
  * @return 0 = 成功, -1 = 失敗
  */
-static int get_svga_info(SVGA_INFO *svga)
+static int get_svga_info(struct SVGA_INFO *svga)
 {
     unsigned short status;
     unsigned long svga_long = (unsigned long) svga;
@@ -131,7 +131,7 @@ static int get_svga_info(SVGA_INFO *svga)
  * SuperVGA モード情報を取得する
  * @return 0 = 成功, -1 = 失敗
  */
-static int get_svga_mode_info(SVGA_MODE_INFO *svga_mode)
+static int get_svga_mode_info(struct SVGA_MODE_INFO *svga_mode)
 {
     unsigned short status;
     unsigned long svga_long = (unsigned long) svga_mode;
