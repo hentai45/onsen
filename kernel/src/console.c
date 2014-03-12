@@ -34,6 +34,7 @@ extern struct FILE_T *f_console;
 #include "str.h"
 #include "sysinfo.h"
 #include "task.h"
+#include "time.h"
 #include "timer.h"
 
 
@@ -102,6 +103,7 @@ static void cmd_clear(void);
 static void cmd_cat(char *fname);
 static void cmd_ps(void);
 static void cmd_mem(void);
+static void cmd_date(void);
 static void cmd_kill(int pid);
 static void cmd_dbg(char *name);
 static int  cmd_app(char *cmd_name, int bgp);
@@ -340,6 +342,8 @@ static void run_cmd(char *cmd_name)
         cmd_ps();
     } else if (STRCMP(cmd_name, ==, "mem")) {
         cmd_mem();
+    } else if (STRCMP(cmd_name, ==, "date")) {
+        cmd_date();
     } else if (STRNCMP(cmd_name, ==, "kill ", 5)) {
         if (cmd_name[5] < '0' || '9' < cmd_name[5]) {
             putf("Usage: kill pid\n\n");
@@ -446,6 +450,14 @@ static void cmd_mem(void)
     putf("total  : %z\n", mem_total_B());
     putf("mfree  : %z\n", mem_total_mfree_B());
     putf("vfree  : %z\n\n", mem_total_vfree_B());
+}
+
+
+static void cmd_date(void)
+{
+    struct DATETIME t;
+    now(&t);
+    putf("%s\n\n", t.str);
 }
 
 
