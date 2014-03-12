@@ -455,9 +455,11 @@ static void cmd_mem(void)
 
 static void cmd_date(void)
 {
+    char s[32];
     struct DATETIME t;
     now(&t);
-    putf("%s\n\n", t.str);
+    dt_str(s, 32, &t);
+    putf("%s\n\n", s);
 }
 
 

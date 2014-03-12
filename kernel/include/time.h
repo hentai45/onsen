@@ -3,8 +3,6 @@
 #ifndef HEADER_TIME
 #define HEADER_TIME
 
-#define MAX_DT_STR 32
-
 struct DATETIME {
     int year;
     int mon;
@@ -12,7 +10,10 @@ struct DATETIME {
     int hour;
     int min;
     int sec;
-    char str[MAX_DT_STR];
 };
+
+
+void now(struct DATETIME *t);
+int dt_str(char *s, int n, struct DATETIME *t);
 
 #endif
