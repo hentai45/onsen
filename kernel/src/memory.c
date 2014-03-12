@@ -457,7 +457,7 @@ int mem_free_maddr(void *vp_maddr)
 {
     unsigned long maddr = (unsigned long) vp_maddr;
     ASSERT(maddr >= 0x1000, "maddr = %p", vp_maddr);
-    ASSERT(maddr <= g_sys_info->end_free_maddr, "maddr = %p", vp_maddr);
+    ASSERT(maddr <= l_end_free_maddr, "maddr = %p", vp_maddr);
     ASSERT(IS_USED_MADDR(vp_maddr), "vp_maddr = %p", vp_maddr);
 
     SET_FREE_MADDR(vp_maddr & ~0xFFF);

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #include "onsen.h"
+#include "myc.h"
 
 #define CURSOR_INTERVAL_MS 500
 

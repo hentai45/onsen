@@ -491,7 +491,7 @@ static void cmd_dbg(char *name)
         dbgf("width = %d\n", g_sys_info->w);
         dbgf("height = %d\n", g_sys_info->h);
         dbgf("color width = %d\n", g_sys_info->color_width);
-        dbgf("end_free_maddr = %#X\n\n", g_sys_info->end_free_maddr);
+        dbgf("mmap entries = %d\n", g_sys_info->mmap_entries);
     } else if (STRCMP(name, ==, "task")) {
         task_dbg();
     } else if (STRCMP(name, ==, "timer")) {

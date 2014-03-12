@@ -1,3 +1,4 @@
+#include "myc.h"
 #include "onsen.h"
 #include "msg.h"
 

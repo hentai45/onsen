@@ -5,6 +5,7 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include "myc.h"
 #include "onsen.h"
 
 static void reverse(char *s);

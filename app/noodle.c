@@ -1,5 +1,6 @@
 // haribote OS APP
 
+#include "myc.h"
 #include "onsen.h"
 
 void draw_time(int sid, int hou, int min, int sec);

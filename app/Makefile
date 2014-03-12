@@ -2,10 +2,12 @@ PRJ_DIR = ..
 
 include $(PRJ_DIR)/Makefile.inc
 
-LIB_DIR = api/$(BIN_DIR)
+API_LIB_DIR = api/$(BIN_DIR)
+MYC_LIB_DIR = libmyc/$(BIN_DIR)
 KERNEL_INC_DIR = $(PRJ_DIR)/kernel/$(INC_DIR)
+MYC_INC_DIR = libmyc/$(INC_DIR)
 
-CFLAGS += -Iapi/$(INC_DIR)
+CFLAGS += -Iapi/$(INC_DIR) -I$(MYC_INC_DIR)
 
 ONSEN_LIB = $(LIB_DIR)/libonsen.a
 
@@ -22,7 +24,7 @@ all :
 
 
 $(BIN_DIR)/% : %.c
-	$(CC) $(CFLAGS) -Wl,-Map=$(<:.c=.map),-emain $< -o $@ -L$(LIB_DIR) -lonsen
+	$(CC) $(CFLAGS) -Wl,-Map=$(<:.c=.map),-emain $< -o $@ -L$(MYC_LIB_DIR) -lmyc -L$(API_LIB_DIR) -lonsen
 
 
 clean :

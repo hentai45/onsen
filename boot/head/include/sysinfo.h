@@ -9,7 +9,6 @@ struct SYSTEM_INFO {
     int32_t h;
     int32_t color_width;
     int32_t mmap_entries;
-    uint32_t end_free_maddr;
 };
 
 extern struct SYSTEM_INFO *g_sys_info;

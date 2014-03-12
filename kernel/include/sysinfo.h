@@ -7,7 +7,6 @@ struct SYSTEM_INFO {
     int h;
     int color_width;
     int mmap_entries;
-    unsigned long end_free_maddr;
 };
 
 extern struct SYSTEM_INFO *g_sys_info;
