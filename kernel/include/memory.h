@@ -48,6 +48,7 @@ extern struct SYSTEM_INFO *g_sys_info;
 
 struct USER_PAGE {
     unsigned long vaddr;
+    unsigned long end_vaddr;  // end_vaddr自体は含まれない
     int refs;
 };
 
@@ -57,6 +58,7 @@ void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
 struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int   mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end);
 int   mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
 

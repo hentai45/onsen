@@ -54,6 +54,7 @@ extern struct SYSTEM_INFO *g_sys_info;
 
 struct USER_PAGE {
     unsigned long vaddr;
+    unsigned long end_vaddr;  // end_vaddr自体は含まれない
     int refs;
 };
 
@@ -63,6 +64,7 @@ void  mem_init(void);
 void *mem_alloc(unsigned int size_B);
 void *mem_alloc_str(const char *s);
 struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags);
+int   mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end);
 int   mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack);
 void *mem_alloc_maddr(void);
 
@@ -401,7 +403,7 @@ int mem_free(void *vp_vaddr)
 
     unsigned int vaddr = (unsigned int) vp_vaddr;
 
-    ASSERT(VADDR_MEM_START <= vaddr || vaddr <= VADDR_MEM_END,
+    ASSERT(VADDR_MEM_START <= vaddr && vaddr <= VADDR_MEM_END,
             "vaddr < VADDR_MEM_START || VADDR_MEM_END < vaddr: %p", vp_vaddr);
 
     // メモリ管理が返すメモリは、下位3ビットが0であるはず
@@ -466,10 +468,55 @@ int mem_free_maddr(void *vp_maddr)
 }
 
 
+int mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end)
+{
+    ASSERT(page, "");
+
+    if (page->end_vaddr > new_end)
+        return 0;
+
+    int size_B = new_end - page->end_vaddr;
+
+    struct USER_PAGE *new_page = mem_alloc_user_page(page->end_vaddr, size_B, PTE_RW);
+
+    ASSERT(page->end_vaddr == new_page->vaddr, "");
+
+    // 古いページと新しいページを１つにまとめる
+
+    void *last_page = (void *) (page->end_vaddr - 0x1000);
+    int flg = paging_get_flags(last_page);
+    ASSERT(flg & PTE_END, "not found end flag");
+    flg &= ~PTE_END;
+    if ((flg & PTE_START) == 0) {
+        flg |= PTE_CONT;
+    }
+    paging_set_flags(last_page, flg);
+
+    flg = paging_get_flags((void *) new_page->vaddr);
+    ASSERT(flg & PTE_START, "not found start flag");
+    flg &= ~PTE_START;
+    if ((flg & PTE_END) == 0) {
+        flg |= PTE_CONT;
+    }
+    paging_set_flags((void *) new_page->vaddr, flg);
+
+    dbgf("expanded user page. %#X => %#X\n", page->end_vaddr, new_page->end_vaddr);
+
+    // 更新
+    page->end_vaddr = new_page->end_vaddr;
+
+    return 0;
+}
+
+
 int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
 {
+    ASSERT(stack, "");
+
     new_stack &= ~0xFFF;
     new_stack -= 0x1000;  // ちょっと余裕をもたせる
+
+    ASSERT(stack->vaddr > new_stack, "");
 
     int size_B = stack->vaddr - new_stack;
 
@@ -480,7 +527,7 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     }
 
     ASSERT(new_stack == new_stack_page->vaddr, "");
-    mem_free(new_stack_page);
+    ASSERT(new_stack_page->end_vaddr == stack->vaddr, "");
 
     // 古いスタックと新しいスタックを１つにまとめる
 
@@ -488,10 +535,10 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     int flg = paging_get_flags(new_stack_last);
     ASSERT(flg & PTE_END, "not found end flag");
     flg &= ~PTE_END;
-    paging_set_flags(new_stack_last, flg);
     if ((flg & PTE_START) == 0) {
         flg |= PTE_CONT;
     }
+    paging_set_flags(new_stack_last, flg);
 
     flg = paging_get_flags((void *) stack->vaddr);
     ASSERT(flg & PTE_START, "not found start flag");
@@ -592,6 +639,8 @@ struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags
         return 0;
     } else {
         page->vaddr = vaddr;
+        page->end_vaddr = vaddr + (num_pages * PAGE_SIZE_B);
+
         return page;
     }
 }

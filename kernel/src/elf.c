@@ -12,17 +12,19 @@
 #define HEADER_ELF
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "api.h"
 
-typedef unsigned int    Elf32_Addr;
-typedef unsigned short  Elf32_Half;
-typedef unsigned int    Elf32_Off;
-typedef int             Elf32_Sword;
-typedef unsigned int    Elf32_Word;
+typedef uint32_t  Elf32_Addr;
+typedef uint16_t  Elf32_Half;
+typedef uint32_t  Elf32_Off;
+typedef int32_t   Elf32_Sword;
+typedef uint32_t  Elf32_Word;
+typedef uint32_t  Elf32_Size;
 
 //-----------------------------------------------------------------------------
 
-#define EI_NIDENT   (16)
+#define EI_NIDENT   16
 
 // ELF ヘッダ
 struct Elf_Ehdr {
@@ -98,6 +100,8 @@ struct Elf_Shdr {
 };
 
 
+#define SHT_SYMTAB  2
+
 inline __attribute__ ((always_inline))
 bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
 {
@@ -105,8 +109,26 @@ bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
+
+//-----------------------------------------------------------------------------
+
+// symbol
+struct Elf_Sym {
+    Elf32_Word    st_name;
+    Elf32_Addr    st_value;
+    Elf32_Word    st_size;
+    unsigned char st_info;
+    unsigned char st_other;
+    Elf32_Half    st_shndx;
+};
+
+
+//-----------------------------------------------------------------------------
+
+
 int elf_load(void *p, unsigned int size, const char *name);
 int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size);
+
 
 #endif
 
@@ -122,7 +144,10 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size);
 #include "str.h"
 #include "task.h"
 
+
+static struct Elf_Sym *search_symbol(struct Elf_Ehdr *ehdr, const char *name);
 static struct Elf_Shdr *search_shdr(struct Elf_Ehdr *ehdr, const char *name);
+static struct Elf_Shdr *search_shdr_t(struct Elf_Ehdr *ehdr, int type);
 
 
 //=============================================================================
@@ -155,7 +180,6 @@ int elf_load(void *p, unsigned int size, const char *name)
     struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
     struct USER_PAGE *code = 0, *data = 0;
-    int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
         if (phdr->p_type != PT_LOAD) {
@@ -189,28 +213,14 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, PTE_RW);
             memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
 
-            bss_size = phdr->p_memsz - phdr->p_filesz;
-            if (bss_size > 0) {
-                // .bss セクションと同じか確認
-                if (bss_shdr && has_section(phdr, bss_shdr)) {
-                    if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
-                        if (bss_shdr->sh_size == bss_size) {
-                            memset((void *) (data->vaddr + phdr->p_filesz), 0, bss_size);
-                        } else {
-                            dbgf("bss size is different");
-                        }
-                    } else {
-                        dbgf("bss->addr != data->addr + data->filesz\n");
-                        dbgf("%#X != %#X + %X (%p)\n", bss_shdr->sh_addr, phdr->p_vaddr, phdr->p_filesz, phdr->p_vaddr + phdr->p_filesz);
-                    }
-                } else {
-                    dbgf("p_filesz != p_memsz, but file doesn't have .bss section\n");
-                }
+            if (bss_shdr) {
+                dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
+                memset((void *) bss_shdr->sh_addr, 0, bss_shdr->sh_size);
             }
 
             break;
@@ -253,6 +263,10 @@ int elf_load(void *p, unsigned int size, const char *name)
     t->stack  = stack;
     t->stack0 = stack0;
 
+    struct Elf_Sym *end_sym = search_symbol(ehdr, "_end");
+    t->brk = (end_sym) ? end_sym->st_value : 0;
+    dbgf("brk = %p\n", t->brk);
+
     task_run(pid);
 
     return pid;
@@ -282,7 +296,6 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
     struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
     struct USER_PAGE *code = 0, *data = 0;
-    int bss_size;
 
     for (int i = 0; i < ehdr->e_phnum; i++, phdr++) {
         if (phdr->p_type != PT_LOAD) {
@@ -316,28 +329,14 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
-            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz + 0x8000, PTE_RW);
+            data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, PTE_RW);
             memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
 
-            bss_size = phdr->p_memsz - phdr->p_filesz;
-            if (bss_size > 0) {
-                // .bss セクションと同じか確認
-                if (bss_shdr && has_section(phdr, bss_shdr)) {
-                    if (bss_shdr->sh_addr == phdr->p_vaddr + phdr->p_filesz) {
-                        if (bss_shdr->sh_size == bss_size) {
-                            memset((void *) (data->vaddr + phdr->p_filesz), 0, bss_size);
-                        } else {
-                            dbgf("bss size is different");
-                        }
-                    } else {
-                        dbgf("bss->addr != data->addr + data->filesz\n");
-                        dbgf("%#X != %#X + %X (%p)\n", bss_shdr->sh_addr, phdr->p_vaddr, phdr->p_filesz, phdr->p_vaddr + phdr->p_filesz);
-                    }
-                } else {
-                    dbgf("p_filesz != p_memsz, but file doesn't have .bss section\n");
-                }
+            if (bss_shdr) {
+                dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
+                memset((void *) bss_shdr->sh_addr, 0, bss_shdr->sh_size);
             }
 
             break;
@@ -354,6 +353,9 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
         return -1;
     }
 
+    struct Elf_Sym *end_sym = search_symbol(ehdr, "_end");
+    g_cur->brk = (end_sym) ? end_sym->st_value : 0;
+
     g_cur->code = code;
     g_cur->data = data;
 
@@ -368,16 +370,49 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
 // 非公開関数
 
 
+// シンボル名に対応するシンボルの検索
+static struct Elf_Sym *search_symbol(struct Elf_Ehdr *ehdr, const char *name)
+{
+    char *head = (char *) ehdr;
+
+    // 名前格納用セクション
+    struct Elf_Shdr *str_shdr = search_shdr(ehdr, ".strtab");
+    if (str_shdr == 0) return 0;
+    char *str_sect = head + str_shdr->sh_offset;
+
+    // シンボルテーブルセクション
+    struct Elf_Shdr *sym_shdr = search_shdr_t(ehdr, SHT_SYMTAB);
+    if (sym_shdr == 0) return 0;
+
+    int num_entries = sym_shdr->sh_size / sym_shdr->sh_entsize;
+    for (int k = 0; k < num_entries; k++) {
+        struct Elf_Sym *symp = (struct Elf_Sym *) (head + sym_shdr->sh_offset + sym_shdr->sh_entsize * k);
+
+        if (symp->st_name == 0)
+            continue;
+
+        char *sym_name = str_sect + symp->st_name;
+
+        if (STRCMP(sym_name, ==, name))
+            return symp;
+    }
+
+    return 0;
+}
+
+
+// 名前によるセクションヘッダの検索
 static struct Elf_Shdr *search_shdr(struct Elf_Ehdr *ehdr, const char *name)
 {
     char *head = (char *) ehdr;
-    struct Elf_Shdr *shdr = (struct Elf_Shdr *) (head + ehdr->e_shoff);
 
     // 名前格納用セクション
-    struct Elf_Shdr *name_shdr = (struct Elf_Shdr *) (shdr + ehdr->e_shstrndx);
+    struct Elf_Shdr *name_shdr = (struct Elf_Shdr *) (head + ehdr->e_shoff + ehdr->e_shentsize * ehdr->e_shstrndx);
     char *name_sect = head + name_shdr->sh_offset;
 
-    for (int i = 0; i < ehdr->e_shnum; i++, shdr++) {
+    for (int i = 0; i < ehdr->e_shnum; i++) {
+        struct Elf_Shdr *shdr = (struct Elf_Shdr *) (head + ehdr->e_shoff + ehdr->e_shentsize * i);
+
         char *sect_name = name_sect + shdr->sh_name;
 
         if (STRCMP(sect_name, ==, name)) {
@@ -389,4 +424,18 @@ static struct Elf_Shdr *search_shdr(struct Elf_Ehdr *ehdr, const char *name)
 }
 
 
+// タイプによるセクションヘッダの検索
+static struct Elf_Shdr *search_shdr_t(struct Elf_Ehdr *ehdr, int type)
+{
+    char *head = (char *) ehdr;
 
+    for (int i = 0; i < ehdr->e_shnum; i++) {
+        struct Elf_Shdr *shdr = (struct Elf_Shdr *) (head + ehdr->e_shoff + ehdr->e_shentsize * i);
+
+        if (shdr->sh_type == type)
+            return shdr;
+
+    }
+
+    return 0;
+}

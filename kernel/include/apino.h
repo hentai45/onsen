@@ -10,6 +10,8 @@
 #define API_EXECVE       11
 #define API_GETPID       20
 
+#define API_BRK          45
+
 #define API_GET_MESSAGE  200
 #define API_GETKEY       201
 

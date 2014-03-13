@@ -344,11 +344,12 @@ static void draw_window(int sid)
 
     int w = srf->g.w;
     int h = srf->g.h;
-    int cw = w - WINDOW_EXT_WIDTH;
-    int ch = h - WINDOW_EXT_HEIGHT;
 
     unsigned int flags = srf->flags;
     srf->flags &= ~SRF_FLG_WINDOW;
+
+    /* 全体を塗りつぶしておく */
+    fill_rect(sid, 0, 0, w, h, 0xFFFFFF);
 
     /* top border */
     fill_rect(sid,   0,   0,   w,   1, 0x969696);
@@ -372,9 +373,6 @@ static void draw_window(int sid)
 
     /* title bar */
     draw_win_titlebar(srf);
-
-    /* client area */
-    fill_rect(sid, CLIENT_X, CLIENT_Y, cw, ch, 0xFFFFFF);
 
     srf->flags = flags;
 }

@@ -25,6 +25,7 @@ int fork(void);
 int write(int fd, const void *buf, int cnt);
 int execve(const char *fname, char *const argv[], char *const envp[]);
 int getpid(void);
+int brk(void *new_brk);
 
 int get_message(struct MSG *msg);
 int getkey(int wait);

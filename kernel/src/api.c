@@ -83,6 +83,10 @@ int onsen_api(struct API_REGISTERS regs)
         ret = g_pid;
         break;
 
+    case API_BRK:
+        ret = task_set_brk((unsigned long) arg1);
+        break;
+
     case API_GET_MESSAGE:
         ret = get_message((struct MSG *) arg1);
         break;

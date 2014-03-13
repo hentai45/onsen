@@ -4,17 +4,19 @@
 #define HEADER_ELF
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "api.h"
 
-typedef unsigned int    Elf32_Addr;
-typedef unsigned short  Elf32_Half;
-typedef unsigned int    Elf32_Off;
-typedef int             Elf32_Sword;
-typedef unsigned int    Elf32_Word;
+typedef uint32_t  Elf32_Addr;
+typedef uint16_t  Elf32_Half;
+typedef uint32_t  Elf32_Off;
+typedef int32_t   Elf32_Sword;
+typedef uint32_t  Elf32_Word;
+typedef uint32_t  Elf32_Size;
 
 //-----------------------------------------------------------------------------
 
-#define EI_NIDENT   (16)
+#define EI_NIDENT   16
 
 // ELF ヘッダ
 struct Elf_Ehdr {
@@ -90,6 +92,8 @@ struct Elf_Shdr {
 };
 
 
+#define SHT_SYMTAB  2
+
 inline __attribute__ ((always_inline))
 bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
 {
@@ -97,7 +101,25 @@ bool has_section(struct Elf_Phdr *phdr, struct Elf_Shdr *shdr)
             shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz);
 }
 
+
+//-----------------------------------------------------------------------------
+
+// symbol
+struct Elf_Sym {
+    Elf32_Word    st_name;
+    Elf32_Addr    st_value;
+    Elf32_Word    st_size;
+    unsigned char st_info;
+    unsigned char st_other;
+    Elf32_Half    st_shndx;
+};
+
+
+//-----------------------------------------------------------------------------
+
+
 int elf_load(void *p, unsigned int size, const char *name);
 int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size);
+
 
 #endif

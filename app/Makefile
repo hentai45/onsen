@@ -18,6 +18,7 @@ BINS  := $(foreach fname, $(SRCS:.c=), $(BIN_DIR)/$(fname))
 
 all :
 	$(MAKE) -C api
+	$(MAKE) -C libmyc
 	cp $(KERNEL_INC_DIR)/msg.h $(INC_DIR)
 	cp $(KERNEL_INC_DIR)/keycode.h $(INC_DIR)
 	$(MAKE) $(BINS)
@@ -29,4 +30,5 @@ $(BIN_DIR)/% : %.c
 
 clean :
 	$(MAKE) clean -C api
+	$(MAKE) clean -C libmyc
 	rm -f $(BINS)

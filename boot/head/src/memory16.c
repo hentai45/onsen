@@ -48,7 +48,7 @@ static int set_memory_map_table(struct MEMORY_MAP_ENTRY *ent)
 
     // INT0x15(EAX = 0xE820) は ES:DIの位置に情報を置く。
     // IPLでESを変更しているので0に戻しておく。
-    __asm__ __volatile__ ("movw %0, %%es" : : "r" (0));
+    __asm__ __volatile__ ("mov %0, %%es" : : "r" (0));
 
     while (i_ent < MAX_ENTRIES) {
         int signature, bytes;

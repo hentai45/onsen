@@ -58,6 +58,7 @@ struct TSS {
     // メモリ
     struct USER_PAGE *code;
     struct USER_PAGE *data;
+    unsigned long brk;
     struct USER_PAGE *stack;
     // OSタスクなら普通のスタック。アプリならOS権限時のスタック
     unsigned long stack0;
@@ -89,6 +90,7 @@ void task_switch(void);
 void task_sleep(int pid);
 void task_wakeup(int pid);
 void task_set_pt(int i_pd, unsigned long pt);
+int task_set_brk(unsigned long brk);
 
 const char *task_get_name(int pid);
 void task_set_name(const char *name);
