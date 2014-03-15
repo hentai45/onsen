@@ -8,7 +8,7 @@ OBJCOPY = ${ARCH}-objcopy
 OBJDUMP = ${ARCH}-objdump
 
 SRC_DIR = src
-LDS_DIR = ldscript
+LDS_DIR = ldscripts
 INC_DIR = include
 BIN_DIR = bin
 

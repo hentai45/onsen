@@ -11,12 +11,12 @@ GDBINIT_DIR = etc/gdbinit
 
 
 # ファイル
-IMG    = $(BIN_DIR)/a.img
-IPL    = boot/ipl/$(BIN_DIR)/ipl.bin
-HEAD   = boot/head/$(BIN_DIR)/head.bin
-ONSEN  = kernel/$(BIN_DIR)/onsen.sys
-ONSEN_SYS = $(BIN_DIR)/onsen.sys
-FNAMES = kernel/$(BIN_DIR)/fnames.bin
+IMG    = $(BIN_DIR)/onsen.img
+MBR    = boot/mbr/$(BIN_DIR)/mbr
+VBR    = boot/vbr1/$(BIN_DIR)/vbr
+HEAD   = boot/head/$(BIN_DIR)/head
+ONSEN  = kernel/$(BIN_DIR)/onsen
+FNAMES = kernel/$(BIN_DIR)/fnames.dat
 APPS   = $(wildcard app/$(BIN_DIR)/*)
 
 
@@ -34,18 +34,9 @@ $(ONSEN_SYS) : $(HEAD) $(ONSEN)
 	cat $(HEAD) $(ONSEN) > $@
 
 
-$(IMG) : $(IPL) $(ONSEN_SYS) $(FNAMES) $(APPS)
-	mformat -f 1440 -C -B $(IPL) -i $@ ::
-	mcopy $(ONSEN_SYS) -i $@ ::
-	mcopy $(FNAMES) -i $@ ::
-	mcopy $(APPS) -i $@ ::
-
-
-mount : $(IMG)
-	sudo mount -o loop $< floppy
-
-umount:
-	sudo umount floppy
+$(IMG) : $(MBR) $(VBR) $(ONSEN) $(FNAMES) $(APPS)
+	cat $(MBR) $(VBR) $(HEAD) $(ONSEN) >$@
+	truncate -s 504K $@
 
 
 run :
@@ -59,39 +50,19 @@ runb :
 
 runq :
 	$(MAKE) img
-	$(QEMU) $(QEMU_FLAGS) -fda $(IMG) &
+	$(QEMU) $(QEMU_FLAGS) -hda $(IMG) &
 
 
-dipl :
+# Usage: make dbg f=gdbinit_file
+dbg :
 	$(MAKE) img
-	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
+	$(QEMU) -S -s $(QEMU_FLAGS) -hda $(IMG) &
 	sleep 1
-	gdb -x $(GDBINIT_DIR)/ipl
-
-
-dhead16 :
-	$(MAKE) img
-	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
-	sleep 1
-	gdb -x $(GDBINIT_DIR)/head16
-
-
-dhead32 :
-	$(MAKE) img
-	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
-	sleep 1
-	gdb -x $(GDBINIT_DIR)/head32
-
-
-dos :
-	$(MAKE) img
-	$(QEMU) -S -s $(QEMU_FLAGS) -fda $(IMG) &
-	sleep 1
-	gdb -x $(GDBINIT_DIR)/os
+	gdb -x $(GDBINIT_DIR)/$(f)
 
 
 clean :
 	$(MAKE) clean -C boot
 	$(MAKE) clean -C kernel
 	$(MAKE) clean -C app
-	rm -f $(IMG)
+	rm -f $(BIN_DIR)/*

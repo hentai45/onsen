@@ -1,6 +1,6 @@
 // http://wiki.osdev.org/Detecting_Memory_(x86)
 
-__asm__ (".code16gcc\n");
+__asm__ (".code16gcc");
  
 #include <stdint.h>
 #include "memory.h"

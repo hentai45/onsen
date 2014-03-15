@@ -50,6 +50,7 @@ C言語のソースファイルの先頭に、そのヘッダファイルの内�
 
 from os import listdir, stat
 from os.path import exists, isdir, join, splitext
+import sys
 from sys import argv
 
 
@@ -87,5 +88,9 @@ def make_header(src_f, dst_f):
 
 
 if __name__ == '__main__':
+    if len(argv) != 3:
+        print "Usage mkhdr src_file output_header_file"
+        sys.exit(0)
+
     main(argv[1], argv[2])
 

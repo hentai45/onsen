@@ -13,5 +13,7 @@ SECTIONS
     .signature : AT(IPLBASE + 510) {
         SHORT(0xAA55)
     }
+
+    /DISCARD/ : {*(.eh_frame)}
 }
 

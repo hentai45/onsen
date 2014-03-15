@@ -2,13 +2,15 @@
 
 SECTIONS
 {
-    . = 0xC200;
+    . = 0x7E00;
 
     .text   :   {*(.text)}
     .rodata :   {*(.rodata*)}
     .data   :   {*(.data)}
     .bss    :   {*(.bss)}
 
-    OnSenMain = .;
+    .eh_frame : {*(.eh_frame)}
+
+    OnSenElfStart = .;
 }
 

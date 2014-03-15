@@ -21,29 +21,36 @@
 
 #define VADDR_USER_ESP      (0xBFFFF000)
 
-/* FREE START               (0x00001000) */
+/* FREE LOW ADDR START      (0x00000500) */
+#define VADDR_MBR           (0xC0000500)
+#define VADDR_PARTITION_TBL (0xC0000500 + 0x1BE)  // パーティションテーブル
 /* OS_PDTはCR3レジスタに設定するので物理アドレスでなければいけない */
 #define MADDR_OS_PDT        (0x00001000)  // 4KB(0x1000)境界であること
 #define VADDR_OS_PDT        (0xC0001000)  // 4KB(0x1000)境界であること
 #define VADDR_SYS_INFO      (0xC0002000)  // システム情報が格納されているアドレス
 #define VADDR_MMAP_TBL      (0xC0003000)  // 使用可能メモリ情報のテーブル
+#define VADDR_VBR           (0xC0007C00)
 #define VADDR_BITMAP_START  (0xC0010000)  // 物理アドレス管理用ビットマップ
 #define VADDR_BITMAP_END    (0xC0030000)
-#define VADDR_BMEM_MNG      (VADDR_BITMAP_END)
-#define VADDR_VMEM_MNG      (VADDR_BMEM_MNG + 0x10000)
-/* FREE END                 (0x0009FFFF) */
-#define VADDR_DISK_IMG      (0xC0100000)
-#define VADDR_IDT           (0xC026F800)
-#define LIMIT_IDT           (0x000007FF)
-#define VADDR_GDT           (0xC0270000)
+#define VADDR_GDT           (0xC0030000)
 #define LIMIT_GDT           (0x0000FFFF)
-#define VADDR_OS            (0xC0280000)  // 最大 1,152 KB
+#define VADDR_IDT           (0xC0040000)
+#define LIMIT_IDT           (0x000007FF)
+#define VADDR_BMEM_MNG      (0xC0050000)
+#define VADDR_VMEM_MNG      (0xC0060000)
+/* FREE LOW ADDR END        (0x0009FFFF) */
+
+#define VADDR_DISK_IMG      (0xC0100000)
+#define VADDR_OS_TEXT       (0xC0100000)
+#define VADDR_OS_STACK      (0xC0200000)
+
+// FREE 2MB
+
+#define MADDR_FREE_START    (0x00400000)
 #define VADDR_MEM_START     (0xC0400000)
 #define VADDR_VRAM          (0xE0000000)
 #define VADDR_MEM_END       (VADDR_VRAM)
 #define VADDR_PD_SELF       (0xFFFFF000)
-
-#define MADDR_FREE_START    (0x00400000)
 
 
 extern struct SYSTEM_INFO *g_sys_info;

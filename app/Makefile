@@ -31,4 +31,4 @@ $(BIN_DIR)/% : %.c
 clean :
 	$(MAKE) clean -C api
 	$(MAKE) clean -C libmyc
-	rm -f $(BINS)
+	rm -f $(BIN_DIR)/* $(OBJS)

@@ -163,13 +163,13 @@ int elf_load(void *p, unsigned int size, const char *name)
     /*
     if ( ! is_elf(ehdr)) {
         dbgf("This is not ELF file.\n");
-        return 0;
+        return -1;
     }
     */
 
     if (ehdr->e_type != ET_EXEC) {
         dbgf("This is not executable file.\n");
-        return 0;
+        return -1;
     }
 
     // ---- ロード
@@ -177,7 +177,6 @@ int elf_load(void *p, unsigned int size, const char *name)
     cli();
 
     struct Elf_Phdr *phdr = (struct Elf_Phdr *) (head + ehdr->e_phoff);
-    struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
     struct USER_PAGE *code = 0, *data = 0;
 
@@ -199,7 +198,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_filesz, phdr->p_memsz);
 
             code = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
-            memcpy((void *) (code->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            memcpy((void *) phdr->p_vaddr, head + phdr->p_offset, phdr->p_filesz);
             break;
 
         // ---- .data
@@ -214,9 +213,11 @@ int elf_load(void *p, unsigned int size, const char *name)
                     phdr->p_filesz, phdr->p_memsz);
 
             data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, PTE_RW);
-            memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            memcpy((void *) phdr->p_vaddr, head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
+
+            struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
             if (bss_shdr) {
                 dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
@@ -293,7 +294,6 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
     // ---- ロード
 
     struct Elf_Phdr *phdr = (struct Elf_Phdr *) (head + ehdr->e_phoff);
-    struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
     struct USER_PAGE *code = 0, *data = 0;
 
@@ -315,7 +315,7 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
                     phdr->p_filesz, phdr->p_memsz);
 
             code = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, 0);
-            memcpy((void *) (code->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            memcpy((void *) phdr->p_vaddr, head + phdr->p_offset, phdr->p_filesz);
             break;
 
         // ---- .data
@@ -330,9 +330,11 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
                     phdr->p_filesz, phdr->p_memsz);
 
             data = mem_alloc_user_page(phdr->p_vaddr, phdr->p_memsz, PTE_RW);
-            memcpy((void *) (data->vaddr + (phdr->p_vaddr & 0xFFF)), head + phdr->p_offset, phdr->p_filesz);
+            memcpy((void *) phdr->p_vaddr, head + phdr->p_offset, phdr->p_filesz);
 
             // ---- .bss 領域を0クリア
+
+            struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
             if (bss_shdr) {
                 dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
