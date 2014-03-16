@@ -7,6 +7,9 @@
 #ifndef HEADER_ASMFUNC
 #define HEADER_ASMFUNC
 
+#include <stdint.h>
+
+
 inline __attribute__ ((always_inline))
 static void hlt(void)
 {
@@ -36,7 +39,7 @@ static void sti(void)
 
 
 inline __attribute__ ((always_inline))
-static void outb(unsigned short port, unsigned char data)
+static void outb(uint16_t port, uint8_t data)
 {
     __asm__ __volatile__ (
         "outb %0, %1"
@@ -48,9 +51,9 @@ static void outb(unsigned short port, unsigned char data)
 
 
 inline __attribute__ ((always_inline))
-static unsigned char inb(unsigned short port)
+static uint8_t inb(uint16_t port)
 {
-    unsigned char ret;
+    uint8_t ret;
 
     __asm__ __volatile__ (
         "inb %1, %0"
@@ -64,7 +67,7 @@ static unsigned char inb(unsigned short port)
 
 
 inline __attribute__ ((always_inline))
-static void outw(unsigned short port, unsigned short data)
+static void outw(uint16_t port, uint16_t data)
 {
     __asm__ __volatile__ (
         "outw %0, %1"
@@ -72,6 +75,22 @@ static void outw(unsigned short port, unsigned short data)
         :
         : "q" (data), "q" (port)
     );
+}
+
+
+inline __attribute__ ((always_inline))
+static uint16_t inw(uint16_t port)
+{
+    uint16_t ret;
+
+    __asm__ __volatile__ (
+        "inw %1, %0"
+
+        : "=a" (ret)
+        : "d" (port)
+    );
+
+    return ret;
 }
 
 

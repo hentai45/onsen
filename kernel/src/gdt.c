@@ -40,8 +40,10 @@
 #define USER_CS    (4 << 3)  // 0x20 アプリケーションのコードセグメントのセレクタ値
 #define SEG_TSS    5         // TSSをGDTの何番から割当てるのか
 
+#define DPL0  0
+#define DPL3  3
 
-struct TSS;
+
 void gdt_init(void);
 void set_seg_desc(int no, unsigned long addr,
         unsigned long limit, int segtype, int seg32type, int dpl);
@@ -58,7 +60,6 @@ void set_data_seg(int no, unsigned long addr, unsigned long limit, int dpl);
 #include "memory.h"
 #include "str.h"
 #include "task.h"
-
 
 struct SEG_DESC {
     unsigned short limit_low;
@@ -81,7 +82,7 @@ struct GDTR {
 
 inline static void load_gdtr(struct GDTR *gdtr)
 {
-    __asm__ volatile("lgdt (%0)" : : "q" (gdtr));
+    __asm__ __volatile__ ("lgdt (%0)" : : "q" (gdtr));
 }
 
 
@@ -95,10 +96,10 @@ void gdt_init(void)
         set_seg_desc(i, 0, 0, 0, 0, 0);
     }
 
-    set_data_seg(KERNEL_DS >> 3, 0x00000000, 0xFFFFFFFF, /* dpl = */ 0);
-    set_code_seg(KERNEL_CS >> 3, 0x00000000, 0xFFFFFFFF, /* dpl = */ 0);
-    set_data_seg(USER_DS >> 3  , 0x00000000, 0xFFFFFFFF, /* dpl = */ 3);
-    set_code_seg(USER_CS >> 3  , 0x00000000, 0xFFFFFFFF, /* dpl = */ 3);
+    set_data_seg(KERNEL_DS >> 3, 0x00000000, 0xFFFFFFFF, DPL0);
+    set_code_seg(KERNEL_CS >> 3, 0x00000000, 0xFFFFFFFF, DPL0);
+    set_data_seg(USER_DS >> 3  , 0x00000000, 0xFFFFFFFF, DPL3);
+    set_code_seg(USER_CS >> 3  , 0x00000000, 0xFFFFFFFF, DPL3);
 
     struct GDTR gdtr;
     gdtr.limit = LIMIT_GDT;

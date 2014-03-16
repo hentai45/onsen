@@ -29,10 +29,10 @@ void set_gate_desc(int no, unsigned short sel, void (*f)(void),
 
 
 // SET_INTR_GATE(0A) での展開なら以下のようになる。
-// set_gate_desc(0x0A, 2 << 3, asm_int0A_handler, 0, SEG_TYPE_INTR_GATE, 0)
+// set_gate_desc(0x0A, KERNEL_CS, asm_int0A_handler, 0, SEG_TYPE_INTR_GATE, DPL0)
 
-#define SET_INTR_GATE(NO) set_gate_desc(0x ## NO, 2 << 3,\
-        asm_int ## NO ## _handler, 0, SEG_TYPE_INTR_GATE, 0)
+#define SET_INTR_GATE(NO) set_gate_desc(0x ## NO, KERNEL_CS,\
+        asm_int ## NO ## _handler, 0, SEG_TYPE_INTR_GATE, DPL0)
 
 
 struct GATE_DESC {
@@ -95,7 +95,7 @@ void idt_init(void)
     // ２つの違いはこれのみ
 
     // システムコールのためのゲートを設定
-    set_gate_desc(IDT_API_NO, KERNEL_CS, asm_api, 0, SEG_TYPE_TRAP_GATE, 3);
+    set_gate_desc(IDT_API_NO, KERNEL_CS, asm_api, 0, SEG_TYPE_TRAP_GATE, DPL3);
 }
 
 

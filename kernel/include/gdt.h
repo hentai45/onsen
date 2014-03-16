@@ -35,8 +35,10 @@
 #define USER_CS    (4 << 3)  // 0x20 アプリケーションのコードセグメントのセレクタ値
 #define SEG_TSS    5         // TSSをGDTの何番から割当てるのか
 
+#define DPL0  0
+#define DPL3  3
 
-struct TSS;
+
 void gdt_init(void);
 void set_seg_desc(int no, unsigned long addr,
         unsigned long limit, int segtype, int seg32type, int dpl);

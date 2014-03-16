@@ -589,6 +589,8 @@ void *mem_alloc_maddr(void)
     return 0;
 }
 
+// TODO
+#include "ata/common.h"
 
 static void dbg_mem_mng(struct MEM_MNG *mng);
 
@@ -601,6 +603,10 @@ void mem_dbg(void)
     DBGF("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
     dbgf("\n");
+
+    ata_init();
+    uint16_t *p = g_ata0->identity;
+    dbgf("%X %X %X %X\n", p[0], p[1], p[2], p[3]);
 }
 
 static void dbg_mem_mng(struct MEM_MNG *mng)
