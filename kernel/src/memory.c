@@ -475,6 +475,8 @@ int mem_free_maddr(void *vp_maddr)
 }
 
 
+static void merge_vaddr(void *first_page);
+
 int mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end)
 {
     ASSERT(page, "");
@@ -489,23 +491,7 @@ int mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end)
     ASSERT(page->end_vaddr == new_page->vaddr, "");
 
     // 古いページと新しいページを１つにまとめる
-
-    void *last_page = (void *) (page->end_vaddr - 0x1000);
-    int flg = paging_get_flags(last_page);
-    ASSERT(flg & PTE_END, "not found end flag");
-    flg &= ~PTE_END;
-    if ((flg & PTE_START) == 0) {
-        flg |= PTE_CONT;
-    }
-    paging_set_flags(last_page, flg);
-
-    flg = paging_get_flags((void *) new_page->vaddr);
-    ASSERT(flg & PTE_START, "not found start flag");
-    flg &= ~PTE_START;
-    if ((flg & PTE_END) == 0) {
-        flg |= PTE_CONT;
-    }
-    paging_set_flags((void *) new_page->vaddr, flg);
+    merge_vaddr((void *) new_page->vaddr);
 
     dbgf("expanded user page. %#X => %#X\n", page->end_vaddr, new_page->end_vaddr);
 
@@ -537,23 +523,7 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     ASSERT(new_stack_page->end_vaddr == stack->vaddr, "");
 
     // 古いスタックと新しいスタックを１つにまとめる
-
-    void *new_stack_last = (void *) (stack->vaddr - 0x1000);
-    int flg = paging_get_flags(new_stack_last);
-    ASSERT(flg & PTE_END, "not found end flag");
-    flg &= ~PTE_END;
-    if ((flg & PTE_START) == 0) {
-        flg |= PTE_CONT;
-    }
-    paging_set_flags(new_stack_last, flg);
-
-    flg = paging_get_flags((void *) stack->vaddr);
-    ASSERT(flg & PTE_START, "not found start flag");
-    flg &= ~PTE_START;
-    if ((flg & PTE_END) == 0) {
-        flg |= PTE_CONT;
-    }
-    paging_set_flags((void *) stack->vaddr, flg);
+    merge_vaddr((void *) stack->vaddr);
 
     dbgf("expanded stack. %#X => %#X\n", stack->vaddr, new_stack);
 
@@ -561,6 +531,27 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     stack->vaddr = new_stack;
 
     return 0;
+}
+
+
+static void merge_vaddr(void *first_page)
+{
+    void *last_page = (void *) ((unsigned long) first_page - 0x1000);
+    int flg = paging_get_flags(last_page);
+    ASSERT(flg & PTE_END, "not found end flag");
+    flg &= ~PTE_END;
+    if ((flg & PTE_START) == 0) {
+        flg |= PTE_CONT;
+    }
+    paging_set_flags(last_page, flg);
+
+    flg = paging_get_flags(first_page);
+    ASSERT(flg & PTE_START, "not found start flag");
+    flg &= ~PTE_START;
+    if ((flg & PTE_END) == 0) {
+        flg |= PTE_CONT;
+    }
+    paging_set_flags(first_page, flg);
 }
 
 
