@@ -6,13 +6,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// ATA シグネチャ
+// ---- ATA シグネチャ
+
 #define ATA_SIG_PATA    0x0000
 #define ATA_SIG_PATAPI  0xEB14
 //#define ATA_SIG_SATA    0xC33C
 //#define ATA_SIG_SATAPI  0x9669
 
-// ATA デバイスタイプ
+
+// ---- ATA デバイスタイプ
+
 #define ATA_TYPE_NON     (1 << 0)  // 未接続
 #define ATA_TYPE_UNKNOWN (1 << 1)  // 不明デバイス
 #define ATA_TYPE_PATA    (1 << 2)
@@ -21,12 +24,21 @@
 //#define ATA_TYPE_SATAPI  (1 << 5)
 
 
+// ---- ATA モード
+
+#define PIO_MODE0     0
+#define PIO_MODE3     3
+#define PIO_MODE4     4
+#define PIO_MODE_NON  0xFF
+
+
 // ---- I/O ポート
 
 #define ATA_PORT_DATA(dev)          ((dev)->base_port + 0)
 #define ATA_PORT_FEATURES(dev)      ((dev)->base_port + 1)
 #define ATA_PORT_ERR(dev)           ((dev)->base_port + 1)
 #define ATA_PORT_SECTOR_CNT(dev)    ((dev)->base_port + 2)
+#define ATA_PORT_SECTOR_NO(dev)     ((dev)->base_port + 3)
 #define ATA_PORT_LBA_LOW(dev)       ((dev)->base_port + 3)
 #define ATA_PORT_CYL_LO(dev)        ((dev)->base_port + 4)
 #define ATA_PORT_LBA_MID(dev)       ((dev)->base_port + 4)
@@ -51,11 +63,15 @@
 // Device/Head レジスタ
 #define ATA_DH_SEL_DEV0  0         // マスタ
 #define ATA_DH_SEL_DEV1  (1 << 4)  // スレーブ
+#define ATA_DH_LBA       (1 << 6)
+#define ATA_DH_OBS       0xA0      // obsolete
 
 // Device Control レジスタ
 #define ATA_DC_nIEN  (1 << 1)  // INTRQ信号の有効／無効
 #define ATA_DC_SRST  (1 << 2)  // ソフトウェア・リセット
 
+
+struct ATA_INFO;
 
 struct ATA_DEV {
     int base_port;
@@ -63,7 +79,9 @@ struct ATA_DEV {
     int dev_ctrl_port;  // Device Control Registers/Alternate Status ports
     int type;  // デバイスタイプ
     int sel_dev;  // マスタならATA_DH_SEL_DEV0, スレーブならATA_DH_SEL_DEV1
+    int mode;
     uint16_t identity[256];  // IDENTIFY DEVICE コマンドを実行したした結果wwwwww
+    struct ATA_INFO *info;
 };
 
 
@@ -74,11 +92,11 @@ extern struct ATA_DEV *g_ata1;
 void ata_init(void);
 
 int ata_select_device(struct ATA_DEV *dev);
+int ata_select_device_ext(struct ATA_DEV *dev, uint8_t ext_flags);
 void ata_wait_5ms(struct ATA_DEV *dev);
 void ata_wait_400ns(struct ATA_DEV *dev);
 int ata_wait_busy_clear(struct ATA_DEV *dev);
 int ata_wait_ready_set(struct ATA_DEV *dev);
 int ata_wait_busy_and_request_clear(struct ATA_DEV *dev);
-void ata_read_data(struct ATA_DEV *dev, uint16_t *buf, int len);
 
 #endif

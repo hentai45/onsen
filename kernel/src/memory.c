@@ -591,6 +591,7 @@ void *mem_alloc_maddr(void)
 
 // TODO
 #include "ata/common.h"
+#include "ata/cmd.h"
 
 static void dbg_mem_mng(struct MEM_MNG *mng);
 
@@ -604,9 +605,10 @@ void mem_dbg(void)
     dbg_mem_mng(l_mng_v);
     dbgf("\n");
 
+    int buf[128];
     ata_init();
-    uint16_t *p = g_ata0->identity;
-    dbgf("%X %X %X %X\n", p[0], p[1], p[2], p[3]);
+    ata_cmd_read_sectors(g_ata0, 1, buf, 1);
+    dbgf("read: %X %X %X %X\n", buf[0], buf[1], buf[2], buf[3]);
 }
 
 static void dbg_mem_mng(struct MEM_MNG *mng)

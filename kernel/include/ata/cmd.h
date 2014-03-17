@@ -3,9 +3,16 @@
 #ifndef HEADER_ATA_CMD
 #define HEADER_ATA_CMD
 
+// SET FEATURES の Subcommand code
+#define SET_TRANSFER  0x03
+
 #include "ata/common.h"
 
+int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt);
 int ata_cmd_identify_device(struct ATA_DEV *dev);
+int ata_cmd_set_features(struct ATA_DEV *dev, uint8_t sub_cmd, uint8_t mode);
+int ata_cmd_idle(struct ATA_DEV *dev);
+int ata_cmd_init_dev_params(struct ATA_DEV *dev);
 
 
 #endif

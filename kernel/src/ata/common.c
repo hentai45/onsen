@@ -15,13 +15,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// ATA シグネチャ
+// ---- ATA シグネチャ
+
 #define ATA_SIG_PATA    0x0000
 #define ATA_SIG_PATAPI  0xEB14
 //#define ATA_SIG_SATA    0xC33C
 //#define ATA_SIG_SATAPI  0x9669
 
-// ATA デバイスタイプ
+
+// ---- ATA デバイスタイプ
+
 #define ATA_TYPE_NON     (1 << 0)  // 未接続
 #define ATA_TYPE_UNKNOWN (1 << 1)  // 不明デバイス
 #define ATA_TYPE_PATA    (1 << 2)
@@ -30,12 +33,21 @@
 //#define ATA_TYPE_SATAPI  (1 << 5)
 
 
+// ---- ATA モード
+
+#define PIO_MODE0     0
+#define PIO_MODE3     3
+#define PIO_MODE4     4
+#define PIO_MODE_NON  0xFF
+
+
 // ---- I/O ポート
 
 #define ATA_PORT_DATA(dev)          ((dev)->base_port + 0)
 #define ATA_PORT_FEATURES(dev)      ((dev)->base_port + 1)
 #define ATA_PORT_ERR(dev)           ((dev)->base_port + 1)
 #define ATA_PORT_SECTOR_CNT(dev)    ((dev)->base_port + 2)
+#define ATA_PORT_SECTOR_NO(dev)     ((dev)->base_port + 3)
 #define ATA_PORT_LBA_LOW(dev)       ((dev)->base_port + 3)
 #define ATA_PORT_CYL_LO(dev)        ((dev)->base_port + 4)
 #define ATA_PORT_LBA_MID(dev)       ((dev)->base_port + 4)
@@ -60,11 +72,15 @@
 // Device/Head レジスタ
 #define ATA_DH_SEL_DEV0  0         // マスタ
 #define ATA_DH_SEL_DEV1  (1 << 4)  // スレーブ
+#define ATA_DH_LBA       (1 << 6)
+#define ATA_DH_OBS       0xA0      // obsolete
 
 // Device Control レジスタ
 #define ATA_DC_nIEN  (1 << 1)  // INTRQ信号の有効／無効
 #define ATA_DC_SRST  (1 << 2)  // ソフトウェア・リセット
 
+
+struct ATA_INFO;
 
 struct ATA_DEV {
     int base_port;
@@ -72,7 +88,9 @@ struct ATA_DEV {
     int dev_ctrl_port;  // Device Control Registers/Alternate Status ports
     int type;  // デバイスタイプ
     int sel_dev;  // マスタならATA_DH_SEL_DEV0, スレーブならATA_DH_SEL_DEV1
+    int mode;
     uint16_t identity[256];  // IDENTIFY DEVICE コマンドを実行したした結果wwwwww
+    struct ATA_INFO *info;
 };
 
 
@@ -83,12 +101,12 @@ extern struct ATA_DEV *g_ata1;
 void ata_init(void);
 
 int ata_select_device(struct ATA_DEV *dev);
+int ata_select_device_ext(struct ATA_DEV *dev, uint8_t ext_flags);
 void ata_wait_5ms(struct ATA_DEV *dev);
 void ata_wait_400ns(struct ATA_DEV *dev);
 int ata_wait_busy_clear(struct ATA_DEV *dev);
 int ata_wait_ready_set(struct ATA_DEV *dev);
 int ata_wait_busy_and_request_clear(struct ATA_DEV *dev);
-void ata_read_data(struct ATA_DEV *dev, uint16_t *buf, int len);
 
 #endif
 
@@ -98,6 +116,7 @@ void ata_read_data(struct ATA_DEV *dev, uint16_t *buf, int len);
 
 #include "asmfunc.h"
 #include "ata/cmd.h"
+#include "ata/info.h"
 #include "debug.h"
 
 
@@ -128,9 +147,11 @@ struct ATA_DEV *g_ata1 = &l_ata1;
 static int init_ata_dev(struct ATA_DEV *dev);
 static void get_signature(struct ATA_DEV *dev);
 static int get_identity(struct ATA_DEV *dev);
+static void check_device_mode(struct ATA_DEV *dev);
+static int init_device_mode(struct ATA_DEV *dev);
+
 static void select_device(struct ATA_DEV *dev);
 static void soft_reset(struct ATA_DEV *dev, bool enable_intr);
-
 
 //=============================================================================
 // 関数
@@ -160,6 +181,13 @@ static int init_ata_dev(struct ATA_DEV *dev)
 
     get_signature(dev);
     get_identity(dev);
+
+    if (dev->type != ATA_TYPE_PATA && dev->type != ATA_TYPE_PATAPI) {
+        return -1;
+    }
+
+    check_device_mode(dev);
+    init_device_mode(dev);
 
     return 0;
 }
@@ -250,6 +278,7 @@ static int get_identity(struct ATA_DEV *dev)
             return -1;
         }
 
+        ata_anal_id(dev);
         return 0;
     }
 
@@ -259,9 +288,73 @@ static int get_identity(struct ATA_DEV *dev)
 }
 
 
+static void check_device_mode(struct ATA_DEV *dev)
+{
+    if (dev->type != ATA_TYPE_PATA && dev->type != ATA_TYPE_PATAPI) {
+        dev->mode = PIO_MODE_NON;
+    }
+
+    if (dev->info->support_pio_mode & SUPPORT_PIO_MODE4) {
+        dev->mode = PIO_MODE4;
+    } else if (dev->info->support_pio_mode & SUPPORT_PIO_MODE3) {
+        dev->mode = PIO_MODE3;
+    } else {
+        dev->mode = PIO_MODE0;
+    }
+}
+
+
+static int init_device_mode(struct ATA_DEV *dev)
+{
+    if (dev->type != ATA_TYPE_PATA && dev->type != ATA_TYPE_PATAPI) {
+        return -1;
+    }
+
+    if (ata_select_device(dev) < 0) {
+        DBGF("ERROR");
+        return -1;
+    }
+
+    if (dev->type == ATA_TYPE_PATA) {
+        if (ata_cmd_init_dev_params(dev) < 0) {
+            DBGF("ERROR");
+            return -1;
+        }
+
+        if (ata_cmd_idle(dev) < 0) {
+            DBGF("ERROR");
+            return -1;
+        }
+    } else if (dev->type == ATA_TYPE_PATAPI) {
+        if (dev->info->support_pow_mng) {
+            if (ata_cmd_idle(dev) < 0) {
+                DBGF("ERROR");
+                return -1;
+            }
+        }
+    } else {
+        ERROR("");
+    }
+
+    if (dev->info->support_iordy) {
+        if (ata_cmd_set_features(dev, SET_TRANSFER, 0x08 | (dev->mode & 7)) < 0) {
+            ata_cmd_set_features(dev, SET_TRANSFER, 0);
+            dev->mode = 0;
+        } else {
+            dbgf("successful set features\n");
+        }
+    } else {
+        ata_cmd_set_features(dev, SET_TRANSFER, 0);
+        dev->mode = 0;
+    }
+
+    return 0;
+}
+
+
 static void select_device(struct ATA_DEV *dev)
 {
-    outb(ATA_PORT_DRIVE_HEAD(dev), dev->sel_dev);
+    outb(ATA_PORT_DRIVE_HEAD(dev), dev->sel_dev | ATA_DH_OBS);
     ata_wait_400ns(dev);
 }
 
@@ -271,7 +364,18 @@ int ata_select_device(struct ATA_DEV *dev)
 {
     ata_wait_busy_and_request_clear(dev);
 
-    outb(ATA_PORT_DRIVE_HEAD(dev), dev->sel_dev);
+    outb(ATA_PORT_DRIVE_HEAD(dev), dev->sel_dev | ATA_DH_OBS);
+    ata_wait_400ns(dev);
+
+    return ata_wait_busy_and_request_clear(dev);
+}
+
+
+int ata_select_device_ext(struct ATA_DEV *dev, uint8_t ext_flags)
+{
+    ata_wait_busy_and_request_clear(dev);
+
+    outb(ATA_PORT_DRIVE_HEAD(dev), dev->sel_dev | ATA_DH_OBS | ext_flags);
     ata_wait_400ns(dev);
 
     return ata_wait_busy_and_request_clear(dev);
@@ -344,19 +448,4 @@ int ata_wait_busy_and_request_clear(struct ATA_DEV *dev)
 
     DBGF("time out");
     return -1;
-}
-
-
-void ata_read_data(struct ATA_DEV *dev, uint16_t *buf, int len)
-{
-    if (buf) {
-        for (int i = 0; i < len; i++) {
-            *buf++ = inw(ATA_PORT_DATA(dev));
-        }
-    } else {
-        // データの空読み
-        for (int i = 0; i < len; i++) {
-            inw(ATA_PORT_DATA(dev));
-        }
-    }
 }
