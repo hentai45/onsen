@@ -9,6 +9,8 @@ BOCHS = bochs
 # ディレクトリ
 GDBINIT_DIR = etc/gdbinit
 
+MOUNT_DIR = partition2
+
 
 # ファイル
 IMG    = $(BIN_DIR)/onsen.img
@@ -18,6 +20,7 @@ HEAD   = boot/head/$(BIN_DIR)/head
 ONSEN  = kernel/$(BIN_DIR)/onsen
 FNAMES = kernel/$(BIN_DIR)/fnames.dat
 APPS   = $(wildcard app/$(BIN_DIR)/*)
+VOL2   = vol2.img
 
 
 all : img
@@ -30,13 +33,30 @@ img :
 	$(MAKE) $(IMG)
 
 
-$(ONSEN_SYS) : $(HEAD) $(ONSEN)
-	cat $(HEAD) $(ONSEN) > $@
-
-
-$(IMG) : $(MBR) $(VBR) $(ONSEN) $(FNAMES) $(APPS)
+$(IMG) : $(MBR) $(VBR) $(HEAD) $(ONSEN)
 	cat $(MBR) $(VBR) $(HEAD) $(ONSEN) >$@
-	truncate -s 504K $@
+	truncate -s 516096 $@
+	dd bs=512 skip=1008 if=$(VOL2) count=2016 >>$@
+
+
+vol2 : $(VOL2)
+
+
+$(VOL2) : $(MBR) $(FNAMES) $(APPS)
+	cp $(MBR) $@
+	truncate -s 1548288 $@
+	sudo losetup -o516096 /dev/loop0 $@
+	sudo mke2fs /dev/loop0
+	sudo mount -text2 /dev/loop0 $(MOUNT_DIR)
+	sudo cp $(FNAMES) $(MOUNT_DIR)
+	sudo cp $(APPS) $(MOUNT_DIR)
+	sync
+	sudo umount /dev/loop0
+	sudo losetup -d /dev/loop0
+
+
+fdisk :
+	@fdisk -u -C3 -S63 -H16 $(IMG)
 
 
 run :

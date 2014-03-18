@@ -62,11 +62,24 @@ int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt)
     uint8_t sec_no, cyl_lo, cyl_hi, dev_head;
 
     if (dev->info->support_lba) {
+        // TODO: check valid
+
         sec_no   = lba & 0xFF;
         cyl_lo   = (lba >> 8) & 0xFF;
         cyl_hi   = (lba >> 16) & 0xFF;
-        dev_head = ((lba >> 24) & 0xF) & ATA_DH_LBA;
+        dev_head = ((lba >> 24) & 0xF) | ATA_DH_LBA;
+
+        uint16_t h = dev->info->cur_heads;
+        uint16_t s = dev->info->cur_sectors;
+
+        uint16_t cc = lba / (s * h);
+        uint16_t hh = (lba / s) % h;
+        uint16_t ss = (lba % s) + 1;
+
+        dbgf("read: lba = %d, c = %d, h = %d, s = %d\n", lba, cc, hh, ss);
     } else {
+        // TODO: check valid
+
         // LBA => CHS
 
         uint16_t h = dev->info->cur_heads;
@@ -77,6 +90,8 @@ int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt)
         cyl_lo   = cyl & 0xFF;
         cyl_hi   = (cyl >> 8) & 0xFF;
         dev_head = (lba / s) % h;
+
+        dbgf("read: lba = %d, c = %d, h = %d, s = %d\n", lba, cyl, dev_head, sec_no);
     }
 
     if (ata_select_device_ext(dev, dev_head) < 0) {
@@ -168,7 +183,7 @@ static int non_data_cmd(uint8_t cmd, struct ATA_DEV *dev, bool check_ready)
     ata_wait_400ns(dev);
 
     if (ata_wait_busy_clear(dev) < 0) {
-        DBGF("ERROR");
+        DBGF("ERROR. cmd = %X", cmd);
         return -2;
     }
 
@@ -176,7 +191,7 @@ static int non_data_cmd(uint8_t cmd, struct ATA_DEV *dev, bool check_ready)
     int status = inb(ATA_PORT_STATUS(dev));
 
     if (status & ATA_ST_ERR) {
-        DBGF("ERROR");
+        DBGF("ERROR. cmd = %X", cmd);
         //int err = inb(ATA_PORT_ERR(dev));
         return -1;
     }
@@ -203,19 +218,19 @@ static int pio_data_in_cmd(uint8_t cmd, struct ATA_DEV *dev,
 
     for (int i = 0; i < cnt; i++) {
         if (ata_wait_busy_clear(dev) < 0) {
-            DBGF("ERROR");
+            DBGF("ERROR. cmd = %X", cmd);
             return -2;
         }
 
         int status = inb(ATA_PORT_ALT_STATUS(dev));
 
         if (status & ATA_ST_ERR) {
-            DBGF("ERROR");
+            DBGF("ERROR. cmd = %X", cmd);
             break;  // コマンド実行エラー
         }
 
         if ((status & ATA_ST_DRQ) == 0) {
-            DBGF("ERROR");
+            DBGF("ERROR. cmd = %X", cmd);
             return -3;  // なぜかデータが用意されていない
         }
 
@@ -227,7 +242,7 @@ static int pio_data_in_cmd(uint8_t cmd, struct ATA_DEV *dev,
     int status = inb(ATA_PORT_STATUS(dev));
 
     if (status & ATA_ST_ERR) {
-        DBGF("ERROR");
+        DBGF("ERROR. cmd = %X", cmd);
         //int err = inb(ATA_PORT_ERR(dev));
         return -1;
     }

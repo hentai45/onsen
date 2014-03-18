@@ -34,7 +34,6 @@
 #define VADDR_VMEM_MNG      (0xC0060000)
 /* FREE LOW ADDR END        (0x0009FFFF) */
 
-#define VADDR_DISK_IMG      (0xC0100000)
 #define VADDR_OS_TEXT       (0xC0100000)
 #define VADDR_OS_STACK      (0xC0200000)
 

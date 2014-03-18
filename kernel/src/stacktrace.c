@@ -24,7 +24,6 @@ char *get_func_name(unsigned int addr);
 //=============================================================================
 // 非公開ヘッダ
 
-#include "fat12.h"
 #include "memory.h"
 #include "str.h"
 
@@ -45,6 +44,7 @@ static int l_num_fnames = 0;
 
 void init_func_names(void)
 {
+    /*
     struct FILEINFO *finfo = fat12_get_file_info();
     int i = fat12_search_file(finfo, FNAMES_FILE_NAME);
 
@@ -54,6 +54,7 @@ void init_func_names(void)
     l_num_fnames = finfo[i].size / sizeof(struct FUNC_NAME);
     l_func_names = (struct FUNC_NAME *) mem_alloc(finfo[i].size);
     fat12_load_file(finfo[i].clustno, finfo[i].size, (char *) l_func_names);
+    */
 }
 
 

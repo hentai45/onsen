@@ -177,7 +177,7 @@ void ata_init(void)
 
 static int init_ata_dev(struct ATA_DEV *dev)
 {
-    dbgf("[ata init] device %d\n", (dev->sel_dev) ? 1 : 0);
+    dbgf("---------- ata device %d ----------\n", (dev->sel_dev) ? 1 : 0);
 
     get_signature(dev);
     get_identity(dev);
@@ -188,6 +188,8 @@ static int init_ata_dev(struct ATA_DEV *dev)
 
     check_device_mode(dev);
     init_device_mode(dev);
+
+    dbgf("\n");
 
     return 0;
 }

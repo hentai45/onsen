@@ -23,7 +23,7 @@ extern struct FILE_T *f_console;
 #include "asmfunc.h"
 #include "debug.h"
 #include "elf.h"
-#include "fat12.h"
+#include "ext2fs.h"
 #include "gdt.h"
 #include "graphic.h"
 #include "keycode.h"
@@ -370,33 +370,17 @@ static void run_cmd(char *cmd_name)
 
 void cmd_ls(void)
 {
-    struct FILEINFO *finfo = fat12_get_file_info();
-    char s[30];
+    struct DIRECTORY *dir = ext2_open_dir(2);
 
-    for (int i = 0; i < 224; i++) {
-        // ここで終了か？
-        if (finfo[i].name[0] == 0x00)
-            break;
+    ASSERT(dir, "");
 
-        // 削除されたファイルは飛ばす
-        if (finfo[i].name[0] == 0xE5)
-            continue;
+    struct DIRECTORY_ENTRY *ent;
 
-        // 隠しファイルかディレクトリなら次へ
-        if ((finfo[i].type & 0x18) != 0)
-            continue;
-
-        for (int y = 0; y < 8; y++) {
-            s[y] = finfo[i].name[y];
-        }
-        s[8] = '.';
-        s[9] = finfo[i].ext[0];
-        s[10] = finfo[i].ext[1];
-        s[11] = finfo[i].ext[2];
-        s[12] = 0;
-
-        putf("%s   %d\n", s, finfo[i].size);
+    while ((ent = ext2_read_dir(dir)) != 0) {
+        putf("%.*s\n", ent->name_len, ent->name);
     }
+
+    ext2_close_dir(dir);
 
     newline();
 }
@@ -413,6 +397,7 @@ static void cmd_clear(void)
 
 static void cmd_cat(char *fname)
 {
+    /*
     struct FILEINFO *finfo = fat12_get_file_info();
     int i = fat12_search_file(finfo, fname);
 
@@ -427,6 +412,7 @@ static void cmd_cat(char *fname)
     }
 
     newline();
+    */
 }
 
 
@@ -517,6 +503,7 @@ static void cmd_dbg(char *name)
 
 static int cmd_app(char *cmd_name, int bgp)
 {
+    /*
     // コマンドラインからファイル名を生成
     char name[32];
 
@@ -556,6 +543,7 @@ static int cmd_app(char *cmd_name, int bgp)
     } else {
         timer_stop(cursor_tid);
     }
+    */
 
     return 0;
 }

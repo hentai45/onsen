@@ -136,7 +136,6 @@ int g_idle_pid;
 #include "console.h"
 #include "debug.h"
 #include "elf.h"
-#include "fat12.h"
 #include "gdt.h"
 #include "graphic.h"
 #include "memory.h"
@@ -474,6 +473,7 @@ int execve(const char *cmd, char **argv, char **envp)
 
 int task_exec(struct API_REGISTERS *regs, const char *fname)
 {
+    /*
     struct FILEINFO *finfo = fat12_get_file_info();
     int i_fi = fat12_search_file(finfo, fname);
 
@@ -531,6 +531,8 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
     mem_free(p);
 
     return ret;
+    */
+    return 0;
 }
 
 

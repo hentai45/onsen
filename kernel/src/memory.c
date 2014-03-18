@@ -40,7 +40,6 @@
 #define VADDR_VMEM_MNG      (0xC0060000)
 /* FREE LOW ADDR END        (0x0009FFFF) */
 
-#define VADDR_DISK_IMG      (0xC0100000)
 #define VADDR_OS_TEXT       (0xC0100000)
 #define VADDR_OS_STACK      (0xC0200000)
 
@@ -580,9 +579,6 @@ void *mem_alloc_maddr(void)
     return 0;
 }
 
-// TODO
-#include "ata/common.h"
-#include "ata/cmd.h"
 
 static void dbg_mem_mng(struct MEM_MNG *mng);
 
@@ -595,11 +591,6 @@ void mem_dbg(void)
     DBGF("DEBUG PAGE UNIT MEMORY MANAGE");
     dbg_mem_mng(l_mng_v);
     dbgf("\n");
-
-    int buf[128];
-    ata_init();
-    ata_cmd_read_sectors(g_ata0, 1, buf, 1);
-    dbgf("read: %X %X %X %X\n", buf[0], buf[1], buf[2], buf[3]);
 }
 
 static void dbg_mem_mng(struct MEM_MNG *mng)

@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+HEADS = 16
+SECTORS = 63  # sectors per track
+
+def main():
+    lba = int(input('lba: '))
+
+    c = lba / (SECTORS * HEADS)
+    h = (lba / SECTORS) % HEADS
+    s = lba % SECTORS + 1
+
+    print 'c = %d, h = %d, s = %d' % (c, h, s)
+    print 'partition table entry: %d %d %d' % (h, s | (c & 0x300), c & 0xFF)
+
+
+if __name__ == '__main__':
+    main()
+

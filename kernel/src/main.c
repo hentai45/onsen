@@ -7,9 +7,10 @@
 #include <stdbool.h>
 
 #include "asmfunc.h"
+#include "ata/common.h"
 #include "console.h"
 #include "debug.h"
-#include "fat12.h"
+#include "ext2fs.h"
 #include "gdt.h"
 #include "graphic.h"
 #include "idt.h"
@@ -75,7 +76,6 @@ static void init_onsen(void)
 
     mem_init();     // メモリ初期化
     paging_init();
-    fat12_init();
     init_func_names();
     gdt_init();
     idt_init();
@@ -89,6 +89,8 @@ static void init_onsen(void)
     graphic_init();  // 画面初期化
     mouse_init();
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
+    ata_init();
+    ext2_init();
 
     init_gui();
 

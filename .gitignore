@@ -5,6 +5,7 @@ debug/
 *.swp
 *.lst
 tags
+vol2.img
 
 # Object files
 *.o
