@@ -293,7 +293,7 @@ static void init_mpage_mem(void)
         int b_start = MADDR2BIT_NO(start);
         int b_end   = MADDR2BIT_NO(end);
 
-        //dbgf("start %#X (%d,%d), end %#X (%d,%d)\n", start, i_start, b_start, end, i_end, b_end);
+        //dbgf("start %p (%d,%d), end %p (%d,%d)\n", start, i_start, b_start, end, i_end, b_end);
 
         if (start < min_start) {
             min_start = start;
@@ -492,7 +492,7 @@ int mem_expand_user_page(struct USER_PAGE *page, unsigned long new_end)
     // 古いページと新しいページを１つにまとめる
     merge_vaddr((void *) new_page->vaddr);
 
-    dbgf("expanded user page. %#X => %#X\n", page->end_vaddr, new_page->end_vaddr);
+    dbgf("expanded user page. %p => %p\n", page->end_vaddr, new_page->end_vaddr);
 
     // 更新
     page->end_vaddr = new_page->end_vaddr;
@@ -524,7 +524,7 @@ int mem_expand_stack(struct USER_PAGE *stack, unsigned long new_stack)
     // 古いスタックと新しいスタックを１つにまとめる
     merge_vaddr((void *) stack->vaddr);
 
-    dbgf("expanded stack. %#X => %#X\n", stack->vaddr, new_stack);
+    dbgf("expanded stack. %p => %p\n", stack->vaddr, new_stack);
 
     // 更新
     stack->vaddr = new_stack;
@@ -595,12 +595,13 @@ void mem_dbg(void)
 
 static void dbg_mem_mng(struct MEM_MNG *mng)
 {
-    int i;
+    char size[16];
 
-    for (i = 0; i < mng->num_free; i++) {
+    for (int i = 0; i < mng->num_free; i++) {
         struct MEMORY *mem = &mng->free[i];
 
-        dbgf("%d : addr = %#X, size = %Z\n", i, mem->addr, mem->size * mng->unit);
+        s_size(mem->size * mng->unit, size, 16);
+        dbgf("%d : addr = %p, size = %s\n", i, mem->addr, size);
     }
 
     dbgf("\n");
@@ -632,7 +633,9 @@ struct USER_PAGE *mem_alloc_user_page(unsigned long vaddr, int size_B, int flags
     int num_pages = BYTE_TO_PAGE(size_B + fraction);
 
     if (mem_alloc_page_sub(vaddr, num_pages, flags | PTE_US, SET_MNG_FLG) < 0) {
-        ERROR("could not allocate user pages: vaddr=%#X, size=%Z", vaddr, size_B);
+        char size[16];
+        s_size(size_B, size, 16);
+        ERROR("could not allocate user pages: vaddr=%p, size=%s", vaddr, size);
         return 0;
     } else {
         page->vaddr = vaddr;
@@ -659,7 +662,7 @@ void *mem_alloc_kernel_page(unsigned int num_pages, bool set_mng_flg)
     }
 
     if (mem_alloc_page_sub((unsigned long) vaddr, num_pages, PTE_RW, set_mng_flg) < 0) {
-        ERROR("could not allocate pages: vaddr=%#X, num pages=%d", vaddr, num_pages);
+        ERROR("could not allocate pages: vaddr=%p, num pages=%d", vaddr, num_pages);
         return 0;
     } else {
         return vaddr;

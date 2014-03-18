@@ -294,6 +294,7 @@ static void put_char(char ch)
 #define TMP_SIZE  (4096)
 static char l_tmp[TMP_SIZE];
 
+__attribute__((format (printf, 1, 2)))
 static void putf(const char *fmt, ...)
 {
     va_list ap;
@@ -432,10 +433,18 @@ static void cmd_ps(void)
 
 static void cmd_mem(void)
 {
+    char size[16];
+
     putf("memory:\n");
-    putf("total  : %z\n", mem_total_B());
-    putf("mfree  : %z\n", mem_total_mfree_B());
-    putf("vfree  : %z\n\n", mem_total_vfree_B());
+
+    s_size(mem_total_B(), size, 16);
+    putf("total  : %s\n", size);
+
+    s_size(mem_total_mfree_B(), size, 16);
+    putf("mfree  : %s\n", size);
+
+    s_size(mem_total_vfree_B(), size, 16);
+    putf("vfree  : %s\n\n", size);
 }
 
 
@@ -455,7 +464,7 @@ static void cmd_kill(int pid)
 
     if (status == 0) {
         // そういうものだ
-        putf("so it goes.\n", pid);
+        putf("so it goes.\n");
     } else {
         putf("could not kill pid %d\n", pid);
     }

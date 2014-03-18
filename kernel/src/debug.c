@@ -260,6 +260,7 @@ static void buf_str(char *s)
 // 画面出力
 
 // 画面更新関数の中でも使える
+__attribute__((format (printf, 1, 2)))
 void temp_dbgf(const char *fmt, ...)
 {
     va_list ap;
@@ -269,6 +270,7 @@ void temp_dbgf(const char *fmt, ...)
 }
 
 
+__attribute__((format (printf, 1, 2)))
 void dbgf(const char *fmt, ...)
 {
     va_list ap;
@@ -298,6 +300,7 @@ void blue_screen(void)
 }
 
 
+__attribute__((format (printf, 2, 3)))
 void blue_screen_f(int line_no, const char *fmt, ...)
 {
     va_list ap;
@@ -312,7 +315,7 @@ void blue_screen_f(int line_no, const char *fmt, ...)
 void dbg_seg(void)
 {
     unsigned short cs, ds, ss;
-    unsigned long esp;
+    unsigned int esp;
 
     __asm__ __volatile__ ("movw %%cs, %0" : "=m" (cs));
     __asm__ __volatile__ ("movw %%ds, %0" : "=m" (ds));
@@ -365,7 +368,7 @@ void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs)
         if (regs->err_code & 1)
             dbgf(" [Instruction Fetch]");
 
-        unsigned long cr2, cr3;
+        unsigned int cr2, cr3;
         __asm__ __volatile__ ("movl %%cr2, %0" : "=r" (cr2));
         __asm__ __volatile__ ("movl %%cr3, %0" : "=r" (cr3));
         dbgf("\nCR2 = %X, CR3 = %X\n", cr2, cr3);

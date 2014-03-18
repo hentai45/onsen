@@ -193,7 +193,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                 return -1;
             }
 
-            dbgf(".text: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+            dbgf(".text: offset=%p, vaddr=%p, size=%d, msize=%d\n",
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
@@ -208,7 +208,7 @@ int elf_load(void *p, unsigned int size, const char *name)
                 return -1;
             }
 
-            dbgf(".data: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+            dbgf(".data: offset=%p, vaddr=%p, size=%d, msize=%d\n",
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
@@ -220,7 +220,7 @@ int elf_load(void *p, unsigned int size, const char *name)
             struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
             if (bss_shdr) {
-                dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
+                dbgf(".bss: addr=%p, size=%d\n", bss_shdr->sh_addr, bss_shdr->sh_size);
                 memset((void *) bss_shdr->sh_addr, 0, bss_shdr->sh_size);
             }
 
@@ -310,7 +310,7 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
                 return -1;
             }
 
-            dbgf(".text: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+            dbgf(".text: offset=%p, vaddr=%p, size=%d, msize=%d\n",
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
@@ -325,7 +325,7 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
                 return -1;
             }
 
-            dbgf(".data: offset=%#X, vaddr=%#X, size=%Z, msize=%Z\n",
+            dbgf(".data: offset=%p, vaddr=%p, size=%d, msize=%d\n",
                     phdr->p_offset, phdr->p_vaddr,
                     phdr->p_filesz, phdr->p_memsz);
 
@@ -337,7 +337,7 @@ int elf_load2(struct API_REGISTERS *regs, void *p, unsigned int size)
             struct Elf_Shdr *bss_shdr = search_shdr(ehdr, ".bss");
 
             if (bss_shdr) {
-                dbgf(".bss: addr=%#X, size=%Z\n", bss_shdr->sh_addr, bss_shdr->sh_size);
+                dbgf(".bss: addr=%p, size=%d\n", bss_shdr->sh_addr, bss_shdr->sh_size);
                 memset((void *) bss_shdr->sh_addr, 0, bss_shdr->sh_size);
             }
 

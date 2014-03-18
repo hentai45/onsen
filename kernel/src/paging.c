@@ -314,7 +314,7 @@ void paging_dbg(void)
 
     for (int i_pd = 0; i_pd < NUM_PDE; i_pd++) {
         if (l_pd[i_pd] & PTE_4MB) {
-            dbgf("%d : 4MB Page = %#X\n", i_pd, i_pd * (4 * 1024 * 1024));
+            dbgf("%d : 4MB Page = %08X\n", i_pd, i_pd * (4 * 1024 * 1024));
             continue;
         }
 
@@ -324,7 +324,7 @@ void paging_dbg(void)
             continue;
         }
 
-        dbgf("%d : %#X:\n", i_pd, pt);
+        dbgf("%d : %08X:\n", i_pd, pt);
 
         int num_pages = 0;
 
@@ -343,13 +343,13 @@ void paging_dbg(void)
                     dbgf(", ");
                 }
 
-                dbgf("%d : %#X", i_pt, pte);
+                dbgf("%d : %08X", i_pt, pte);
             }
 
             num_pages++;
         }
 
-        dbgf(", page = %d\n", num_pages);
+        dbgf(", pages = %d\n", num_pages);
     }
 
     dbgf("\n");

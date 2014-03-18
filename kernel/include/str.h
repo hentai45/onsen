@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include "file.h"
 
+void s_size(unsigned int size_B, char *s, int n);
+
 int  strlen(const char *s);
 char *strcpy(char *s, const char *t);
 char *strncpy(char *s, const char *t, int n);

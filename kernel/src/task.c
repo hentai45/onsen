@@ -697,7 +697,7 @@ void task_dbg(void)
         struct TSS *t = &l_mng.tss[pid];
 
         if (TASK_IS_NOT_FREE(t)) {
-            dbgf("%d %s, pd : %p, cs : %X, ds : %X, ss : %X\n",
+            dbgf("%d %-12s, pd : %p, cs : %X, ds : %X, ss : %X\n",
                     pid, t->name, t->pd, t->cs, t->ds, t->ss);
         }
     }

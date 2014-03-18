@@ -79,9 +79,9 @@ void stacktrace2(unsigned int max_frames, struct FILE_T *f, unsigned int *ebp)
         //unsigned int *arguments = &ebp[2];
         char *name = get_func_name(eip);
         if (name) {
-            fprintf(f, "  %#X: %.32s\n", eip, name);
+            fprintf(f, "  %p: %.32s\n", eip, name);
         } else {
-            fprintf(f, "  %#X: %.32s\n", eip, "unknown func");
+            fprintf(f, "  %p: %.32s\n", eip, "unknown func");
             return;
         }
     }

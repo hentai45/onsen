@@ -1155,7 +1155,7 @@ void graphic_dbg(void)
                 }
             }
 
-            dbgf("%d: %s, buf = %p, (%d, %d, %d, %d) %s\n",
+            dbgf("%d: %-12s, buf = %p, (%4d, %4d, %4d, %4d) %s\n",
                     sid, task_get_name(srf->pid), srf->g.buf,
                     srf->x, srf->y, srf->g.w, srf->g.h, s);
 
