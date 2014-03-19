@@ -159,12 +159,21 @@ struct MOUSE_DECODE *mouse_decode(unsigned char data)
         bool change_pos = false;
 
         if (l_mdec.dx != 0) {
-            l_mdec.x = MAXMIN(0, l_mdec.x + l_mdec.dx, l_w);
+            if (l_mdec.x + l_mdec.dx < 0) {
+                l_mdec.x = 0;
+            } else {
+                l_mdec.x = MAXMIN(0, l_mdec.x + l_mdec.dx, l_w);
+            }
+
             change_pos = true;
         }
 
         if (l_mdec.dy != 0) {
-            l_mdec.y = MAXMIN(0, l_mdec.y + l_mdec.dy, l_h);
+            if (l_mdec.y + l_mdec.dy < 0) {
+                l_mdec.y = 0;
+            } else {
+                l_mdec.y = MAXMIN(0, l_mdec.y + l_mdec.dy, l_h);
+            }
             change_pos = true;
         }
 

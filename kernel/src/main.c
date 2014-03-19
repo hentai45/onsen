@@ -155,8 +155,12 @@ static void init_gui(void)
 {
     // ---- desk top
 
-    for (int y = 0; y < 48; y++) {
-        draw_text_bg(g_dt_sid, 0, y * HANKAKU_H, COL_WHITE, COL_BLACK, l_dt_txt[y]);
+    if (get_screen_w() == 1024 && get_screen_h() == 768) {
+        for (int y = 0; y < 48; y++) {
+            draw_text_bg(g_dt_sid, 0, y * HANKAKU_H, COL_WHITE, COL_BLACK, l_dt_txt[y]);
+        }
+    } else {
+        fill_surface(g_dt_sid, COL_BLACK);
     }
 
     update_surface(g_dt_sid);
