@@ -4,8 +4,10 @@
 #define HEADER_STRING
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include "file.h"
 
+void s_itob(unsigned int n, char *s, bool space);
 void s_size(unsigned int size_B, char *s, int n);
 
 int  strlen(const char *s);

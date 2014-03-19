@@ -7,8 +7,10 @@
 #define HEADER_STRING
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include "file.h"
 
+void s_itob(unsigned int n, char *s, bool space);
 void s_size(unsigned int size_B, char *s, int n);
 
 int  strlen(const char *s);
@@ -39,11 +41,30 @@ void *memset(void *dst, int c, unsigned int count);
 #endif
 
 
-#include <stdbool.h>
 #include "debug.h"
 
 
 #define MAX(x,y)  (((x) > (y)) ? (x) : (y))
+
+
+void s_itob(unsigned int n, char *s, bool space)
+{
+    int i;
+
+    for (i = 31; i >= 0; i--) {
+        if (n & (1 << i)) {
+            *s++ = '1';
+        } else {
+            *s++ = '0';
+        }
+
+        if (space && (i & 0x7) == 0) {
+            *s++ = ' ';
+        }
+    }
+
+    *s = '\0';
+}
 
 
 static void s_itoa(int n, char *s);
@@ -190,7 +211,6 @@ int strncmp(const char *s, const char *t, int n)
 
 static void itox(unsigned int n, char *s, bool capital);
 static void s_uitoa(unsigned int n, char *s);
-static void s_itob(unsigned int n, char *s, bool space);
 
 
 __attribute__((format (printf, 1, 2)))
@@ -453,18 +473,6 @@ int vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
             for (char *s_val = l_tmp; *s_val; s_val++) {
                 ADD_CHAR(*s_val);
             }
-        } else if (*p == 'b') {  // ビット表示
-            s_itob(va_arg(ap, unsigned int), l_tmp, false);
-
-            for (char *s_val = l_tmp; *s_val; s_val++) {
-                ADD_CHAR(*s_val);
-            }
-        } else if (*p == 'B') {  // ビット表示（8ビットごとにスペースが入る）
-            s_itob(va_arg(ap, unsigned int), l_tmp, true);
-
-            for (char *s_val = l_tmp; *s_val; s_val++) {
-                ADD_CHAR(*s_val);
-            }
         } else {
             ADD_CHAR(*p);
         }
@@ -548,24 +556,4 @@ static void s_uitoa(unsigned int n, char *s)
     s[i] = '\0';
 
     reverse(s);
-}
-
-
-static void s_itob(unsigned int n, char *s, bool space)
-{
-    int i;
-
-    for (i = 31; i >= 0; i--) {
-        if (n & (1 << i)) {
-            *s++ = '1';
-        } else {
-            *s++ = '0';
-        }
-
-        if (space && (i & 0x7) == 0) {
-            *s++ = ' ';
-        }
-    }
-
-    *s = '\0';
 }
