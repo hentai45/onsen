@@ -378,7 +378,7 @@ void cmd_ls(void)
     struct DIRECTORY_ENTRY *ent;
 
     while ((ent = ext2_read_dir(dir)) != 0) {
-        putf("%.*s\n", ent->name_len, ent->name);
+        putf("%-16.*s %8d\n", ent->name_len, ent->name, ext2_get_file_size_B(ent->inode_i));
     }
 
     ext2_close_dir(dir);
@@ -516,16 +516,7 @@ static int cmd_app(char *cmd_name, int bgp)
 {
     // コマンドラインからファイル名を生成
     char name[32];
-
-    int i_name;
-    for (i_name = 0; i_name < 13; i_name++) {
-        if (cmd_name[i_name] <= ' ') {
-            break;
-        }
-
-        name[i_name] = cmd_name[i_name];
-    }
-    name[i_name] = 0;
+    strncpy(name, cmd_name, 32);
 
     int inode_i = ext2_get_inode_i(EXT2_ROOT_INODE, name);
 

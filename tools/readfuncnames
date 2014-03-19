@@ -13,11 +13,12 @@ def main(map_file_name):
         return
 
     f = open(map_file_name, 'rb')
-    print struct.unpack('I32s', f.read(36))
-    print struct.unpack('I32s', f.read(36))
-    print struct.unpack('I32s', f.read(36))
-    print struct.unpack('I32s', f.read(36))
-    print struct.unpack('I32s', f.read(36))
+
+    data = f.read(36)
+    while data:
+        addr, name = struct.unpack('I32s', data)
+        print hex(addr), name
+        data = f.read(36)
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ struct DIRECTORY_ENTRY {
 
 void ext2_init(void);
 int ext2_get_inode_i(int parent_inode_i, const char *name);
+int ext2_get_file_size_B(int inode_i);
 void *ext2_open(int inode_i, int *len);
 struct DIRECTORY *ext2_open_dir(int inode_i);
 struct DIRECTORY_ENTRY *ext2_read_dir(struct DIRECTORY *dir);

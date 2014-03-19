@@ -35,6 +35,7 @@ struct DIRECTORY_ENTRY {
 
 void ext2_init(void);
 int ext2_get_inode_i(int parent_inode_i, const char *name);
+int ext2_get_file_size_B(int inode_i);
 void *ext2_open(int inode_i, int *len);
 struct DIRECTORY *ext2_open_dir(int inode_i);
 struct DIRECTORY_ENTRY *ext2_read_dir(struct DIRECTORY *dir);
@@ -133,7 +134,6 @@ struct INODE {
 };
 
 
-static struct BLOCK_GROUP_DESCRIPTOR *get_block_group_descriptor(int group_i);
 static struct INODE *get_inode(int inode_i);
 static void *get_block(int group_i, int block_i);
 static struct DIRECTORY_ENTRY *next_dir_ent(struct DIRECTORY_ENTRY *ent);
@@ -190,6 +190,21 @@ void ext2_init(void)
 }
 
 
+int ext2_get_file_size_B(int inode_i)
+{
+    struct INODE *inode = get_inode(inode_i);
+
+    if (inode == 0)
+        return -1;
+
+    int size_B = inode->size_lo_B;
+
+    mem_free(inode);
+
+    return size_B;
+}
+
+
 int ext2_get_inode_i(int parent_inode_i, const char *name)
 {
     struct DIRECTORY *dir = ext2_open_dir(parent_inode_i);
@@ -201,8 +216,13 @@ int ext2_get_inode_i(int parent_inode_i, const char *name)
 
     int inode_i = 0;
 
+    int len = strlen(name);
+
     while ((ent = ext2_read_dir(dir)) != 0) {
-        if (STRCMP(name, ==, ent->name)) {  // TODO: "ab"と"abc"も同じになる
+        if (len != ent->name_len)
+            continue;
+
+        if (STRCMP(name, ==, ent->name)) {
             inode_i = ent->inode_i;
             break;
         }
@@ -242,7 +262,7 @@ void *ext2_open(int inode_i, int *len)
         uint32_t *p_inode_i = (uint32_t *) p1_block;
 
         for (int i = 0; i < (l_block_size_B / 4) && *p_inode_i && size_B > 0; i++, p_inode_i++) {
-            void *block = get_block(0, inode->blocks[i]);  // TODO: block groupを指定する
+            void *block = get_block(0, *p_inode_i);  // TODO: block groupを指定する
             memcpy(p, block, MIN(l_block_size_B, size_B));
             mem_free(block);
 

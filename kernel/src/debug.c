@@ -397,7 +397,8 @@ void dbg_fault(const char *msg, int no, struct INT_REGISTERS *regs)
 
     if (is_os_task(g_pid)) {
         stacktrace2(5, f_debug, (unsigned int *) regs->ebp);
-    }
+    } else if (regs->eip >= VADDR_BASE)
+        stacktrace2(5, f_debug, (unsigned int *) regs->ebp);
 
     fg = bk_fg;
     bg = bk_bg;

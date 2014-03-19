@@ -69,6 +69,7 @@ int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt)
         cyl_hi   = (lba >> 16) & 0xFF;
         dev_head = ((lba >> 24) & 0xF) | ATA_DH_LBA;
 
+        /*
         uint16_t h = dev->info->cur_heads;
         uint16_t s = dev->info->cur_sectors;
 
@@ -77,6 +78,7 @@ int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt)
         uint16_t ss = (lba % s) + 1;
 
         dbgf("read: lba = %d, c = %d, h = %d, s = %d\n", lba, cc, hh, ss);
+        */
     } else {
         // TODO: check valid
 
@@ -91,7 +93,7 @@ int ata_cmd_read_sectors(struct ATA_DEV *dev, uint32_t lba, void *buf, int cnt)
         cyl_hi   = (cyl >> 8) & 0xFF;
         dev_head = (lba / s) % h;
 
-        dbgf("read: lba = %d, c = %d, h = %d, s = %d\n", lba, cyl, dev_head, sec_no);
+        //dbgf("read: lba = %d, c = %d, h = %d, s = %d\n", lba, cyl, dev_head, sec_no);
     }
 
     if (ata_select_device_ext(dev, dev_head) < 0) {

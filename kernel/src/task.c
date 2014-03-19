@@ -136,6 +136,7 @@ int g_idle_pid;
 #include "console.h"
 #include "debug.h"
 #include "elf.h"
+#include "ext2fs.h"
 #include "gdt.h"
 #include "graphic.h"
 #include "memory.h"
@@ -473,19 +474,24 @@ int execve(const char *cmd, char **argv, char **envp)
 
 int task_exec(struct API_REGISTERS *regs, const char *fname)
 {
-    /*
-    struct FILEINFO *finfo = fat12_get_file_info();
-    int i_fi = fat12_search_file(finfo, fname);
+    char name[TASK_NAME_MAX];
+    strncpy(name, fname, TASK_NAME_MAX);
+    name[TASK_NAME_MAX - 1] = 0;
 
-    if (i_fi < 0) {  // ファイルが見つからなかった
-        dbgf("not found %s\n", fname);
+    int inode_i = ext2_get_inode_i(EXT2_ROOT_INODE, name);
+
+    if (inode_i == 0) {
+        dbgf("File not found.\n");
         return -1;
     }
 
-    struct FILEINFO *fi = &finfo[i_fi];
+    int size_B;
+    char *p = (char *) ext2_open(inode_i, &size_B);
 
-    char *p = (char *) mem_alloc(fi->size);
-    fat12_load_file(fi->clustno, fi->size, p);
+    if (p == 0) {
+        dbgf("Could not open file.\n");
+        return -1;
+    }
 
     if (is_os_task(g_pid)) {
         cli();
@@ -523,16 +529,13 @@ int task_exec(struct API_REGISTERS *regs, const char *fname)
         paging_clear_pd_range(0, g_cur->stack->vaddr - 0x400000);  // １つ前のPDEを指すために4MB引く
     }
 
-    strncpy(g_cur->name, fi->name, TASK_NAME_MAX - 1);
-    g_cur->name[TASK_NAME_MAX - 1] = 0;
+    strcpy(g_cur->name, name);
 
-    int ret = elf_load2(regs, p, fi->size);
+    int ret = elf_load2(regs, p, size_B);
 
     mem_free(p);
 
     return ret;
-    */
-    return 0;
 }
 
 

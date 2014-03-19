@@ -45,6 +45,7 @@ void *memset(void *dst, int c, unsigned int count);
 
 
 #define MAX(x,y)  (((x) > (y)) ? (x) : (y))
+#define MIN(x,y)  (((x) < (y)) ? (x) : (y))
 
 
 void s_itob(unsigned int n, char *s, bool space)
@@ -179,10 +180,9 @@ static void reverse(char *s)
 int strcmp(const char *s, const char *t)
 {
     for ( ; *s == *t; s++, t++) {
-    }
-
-    if (*s == '\0' || *t == '\0') {
-        return 0;
+        if (*s == '\0') {
+            return 0;
+        }
     }
 
     return *s - *t;
@@ -192,10 +192,9 @@ int strncmp(const char *s, const char *t, int n)
 {
     int i;
     for (i = 0; i < n && *s == *t; i++, s++, t++) {
-    }
-
-    if (*s == '\0' || *t == '\0') {
-        return 0;
+        if (*s == '\0') {
+            return 0;
+        }
     }
 
     if (i == n)
@@ -375,7 +374,14 @@ int vsnprintf(char *s, unsigned int n, const char *fmt, va_list ap)
             ADD_CHAR(ch_val);
         } else if (*p == 's') {  // 文字列
             char *s_val = va_arg(ap, char *);
-            int len = strlen(s_val);
+
+            int len;
+
+            if (precision == 0) {
+                len = strlen(s_val);
+            } else {
+                len = precision;
+            }
 
             if ((flags & FLG_MINUS_SIGN) == 0) {
                 for (int k = width - len; k > 0; k--) {
