@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 
+#define EXT2_ROOT_INODE  2
 
 struct DIRECTORY {
     void *head;
@@ -33,6 +34,8 @@ struct DIRECTORY_ENTRY {
 
 
 void ext2_init(void);
+int ext2_get_inode_i(int parent_inode_i, const char *name);
+void *ext2_open(int inode_i, int *len);
 struct DIRECTORY *ext2_open_dir(int inode_i);
 struct DIRECTORY_ENTRY *ext2_read_dir(struct DIRECTORY *dir);
 void ext2_close_dir(struct DIRECTORY *dir);
@@ -103,6 +106,8 @@ struct BLOCK_GROUP_DESCRIPTOR {
 };
 
 
+#define EXT2_INODE_TYPE_DIRECTORY  0x4000
+
 struct INODE {
     uint16_t type;
     uint16_t uid;
@@ -137,10 +142,13 @@ static struct DIRECTORY_ENTRY *next_dir_ent(struct DIRECTORY_ENTRY *ent);
 static char l_super_buf[SECTOR_SIZE];
 static struct SUPER_BLOCK *l_super;  // super block
 
+static struct BLOCK_GROUP_DESCRIPTOR *l_bgd_tbl;
+
 static int l_block_size_B = 1024;
 static int l_sectors_per_group = 16384;
 static int l_sectors_per_block = 2;
 static int l_inodes_per_block = 8;
+static int l_num_groups = 1;
 
 
 //=============================================================================
@@ -166,39 +174,60 @@ void ext2_init(void)
     l_sectors_per_block = l_block_size_B / SECTOR_SIZE;
     l_sectors_per_group = l_super->blocks_per_group * l_sectors_per_block;
     l_inodes_per_block  = l_block_size_B / l_super->inode_size_B;
+    l_num_groups = (l_super->total_blocks + l_super->blocks_per_group - 1) / l_super->blocks_per_group;
+
+    l_bgd_tbl = (struct BLOCK_GROUP_DESCRIPTOR *) mem_alloc(l_num_groups * SECTOR_SIZE);
+    struct BLOCK_GROUP_DESCRIPTOR *bgd = l_bgd_tbl;
+
+    for (int i = 0; i < l_num_groups; i++, bgd++) {
+        int lba = START_LBA + (i * l_sectors_per_group) + ADDR_BGD;
+
+        if (ata_cmd_read_sectors(g_ata0, lba, bgd, 1) < 0) {
+            ERROR("could not read block group descriptor. group_i = %d, lba = %d", i, lba);
+            break;
+        }
+    }
 }
 
 
-void ext2_ls(void)
+int ext2_get_inode_i(int parent_inode_i, const char *name)
 {
-    struct DIRECTORY *dir = ext2_open_dir(2);
+    struct DIRECTORY *dir = ext2_open_dir(parent_inode_i);
 
-    ASSERT(dir, "");
+    if (dir == 0)
+        return 0;
 
     struct DIRECTORY_ENTRY *ent;
 
+    int inode_i = 0;
+
     while ((ent = ext2_read_dir(dir)) != 0) {
-        dbgf("%.*s\n", ent->name_len, ent->name);
+        if (STRCMP(name, ==, ent->name)) {  // TODO: "ab"と"abc"も同じになる
+            inode_i = ent->inode_i;
+            break;
+        }
     }
 
     ext2_close_dir(dir);
+
+    return inode_i;
 }
 
 
-struct DIRECTORY *ext2_open_dir(int inode_i)
+void *ext2_open(int inode_i, int *len)
 {
+    if (len)
+        *len = 0;
+
     struct INODE *inode = get_inode(inode_i);
 
-    struct DIRECTORY *dir = (struct DIRECTORY *) mem_alloc(sizeof(struct DIRECTORY));
-
     int size_B = inode->size_lo_B;
-    dir->head = mem_alloc(size_B);
-    dir->cur_ent = (struct DIRECTORY_ENTRY *) dir->head;
+    void *head = mem_alloc(size_B);
 
-    char *p = (char *) dir->head;
+    char *p = (char *) head;
 
     for (int i = 0; i < 12 && size_B > 0; i++) {
-        void *block = get_block(0, inode->blocks[i]);  // TODO
+        void *block = get_block(0, inode->blocks[i]);  // TODO: block groupを指定する
         memcpy(p, block, MIN(l_block_size_B, size_B));
         mem_free(block);
 
@@ -206,10 +235,51 @@ struct DIRECTORY *ext2_open_dir(int inode_i)
         p += l_block_size_B;
     }
 
+
     if (size_B > 0) {
+        void *p1_block = get_block(0, inode->p1_blocks);
+
+        uint32_t *p_inode_i = (uint32_t *) p1_block;
+
+        for (int i = 0; i < (l_block_size_B / 4) && *p_inode_i && size_B > 0; i++, p_inode_i++) {
+            void *block = get_block(0, inode->blocks[i]);  // TODO: block groupを指定する
+            memcpy(p, block, MIN(l_block_size_B, size_B));
+            mem_free(block);
+
+            size_B -= l_block_size_B;
+            p += l_block_size_B;
+        }
+
+        mem_free(p1_block);
+    }
+
+    if (size_B > 0) {
+        mem_free(inode);
         ERROR("too large");
         return 0;
     }
+
+    if (len)
+        *len = inode->size_lo_B;
+
+    mem_free(inode);
+
+    return head;
+}
+
+
+struct DIRECTORY *ext2_open_dir(int inode_i)
+{
+    struct INODE *inode = get_inode(inode_i);
+    if ((inode->type & EXT2_INODE_TYPE_DIRECTORY) == 0) {
+        mem_free(inode);
+        ERROR("");
+        return 0;
+    }
+
+    struct DIRECTORY *dir = (struct DIRECTORY *) mem_alloc(sizeof(struct DIRECTORY));
+    dir->head = ext2_open(inode_i, 0);
+    dir->cur_ent = (struct DIRECTORY_ENTRY *) dir->head;
 
     return dir;
 }
@@ -241,32 +311,15 @@ void ext2_close_dir(struct DIRECTORY *dir)
 // 非公開関数
 
 
-static struct BLOCK_GROUP_DESCRIPTOR *get_block_group_descriptor(int group_i)
-{
-    struct BLOCK_GROUP_DESCRIPTOR *bgd = (struct BLOCK_GROUP_DESCRIPTOR *) mem_alloc(SECTOR_SIZE);
-
-    int lba = START_LBA + (group_i * l_sectors_per_group) + ADDR_BGD;
-
-    if (ata_cmd_read_sectors(g_ata0, lba, bgd, 1) < 0) {
-        ERROR("could not read block group descriptor");
-        return 0;
-    }
-
-    dbgf("block group descriptor: %X %X\n", bgd->addr_block_bitmap, bgd->addr_inode_bitmap);
-
-    return bgd;
-}
-
-
 static struct INODE *get_inode(int inode_i)
 {
-    struct BLOCK_GROUP_DESCRIPTOR *bgd = get_block_group_descriptor(0);  // TODO
+    // TODO: 範囲チェック
 
     int group_i = (inode_i - 1) / l_super->inodes_per_group;
+    struct BLOCK_GROUP_DESCRIPTOR *bgd = &l_bgd_tbl[group_i];
+
     int tbl_i   = (inode_i - 1) % l_super->inodes_per_group;
     int block_i = bgd->addr_inode_table + (tbl_i * l_super->inode_size_B) / l_block_size_B;
-
-    mem_free(bgd);
 
     char *p = (char *) get_block(group_i, block_i);
     char *p_inode = p + (tbl_i % l_inodes_per_block) * l_super->inode_size_B;

@@ -76,7 +76,6 @@ static void init_onsen(void)
 
     mem_init();     // メモリ初期化
     paging_init();
-    init_func_names();
     gdt_init();
     idt_init();
     intr_init();   // 割り込み初期化
@@ -91,6 +90,7 @@ static void init_onsen(void)
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
     ata_init();
     ext2_init();
+    init_func_names();
 
     init_gui();
 

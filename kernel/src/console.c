@@ -398,22 +398,24 @@ static void cmd_clear(void)
 
 static void cmd_cat(char *fname)
 {
-    /*
-    struct FILEINFO *finfo = fat12_get_file_info();
-    int i = fat12_search_file(finfo, fname);
+    int inode_i = ext2_get_inode_i(EXT2_ROOT_INODE, fname);
 
-    if (i >= 0) {  // ファイルが見つかった
-        char *p = (char *) mem_alloc(finfo[i].size + 1);
-        fat12_load_file(finfo[i].clustno, finfo[i].size, p);
-        p[finfo[i].size] = 0;
-        putf("%s", p);
-        mem_free(p);
-    } else {  // ファイルが見つからなかった
+    if (inode_i == 0) {
         putf("File not found.\n");
+        return;
     }
 
-    newline();
-    */
+    int size_B;
+    char *p = (char *) ext2_open(inode_i, &size_B);
+
+    if (p == 0) {
+        putf("Could not open file.\n");
+        return;
+    }
+
+    putf("%.*s", size_B, p);
+
+    mem_free(p);
 }
 
 
@@ -512,7 +514,6 @@ static void cmd_dbg(char *name)
 
 static int cmd_app(char *cmd_name, int bgp)
 {
-    /*
     // コマンドラインからファイル名を生成
     char name[32];
 
@@ -526,23 +527,25 @@ static int cmd_app(char *cmd_name, int bgp)
     }
     name[i_name] = 0;
 
-    struct FILEINFO *finfo = fat12_get_file_info();
-    int i_fi = fat12_search_file(finfo, name);
+    int inode_i = ext2_get_inode_i(EXT2_ROOT_INODE, name);
 
-    if (i_fi < 0) {  // ファイルが見つからなかった
+    if (inode_i == 0) {
         return -2;
     }
 
-    struct FILEINFO *fi = &finfo[i_fi];
+    int size_B;
+    char *p = (char *) ext2_open(inode_i, &size_B);
 
-    char *p = (char *) mem_alloc(fi->size);
-    fat12_load_file(fi->clustno, fi->size, p);
+    if (p == 0) {
+        putf("Could not open file.\n");
+        return -3;
+    }
 
     if (is_elf((struct Elf_Ehdr *) p)) {
-        child_pid = elf_load(p, fi->size, fi->name);
-        //mem_free(p);
+        child_pid = elf_load(p, size_B, name);
+        mem_free(p);
     } else {
-        //mem_free(p);
+        mem_free(p);
         return -1;
     }
 
@@ -552,7 +555,6 @@ static int cmd_app(char *cmd_name, int bgp)
     } else {
         timer_stop(cursor_tid);
     }
-    */
 
     return 0;
 }

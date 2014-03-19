@@ -179,12 +179,10 @@ static void reverse(char *s)
 int strcmp(const char *s, const char *t)
 {
     for ( ; *s == *t; s++, t++) {
-        if (*s == '\0' || *t == '\0') {
-            if (*s == '\0' && *t == '\0')
-                return 0;
-            else
-                break;
-        }
+    }
+
+    if (*s == '\0' || *t == '\0') {
+        return 0;
     }
 
     return *s - *t;
@@ -194,12 +192,10 @@ int strncmp(const char *s, const char *t, int n)
 {
     int i;
     for (i = 0; i < n && *s == *t; i++, s++, t++) {
-        if (*s == '\0' || *t == '\0') {
-            if (*s == '\0' && *t == '\0')
-                return 0;
-            else
-                break;
-        }
+    }
+
+    if (*s == '\0' || *t == '\0') {
+        return 0;
     }
 
     if (i == n)

@@ -24,10 +24,12 @@ char *get_func_name(unsigned int addr);
 //=============================================================================
 // 非公開ヘッダ
 
+#include "debug.h"
+#include "ext2fs.h"
 #include "memory.h"
 #include "str.h"
 
-#define FNAMES_FILE_NAME  "fnames.bin"
+#define FNAMES_FILE_NAME  "fnames.dat"
 
 struct FUNC_NAME {
     unsigned int addr;
@@ -44,17 +46,23 @@ static int l_num_fnames = 0;
 
 void init_func_names(void)
 {
-    /*
-    struct FILEINFO *finfo = fat12_get_file_info();
-    int i = fat12_search_file(finfo, FNAMES_FILE_NAME);
+    int inode_i = ext2_get_inode_i(EXT2_ROOT_INODE, FNAMES_FILE_NAME);
 
-    if (i < 0)
+    if (inode_i == 0) {
+        dbgf("File not found. %s\n", FNAMES_FILE_NAME);
         return;
+    }
 
-    l_num_fnames = finfo[i].size / sizeof(struct FUNC_NAME);
-    l_func_names = (struct FUNC_NAME *) mem_alloc(finfo[i].size);
-    fat12_load_file(finfo[i].clustno, finfo[i].size, (char *) l_func_names);
-    */
+    int size_B;
+    char *p = (char *) ext2_open(inode_i, &size_B);
+
+    if (p == 0) {
+        dbgf("Could not open file. %s\n", FNAMES_FILE_NAME);
+        return;
+    }
+
+    l_num_fnames = size_B / sizeof(struct FUNC_NAME);
+    l_func_names = (struct FUNC_NAME *) p;
 }
 
 

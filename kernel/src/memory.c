@@ -146,9 +146,9 @@ static int   page_free_maddr(void *vp_vaddr);
 // 8バイト単位メモリ管理（4096-8バイト以下のメモリ割り当てを管理する）
 
 #define BYTE_MEM_MNG_MAX  4096
-#define MEM_INFO_B        8                // メモリの先頭に置く管理情報のサイズ
-#define BYTE_MEM_BYTES    (1 * 1024 * 1024)  // バイト管理する容量
-#define MM_SIG            (0xBAD41BAD)       // メモリの先頭に置くシグネチャ
+#define MEM_INFO_B        8                    // メモリの先頭に置く管理情報のサイズ
+#define BYTE_MEM_BYTES    (4 * 1024 * 1024)    // バイト管理する容量
+#define MM_SIG            (0xBAD41BAD)         // メモリの先頭に置くシグネチャ
 #define BYTES_TO_8BYTES(b)   (((b) + 7) >> 3)  // バイトを8バイト単位に変換する
 
 struct INFO_8BYTES {

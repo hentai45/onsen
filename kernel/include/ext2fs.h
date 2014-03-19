@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 
+#define EXT2_ROOT_INODE  2
 
 struct DIRECTORY {
     void *head;
@@ -22,6 +23,8 @@ struct DIRECTORY_ENTRY {
 
 
 void ext2_init(void);
+int ext2_get_inode_i(int parent_inode_i, const char *name);
+void *ext2_open(int inode_i, int *len);
 struct DIRECTORY *ext2_open_dir(int inode_i);
 struct DIRECTORY_ENTRY *ext2_read_dir(struct DIRECTORY *dir);
 void ext2_close_dir(struct DIRECTORY *dir);
