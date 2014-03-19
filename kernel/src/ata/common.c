@@ -177,7 +177,7 @@ void ata_init(void)
 
 static int init_ata_dev(struct ATA_DEV *dev)
 {
-    dbgf("---------- ata device %d ----------\n", (dev->sel_dev) ? 1 : 0);
+    //dbgf("---------- ata device %d ----------\n", (dev->sel_dev) ? 1 : 0);
 
     get_signature(dev);
     get_identity(dev);
@@ -189,7 +189,7 @@ static int init_ata_dev(struct ATA_DEV *dev)
     check_device_mode(dev);
     init_device_mode(dev);
 
-    dbgf("\n");
+    //dbgf("\n");
 
     return 0;
 }
@@ -213,7 +213,7 @@ static void get_signature(struct ATA_DEV *dev)
         }
 
         if ((inb(ATA_PORT_ERR(dev)) & 0x7F) != 1) {
-            dbgf("[ata] err\n");
+            //dbgf("[ata] err\n");
             break;  // デバイス不良
         }
 
@@ -227,17 +227,17 @@ static void get_signature(struct ATA_DEV *dev)
 
             switch (sig) {
             case ATA_SIG_PATA:
-                dbgf("[ata] type is ATA\n");
+                //dbgf("[ata] type is ATA\n");
                 dev->type = ATA_TYPE_PATA;
                 break;
 
             case ATA_SIG_PATAPI:
-                dbgf("[ata] type is ATAPI\n");
+                //dbgf("[ata] type is ATAPI\n");
                 dev->type = ATA_TYPE_PATAPI;
                 break;
 
             default:
-                dbgf("[ata] sig = %X\n", sig);
+                //dbgf("[ata] sig = %X\n", sig);
                 dev->type = ATA_TYPE_UNKNOWN;
                 break;
             }
@@ -342,8 +342,6 @@ static int init_device_mode(struct ATA_DEV *dev)
         if (ata_cmd_set_features(dev, SET_TRANSFER, 0x08 | (dev->mode & 7)) < 0) {
             ata_cmd_set_features(dev, SET_TRANSFER, 0);
             dev->mode = 0;
-        } else {
-            dbgf("successful set features\n");
         }
     } else {
         ata_cmd_set_features(dev, SET_TRANSFER, 0);

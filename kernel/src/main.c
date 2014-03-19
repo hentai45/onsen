@@ -51,11 +51,59 @@ static int active_win_pid = ERROR_PID;
 static bool is_shift_on = false;
 static bool is_ctrl_on  = false;
 
-static COLOR32 bg = 0x008484;
-static int l_info_bg_sid;
 static int l_info_sid;
 static int l_update_tid;
 
+static char *l_dt_txt[] = {
+"                    ..,,;cdooddkkO000K00KKKKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXKKKKKKKKKKKKKKKKKKK0o.                   ",
+"                   ....,;ldlooxOOO000KKKKKKKKKKKKKKKKKKXXKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXKKKKKKKKKKKKKKKKK0O:                   ",
+"                   ....';cllloxkO0000KKKKKKKKKKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXKKKKKKKKKKKKKKKKKKKKO;                  ",
+"                   ......:::coxOO0000KKKKKKKKKKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXXXXXKXXXXXXXXXKKKKKKXXXXKKKKKKKKKk'                 ",
+"                     ....,:;:odkO00000KKKKKKKKKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXKKXKKKKKKXXXXXKKKKKKXKKd.                ",
+"                     .'..,:,;coxOO0000KKKKKKKKKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXKKKKKKXXXXXXXXXXXXXXXKO;                ",
+"                     ....;;;,,:ldkOOO00KK0KKKKKKKKKKKKKXXXXXXXXXXXXXXXXXXNXXXXXXXXXXXXXKKKKKKKXXXXXXXXXXXXXXXXKo.               ",
+"                     ......'..':c:cccccllodkO0KKKKKKKKKXXXXXXXXXXXXXXXXXNNNXXXXXXXXXXXXKKKKKKKKXXXXXXXXXXXXXXXKk,               ",
+"                     ..,. .   ..'...      ..;lokO0KKKKKKXXXXXXXXXXXXXXXXXXXXXXXXXXXKKKKKKKKKKKXXXXXXXXXXXXXXXXK0l.              ",
+"                    .....                     .'ldO0KKKKXKXXXXXXXXXXXXXXXK00OkxxxxdxkOOOOO000KKXXXXXXXXXXXXXXXXKx.              ",
+"                     .          ....,;;;'..    .'cxO00KKKKKKKXXXXXXK0O0KK0OxdollodxdxOOOkkkOOOKKXXXXXXXXXXXXXXXKO'              ",
+"                            .'':odxxkkOOkxol:'...,coxOOO000KKKXXXXKK000000OOOOOOOOOOkkkkOOOkxxOKKXXXXXXXXXXXXXXKO,              ",
+"                       ....;cloxkO00000000000Odc'..':odkOO000KKKKKK00000000000000KKKKKKKK000OxxO0KXXXXXXXXXXXXXKO'              ",
+"                       ;cllooodxk00000KKKKXXXXKOxl,'':odxkOO00KKKKKK0000000KKKKKXXXXXXXKKKKKK0OOkO0KXXXXXXXXXXXKO,              ",
+"                    ..';cc:;;:ooc;,',,;:cox0KKKK0xc,,:coxkOO00KKKKKK000KKKKKKKKKKKXXXXXXXXXKXXKK00KXXXXXXXXXXXXKO'              ",
+"                  .'''cxOko,..           .  .:kKK0kl;;;cx0KKKXXXXKKKK0000000OO00KKXXXXXXXXXXXXXKKKXXXXXXXXXXXXXX0'              ",
+"                  .,,....'..      .        ':. 'd00d:::cd0KKKXXXKKK000OOkkkxdloddxkOKXXXXXXXXXXXXXKXXKKKXXXXXXXKO.              ",
+"                  'cccooolcc,.;odlc:'...'..x0O:  l0O:;old0KKKXXKKKK000OOkxl,.       ..;lOKXXXXXXXKKKKKXXXXXXXXXKd  .':;'        ",
+"                  .;:lddxxxdc'':::clloddkkkOOOOxod00dddox0KKKKXKKKKK000Okx:,:;        ...':xKXXXXXKKKKKXXXXXXXXKkoxO000Od.      ",
+"                  .;coxkkkkkkxollll:;::cooxkOOO00K0Odolok00KKKKKKKKKKKK0OOkddo:;;:cxdkOOOOOxkOO0000KK0KKXXXXXXXK0KK000Oxx;      ",
+"                  'coxkOOkkOOOkxdxkkkxxxkkkOOO0000OkdooxO00KKKKKKKKKKKKK0OkkxxxkkkOO00000KKKKKKK000KKKKXXXXXXXKK000000Oxkc      ",
+"                  ,cdkO0OOOOOOOOOOOOOOOOOOOO0000OOkxdodk000KKKKKKKKKKKKKKK00OkkkkkOOOOOO0KKKXXXKKKK0000KXXXXXXKK00KKK00Okl      ",
+"                  ,cdO00OOOOOOOOOOOOOOOOOOOOO0OOOxddoodO000KKKKKKKKKKKKKKKXXKKKKKKXXXXKKKXXXXXXKKKKKK00KKXXXXXKKKKKKK00OOl      ",
+"                  .:ok00OOOOOkOOOOOOOOOOOOOOOOOkxooolldkO0000000000KKKKKKKXXXKKKKKKXXKXXXXXXXXXXKKKKKK00KXXXXXKKKKKKKK0OOc      ",
+"                  .;lx0K0OOOOOOOOOOOOOOOOOkOOOkkdollloxkOO00000000000000KKKXXKKKKKKKKKKKKKKXXXXXKKKKKKKKKXXXXK00000KKK0Ok,      ",
+"                   'cdO00OOOOOOOO0000OOOOOOOOOkdolcldkOO00000K000000000KKKKKKKKKKKKKKKKKKKKKXXXXXKKKKKKKKXXXKK0000000K0Ox.      ",
+"                   .:dkOOkkkkkOOOOO00OOOOOOkkxxl:::dkO000000000KKKK0000KKKKKKKKKKK0KKKKKKKKXXXXKKKKKKKKKXXXKKK000000000Oc       ",
+"                   .,ldxxkkkkkkOOOOOOOOkkkkxxddo;;:xO000000KKK0KKK00000KKKKXKKKKKKKKKKKKXXXXXXXKKKKKKXXXXKKKKKKKKK00000x.       ",
+"                    .;loddxkkxkkkkkkkkkxdlllodxxolodkO0000KKKKKKKK000000000K0000KKKKKKKKXXXXXXXKKKKKXXXXXKKKKKKKK00000O:        ",
+"                     ';looddxxxxxxxxdol;. .'coxxddlcloxOO000KKKK0000000000000OkkO000KKKKXXXXXXKKKKKKXXXXKKKKKKKK000000x.        ",
+"                      ';clloooddoolc,.      ..,:;,'..,cdkOOO00000000K000000OkxxoldkO000OKKKKKKKKKKKKXXXKK0000KK000000Ol         ",
+"                       .';:ccllc:,..                   ':ldxkOOdllokO000OOOkxxdl,.:dkOOOKKKKKKKKKKKKXKKK0000000000000k,         ",
+"                         .',,,'....                        ...      .'cx0KK0OOkxc. .:oxk00K0000000KKKKK000000KKK0000Ol          ",
+"                        ...''.':c:,. ..,,,;,...         .,:lodxdollcldO0KKKKKK00Od,  .;oxO0000000000K00000O00000000Od.          ",
+"                         .'..;lc:,.':odxxxxdoll;,,;;::cokOO00000KKKK0000KKKKKKKK00Ox,  .cdxkOO00O00000000OOO0000000x.           ",
+"                         .'.;ool;..,coodxxxkxxxxxxxkOkOOOOOO0000KKKK000000KKK000K0OOkl. 'ldxkOOOO0OO00000OOOO000O0k'            ",
+"                        .:;,lxdl:'  .,coodxkkkkkOOOOOOO000000000KKKKK00000K0K00000Okkxo.,dxxxkOOOOOO00000OOO000OOd'             ",
+"                        ,:;;ldxl:;     ..';;:::ccloddxkkO00000000000000KKKKKK00000Okkxx''xkOkkkOOOOO0000OOkOOOkd;               ",
+"                        .:c:ldxxo:.                ...,,;clooddxdddddxxxkkOO00OOOOOOOOx'.oOOOkkOOOOO0OOOOkxo:,.                 ",
+"                        .;clodxxxxdl.          .:c:..''. .,:l:;okxl;:c,.. ...';:loddkkx,,xOOOOOOOOO00OOOkx:                     ",
+"                         .:llodxxxxkkd:.    'o;xKKK00KKKOkKKXKKXXXKKKK00xo.    .cxxxkOxoxO0OOOOOOOOOOOOkxd.                     ",
+"                          ,clodxxkkkkkkxd:,..ccOKKK0KKKKk0KXXKKXXXXKXKKXKKk'.;oO00OOOkkOOOOOOOOOOOOOOOOkx;                      ",
+"                          .;clodxkkkkxdddddoll::ok:,dO0d;OKKK0kKKKKKK0K0OOkk0KKKK00OOOOO0OOOOOOOOOOOOOkko.                      ",
+"                           '::codxkkkkxocldxxkxxddl:cod:,okxxoxkkdkOkxkkkO00KKKKKK0OOO000OOOOOOOOOOOOkkx,                       ",
+"                            ,c,cdxxkkkxoc::cloddxxxkkkkkkkkxxxkOOOOOOOOO0000KKKKKKK0O00OOOOOOOOOOOOOkkx:                        ",
+"                            'cc:ldxxxkkxoc::;;;;:loxxxkkOOOOOO0000000000000KKKKKKKK0000OOOOOOOOOOOOkkxl                         ",
+"                            .:ccclodxxkxddoollcc::::;clooooddxxkkOOO00000KKKKKKKKKK00000OOOOOOOOOOkkxc                          ",
+"                            .;:c:codddxkxxdoooodddoollollcllodxxkOO0000KKKKKKKKKKK000000OOOOOOOOOkkkd.                          ",
+};
 
 void OnSenMain(void)
 {
@@ -105,17 +153,17 @@ static void init_onsen(void)
 
 static void init_gui(void)
 {
-    // desk top
-    fill_surface(g_dt_sid, bg);
+    // ---- desk top
+
+    for (int y = 0; y < 48; y++) {
+        draw_text_bg(g_dt_sid, 0, y * HANKAKU_H, COL_WHITE, COL_BLACK, l_dt_txt[y]);
+    }
+
     update_surface(g_dt_sid);
 
-    l_info_bg_sid = new_surface(NO_PARENT_SID, INFO_W, INFO_H);
-    set_alpha(l_info_bg_sid, 60);
-    fill_surface(l_info_bg_sid, INFO_BG);
+    // ---- info
 
     l_info_sid = new_surface(NO_PARENT_SID, INFO_W, INFO_H);
-    set_colorkey(l_info_sid, COL_BLUE);
-    fill_surface(l_info_sid, COL_BLUE);
 }
 
 
@@ -166,16 +214,14 @@ static char l_timer_tmp[L_TIMER_TMP_SIZE];
 
 static void timer_handler(void)
 {
-    fill_surface(l_info_bg_sid, INFO_BG);
-    fill_surface(l_info_sid, COL_BLUE);
+    fill_surface(l_info_sid, COL_BLACK);
 
-    // userd memory
+    // used memory
     int used_mem_percent = (mem_total_mfree_B() * 100) /  mem_total_B();
     snprintf(l_timer_tmp, L_TIMER_TMP_SIZE, "mem: %d%%", used_mem_percent);
     draw_text(l_info_sid, 5, 5, COL_WHITE, l_timer_tmp);
 
-    fill_rect(g_dt_sid, INFO_X, INFO_Y, INFO_W, INFO_H, bg);
-    draw_surface(l_info_bg_sid, g_dt_sid, INFO_X, INFO_Y, OP_SRC_COPY);
+    fill_rect(g_dt_sid, INFO_X, INFO_Y, INFO_W, INFO_H, COL_BLACK);
     draw_surface(l_info_sid, g_dt_sid, INFO_X, INFO_Y, OP_SRC_COPY);
 
     update_rect(g_dt_sid, INFO_X, INFO_Y, INFO_W, INFO_H);
@@ -199,12 +245,12 @@ static void mouse_handler(unsigned long data)
         return;
     }
 
-    struct MSG msg;
-    msg.l_param = mdec->y << 16 | mdec->x;
-
     if (mdec->change_pos) {
         set_mouse_pos(mdec->x, mdec->y);
     }
+
+    struct MSG msg;
+    msg.l_param = mdec->y << 16 | mdec->x;
 
     if (mdec->btn_left && ! l_left_down) {
         // left button down

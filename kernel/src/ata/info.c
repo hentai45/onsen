@@ -80,6 +80,7 @@ void ata_anal_id(struct ATA_DEV *dev)
 
     info->support_pow_mng = id[82] & 8;
 
+    /*
     dbgf("default: c = %d, h = %d, s = %d\n",
             info->default_cylinders, info->default_heads, info->default_sectors);
     dbgf("cur:     c = %d, h = %d, s = %d\n",
@@ -87,4 +88,5 @@ void ata_anal_id(struct ATA_DEV *dev)
     dbgf("support pio mode = %X\n", info->support_pio_mode);
     dbgf("support iordy    = %d\n", info->support_iordy);
     dbgf("support pow mng  = %X\n", info->support_pow_mng);
+    */
 }

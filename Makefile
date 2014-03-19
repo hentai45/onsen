@@ -48,7 +48,6 @@ $(VOL2) : $(MBR) $(FNAMES) $(APPS)
 	sudo losetup -o516096 /dev/loop0 $@
 	sudo mke2fs /dev/loop0
 	sudo mount -text2 /dev/loop0 $(MOUNT_DIR)
-	sudo cp Makefile.inc $(MOUNT_DIR)
 	sudo cp $(FNAMES) $(MOUNT_DIR)
 	sudo cp $(APPS) $(MOUNT_DIR)
 	sync
