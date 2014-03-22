@@ -22,8 +22,16 @@
     }                                                                           \
 } while (0)
 
+
+#define STRCMP(a, R, b)  (strcmp(a,b) R 0)
+#define STRNCMP(a, R, b, n)  (strncmp(a,b,n) R 0)
+#define MAX(x,y)  (((x) > (y)) ? (x) : (y))
+#define MIN(x,y)  (((x) < (y)) ? (x) : (y))
+
+
 int  strlen(const char *s);
 char *strcpy(char *s, const char *t);
+char *strncpy(char *s, const char *t, int n);
 char *strcat(char *s, const char *t);
 int  strcmp(const char *s, const char *t);
 int  strncmp(const char *s, const char *t, int n);

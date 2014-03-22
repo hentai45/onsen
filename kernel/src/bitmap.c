@@ -2,9 +2,9 @@
  * ビットマップ（24ビットのみ対応）
  *
  * ## BMP ファイルの構造
- * * ファイルヘッダ(BMP_FILE_HDR)
- * * 情報ヘッダ(BMP_INFO_HDR)
- * * 画像データ
+ * - ファイルヘッダ(BMP_FILE_HDR)
+ * - 情報ヘッダ(BMP_INFO_HDR)
+ * - 画像データ
  */
 
 
@@ -148,8 +148,8 @@ static bool load_header(void *p, unsigned int size_B, int *w, int *h,
 static int load_bmp_rgb24(unsigned char *p_file, int size_B, int w, int h,
         int pad_B)
 {
-    // * 画像データは左下から右上に向かって記録されている
-    // * 画像の横ラインのデータは4バイトの境界に揃えないといけない
+    // - 画像データは左下から右上に向かって記録されている
+    // - 画像の横ラインのデータは4バイトの境界に揃えないといけない
 
     COLOR16 *buf = mem_alloc(w * h * sizeof (COLOR16));
 
