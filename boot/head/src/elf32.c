@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "memory.h"
+#include "print32.h"
+
 
 typedef uint32_t  Elf32_Addr;
 typedef uint16_t  Elf32_Half;
@@ -117,12 +119,12 @@ void run_elf(void *p)
     // ---- 形式チェック
 
     if ( ! is_elf(ehdr)) {
-        //print("This is not ELF file");
+        print32("This is not ELF file");
         forever_hlt();
     }
 
     if (ehdr->e_type != ET_EXEC) {
-        //print("This is not executable file");
+        print32("This is not executable file");
         forever_hlt();
     }
 
@@ -141,7 +143,7 @@ void run_elf(void *p)
         // ---- .text
         case PF_R | PF_X:
             if (code) {
-                //print("file has two text sections");
+                print32("file has two text sections");
                 forever_hlt();
             }
 
@@ -152,7 +154,7 @@ void run_elf(void *p)
         // ---- .data
         case PF_R | PF_W:
             if (data) {
-                //print("file has two data sections");
+                print32("file has two data sections");
                 forever_hlt();
             }
 
@@ -172,12 +174,12 @@ void run_elf(void *p)
     }
 
     if (code == 0) {
-        //print("file doesn't have code section");
+        print32("file doesn't have code section");
         forever_hlt();
     }
 
     if (data == 0) {
-        //print("file doesn't have data section");
+        print32("file doesn't have data section");
         forever_hlt();
     }
 

@@ -6,13 +6,15 @@ SECTIONS
 {
     . = _OS_BASE;
 
-    .text   :   {*(.text)}
-    .rodata :   {*(.rodata*)}
-    .eh_frame : {*(.eh_frame)}
+    .text : {
+        *(.text)
+        *(.rodata*)
+        *(.eh_frame)
+    }
 
-    . = ALIGN (CONSTANT (MAXPAGESIZE)) - ((CONSTANT (MAXPAGESIZE) - .) & (CONSTANT (MAXPAGESIZE) - 1)); . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
-
-    .data   :   {*(.data)}
-    .bss    :   {*(.bss)}
+    .data : ALIGN(0x1000) {
+        *(.data)
+        *(.bss)
+    }
 }
 
