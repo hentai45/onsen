@@ -91,6 +91,10 @@ void send_window_deactive_msg(int pid_recieve, int pid);
 #define MSG_WINDOW_DEACTIVE    14
 
 
+// ---- ネットワークメッセージ
+#define MSG_NET_RX    15
+#define MSG_NET_TX    16
+
 #endif
 
 

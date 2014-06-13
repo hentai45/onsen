@@ -19,6 +19,8 @@
 
 #define VADDR_BASE          (0xC0000000)  // 論理アドレスのベースアドレス
 
+#define _PA(vaddr)  ((vaddr) - VADDR_BASE)
+
 #define VADDR_USER_ESP      (0xBFFFF000)
 
 /* FREE LOW ADDR START      (0x00000500) */

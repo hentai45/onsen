@@ -20,7 +20,9 @@
 #include "mouse.h"
 #include "memory.h"
 #include "msg_q.h"
+#include "net/rtl8139.h"
 #include "paging.h"
+#include "pci.h"
 #include "stacktrace.h"
 #include "str.h"
 #include "sysinfo.h"
@@ -138,6 +140,8 @@ static void init_onsen(void)
     set_mouse_pos(get_screen_w() / 2, get_screen_h() / 2);
     ata_init();
     ext2_init();
+    pci_init();
+    rtl8139_init();
     init_func_names();
 
     init_gui();
@@ -184,6 +188,14 @@ static void main_proc(unsigned int message, unsigned long u_param, long l_param)
 
     case MSG_KEYDOWN:
         keydown_handler(/* keycode = */ u_param);
+        break;
+
+    case MSG_NET_RX:
+        rtl8139_receive();
+        break;
+
+    case MSG_NET_TX:
+        dbgf("net tx\n");
         break;
 
     case MSG_REQUEST_EXIT:

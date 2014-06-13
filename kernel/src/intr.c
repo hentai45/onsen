@@ -10,6 +10,8 @@
 #ifndef HEADER_INTR
 #define HEADER_INTR
 
+#include <stdint.h>
+
 //-----------------------------------------------------------------------------
 // 割り込み
 
@@ -17,8 +19,11 @@ void intr_init(void);
 
 void notify_intr_end(unsigned char irq);
 
-void set_pic0_mask(unsigned char mask);
-void set_pic1_mask(unsigned char mask);
+void set_pic0_mask(uint8_t mask);
+void set_pic1_mask(uint8_t mask);
+
+void intr_enable(int irq);
+
 
 //-----------------------------------------------------------------------------
 // フォールト
@@ -97,15 +102,33 @@ void intr_init(void)
 
 // 割り込みマスクを設定する。
 // mask = 0xFF でPIC0すべての割り込みを受け付けない
-void set_pic0_mask(unsigned char mask)
+void set_pic0_mask(uint8_t mask)
 {
     outb(PIC0_IMR, mask);
 }
 
 
-void set_pic1_mask(unsigned char mask)
+void set_pic1_mask(uint8_t mask)
 {
     outb(PIC1_IMR, mask);
+}
+
+
+void intr_enable(int irq)
+{
+    uint8_t mask;
+
+    if (0 <= irq && irq <= 7) {
+        mask = inb(PIC0_IMR);
+        mask &= ~(1 << irq);
+        outb(PIC0_IMR, mask);
+    } else if (8 <= irq && irq <= 15) {
+        mask = inb(PIC1_IMR);
+        mask &= ~(1 << (irq - 8));
+        outb(PIC1_IMR, mask);
+    } else {
+        ERROR("invalid irq");
+    }
 }
 
 

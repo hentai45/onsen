@@ -2,7 +2,7 @@ include Makefile.inc
 
 # ソフトウェア
 QEMU = qemu-system-i386
-QEMU_FLAGS = -m 32 -localtime -vga std
+QEMU_FLAGS = -net nic,model=rtl8139 -net tap -m 32 -localtime -vga std
 BOCHS = bochs
 
 

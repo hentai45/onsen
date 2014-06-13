@@ -30,9 +30,11 @@ extern struct FILE_T *f_console;
 #include "memory.h"
 #include "msg_q.h"
 #include "paging.h"
+#include "pci.h"
 #include "stdarg.h"
 #include "str.h"
 #include "sysinfo.h"
+#include "net/rtl8139.h"
 #include "task.h"
 #include "time.h"
 #include "timer.h"
@@ -104,6 +106,7 @@ static void cmd_cat(char *fname);
 static void cmd_ps(void);
 static void cmd_mem(void);
 static void cmd_date(void);
+static void cmd_lspci(void);
 static void cmd_kill(int pid);
 static void cmd_dbg(char *name);
 static int  cmd_app(char *cmd_name, int bgp);
@@ -345,6 +348,10 @@ static void run_cmd(char *cmd_name)
         cmd_mem();
     } else if (STRCMP(cmd_name, ==, "date")) {
         cmd_date();
+    } else if (STRCMP(cmd_name, ==, "lspci")) {
+        cmd_lspci();
+    } else if (STRCMP(cmd_name, ==, "s")) {
+        rtl8139_dbg();
     } else if (STRNCMP(cmd_name, ==, "kill ", 5)) {
         if (cmd_name[5] < '0' || '9' < cmd_name[5]) {
             putf("Usage: kill pid\n\n");
@@ -457,6 +464,12 @@ static void cmd_date(void)
     now(&t);
     dt_str(s, 32, &t);
     putf("%s\n\n", s);
+}
+
+
+static void cmd_lspci(void)
+{
+    pci_enum();
 }
 
 

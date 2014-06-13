@@ -18,6 +18,7 @@ AS_OBJS := $(AS_SRCS:.S=.o)
 
 C_SRCS  := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
 C_SRCS  += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/ata/*.c))
+C_SRCS  += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/net/*.c))
 C_OBJS  := $(C_SRCS:.c=.o)
 
 
@@ -30,6 +31,7 @@ all :
 mkhdr :
 	$(MKHDR) $(SRC_DIR) $(INC_DIR)
 	$(MKHDR) $(SRC_DIR)/ata $(INC_DIR)/ata
+	$(MKHDR) $(SRC_DIR)/net $(INC_DIR)/net
 
 
 mkfnames : $(MAP)

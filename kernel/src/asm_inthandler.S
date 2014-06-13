@@ -30,6 +30,7 @@ void asm_int0E_handler(void);
 void asm_int20_handler(void);
 void asm_int21_handler(void);
 void asm_int2C_handler(void);
+void asm_rtl8139_handler(void);
 
 #endif
 */
@@ -48,6 +49,7 @@ void asm_int2C_handler(void);
     .globl asm_int20_handler
     .globl asm_int21_handler
     .globl asm_int2C_handler
+    .globl asm_rtl8139_handler
 
 
     .extern int00_handler
@@ -62,6 +64,8 @@ void asm_int2C_handler(void);
 
     .extern int20_handler
     .extern int21_handler
+    .extern int2C_handler
+    .extern rtl8139_handler
 
 
 # 特権レベル３（アプリ）から呼び出される場合、cs レジスタは特権レベル０(OS)に
@@ -131,4 +135,7 @@ asm_int21_handler:
 
 asm_int2C_handler:
     asm_int_handler int2C_handler
+
+asm_rtl8139_handler:
+    asm_int_handler rtl8139_handler
 

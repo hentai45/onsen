@@ -44,8 +44,6 @@ char keycode2char(int keycode, bool is_shift_on);
 // キーボード割り込み(IRQ-01)を処理する
 void int21_handler(int *esp)
 {
-    notify_intr_end(/* IRQ = */ 1);  // 割り込み完了通知
-
     // キーデータの取得
     unsigned char data = inb(PORT_RW_KBC_DATA);
 
@@ -55,6 +53,8 @@ void int21_handler(int *esp)
     msg.u_param = data;
 
     msg_q_put(g_root_pid, &msg);
+
+    notify_intr_end(/* IRQ = */ 1);  // 割り込み完了通知
 }
 
 

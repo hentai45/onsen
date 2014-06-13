@@ -97,8 +97,6 @@ void mouse_init(void)
 // マウス割り込み(IRQ-12)を処理する
 void int2C_handler(int *esp)
 {
-    notify_intr_end(/* IRQ = */ 12);  // 割り込み完了通知
-
     // マウスデータの取得
     unsigned char data = inb(PORT_RW_KBC_DATA);
 
@@ -108,6 +106,8 @@ void int2C_handler(int *esp)
     msg.u_param = data;
 
     msg_q_put(g_root_pid, &msg);
+
+    notify_intr_end(/* IRQ = */ 12);  // 割り込み完了通知
 }
 
 

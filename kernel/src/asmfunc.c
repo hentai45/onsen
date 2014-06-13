@@ -38,6 +38,90 @@ static void sti(void)
 }
 
 
+static void inline __attribute__ ((always_inline))
+out8 (uint16_t port,  uint8_t data)
+{
+    __asm__ __volatile__ (
+        "outb %0, %1"
+
+        :
+        : "a" (data), "Nd" (port)  // N : 0 から 255 の範囲の定数
+    );
+}
+
+
+static uint8_t inline __attribute__ ((always_inline))
+in8 (uint16_t port)
+{
+    uint8_t ret;
+
+    __asm__ __volatile__ (
+        "inb %1, %0"
+
+        : "=a" (ret)
+        : "Nd" (port)  // N : 0 から 255 の範囲の定数
+    );
+
+    return ret;
+}
+
+
+static void inline __attribute__ ((always_inline))
+out16 (uint16_t port,  uint16_t data)
+{
+    __asm__ __volatile__ (
+        "outw %0, %1"
+
+        :
+        : "a" (data), "d" (port)
+    );
+}
+
+
+static uint16_t inline __attribute__ ((always_inline))
+in16 (uint16_t port)
+{
+    uint16_t ret;
+
+    __asm__ __volatile__ (
+        "inw %1, %0"
+
+        : "=a" (ret)
+        : "d" (port)
+    );
+
+    return ret;
+}
+
+
+static void inline __attribute__ ((always_inline))
+out32 (uint16_t port,  uint32_t data)
+{
+    __asm__ __volatile__ (
+        "outl %0, %1"
+
+        :
+        : "a" (data), "d" (port)
+    );
+}
+
+
+static uint32_t inline __attribute__ ((always_inline))
+in32 (uint16_t port)
+{
+    uint32_t ret;
+
+    __asm__ __volatile__ (
+        "inl %1, %0"
+
+        : "=a" (ret)
+        : "d" (port)
+    );
+
+    return ret;
+}
+
+
 inline __attribute__ ((always_inline))
 static void outb(uint16_t port, uint8_t data)
 {
@@ -73,7 +157,7 @@ static void outw(uint16_t port, uint16_t data)
         "outw %0, %1"
 
         :
-        : "q" (data), "q" (port)
+        : "a" (data), "d" (port)
     );
 }
 
@@ -85,6 +169,34 @@ static uint16_t inw(uint16_t port)
 
     __asm__ __volatile__ (
         "inw %1, %0"
+
+        : "=a" (ret)
+        : "d" (port)
+    );
+
+    return ret;
+}
+
+
+inline __attribute__ ((always_inline))
+static void outl(uint16_t port, uint32_t data)
+{
+    __asm__ __volatile__ (
+        "outl %0, %1"
+
+        :
+        : "a" (data), "d" (port)
+    );
+}
+
+
+inline __attribute__ ((always_inline))
+static uint32_t inl(uint16_t port)
+{
+    uint32_t ret;
+
+    __asm__ __volatile__ (
+        "inl %1, %0"
 
         : "=a" (ret)
         : "d" (port)

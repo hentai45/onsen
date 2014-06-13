@@ -16,5 +16,6 @@ void asm_int0E_handler(void);
 void asm_int20_handler(void);
 void asm_int21_handler(void);
 void asm_int2C_handler(void);
+void asm_rtl8139_handler(void);
 
 #endif
